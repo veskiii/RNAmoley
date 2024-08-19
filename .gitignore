@@ -1,0 +1,3 @@
+restapi/.env
+restapi/node_modules
+restapi/public/*
