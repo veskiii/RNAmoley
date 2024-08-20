@@ -6,6 +6,9 @@ import { router as jobRoutes } from './jobs/routes.js';
 const app = express();
 app.use(express.json());
 
+// expose public folder
+app.use(express.static('public'));
+
 const PORT = process.env.PORT;
 
 app.get('/', (req: Request, res: Response) => {
