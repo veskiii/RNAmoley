@@ -4,42 +4,63 @@ services:
     restart: always
     # set shared memory limit when using docker-compose
     shm_size: 128mb
-    ports:
-      - 5432:5432
+    user: postgres
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
-      POSTGRES_PASSWORD: postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
     volumes:
       - db_data:/var/lib/postgresql/data
+    secrets:
+      - db-password
 
   adminer:
     image: adminer
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - 8080:8080
 
   molprobity:
     image: dawidgrajek1/molprobity:latest
     restart: always
-    # container_name: molprobity
-    # command: tail -f "/dev/null"
     ports:
       - 3001:3001
     volumes:
       - user_data:/user_data
-  # api:
-  #   build: ./restapi
-  #   container_name: rnamoley/restapi
-  # restart: always
-  # ports:
-  #   - 3000:3000
-  # depends_on:
-  #   - db
-  #   - molprobity
+
+  tools:
+    build:
+      context: ./tools
+    environment:
+      NODE_ENV: production
+    ports:
+      - 3002:3002
+    volumes:
+      - user_data:/usr/src/app/user_data
+  # restapi:
+  #   build:
+  #     context: ./restapi
+  #   restart: always
+  #   ports:
+  #     - 3000:3000
+  #   depends_on:
+  #     - db
+  #     - molprobity
 
 volumes:
   db_data:
     driver: local
   user_data:
     driver: local
+secrets:
+  db-password:
+    file: db/password.txt
