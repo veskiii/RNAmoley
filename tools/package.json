@@ -1,12 +1,12 @@
 {
-  "name": "restapi",
+  "name": "tools",
   "version": "1.0.0",
   "description": "",
   "main": "dist/server.js",
   "scripts": {
     "build": "npx tsc",
-    "start": "node --env-file .env dist/server.js",
-    "dev": "tsx watch --env-file .env src/server.ts"
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -14,18 +14,11 @@
   "type": "module",
   "dependencies": {
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "multer": "1.4.5-lts.1",
-    "pg": "^8.12.0",
-    "uuid": "^10.0.0",
-    "zod": "^3.23.8"
+    "express": "^4.19.2"
   },
   "devDependencies": {
+    "@types/node": "^20.15.0",
     "@types/express": "^4.17.21",
-    "@types/multer": "^1.4.11",
-    "@types/node": "^22.0.0",
-    "@types/pg": "^8.11.6",
-    "@types/uuid": "^10.0.0",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2",
     "tsx": "^4.16.5",
