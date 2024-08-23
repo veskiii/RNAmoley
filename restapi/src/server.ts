@@ -2,8 +2,7 @@ import express from 'express';
 import type { Express, Request, Response } from 'express';
 import runDbMigrations from './db/migrations/index.js';
 import { router as jobRoutes } from './jobs/routes.js';
-
-const cors = require('cors')
+import cors from 'cors';
 
 const app = express();
 app.use(express.json());
