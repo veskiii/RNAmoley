@@ -11,12 +11,8 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const PORT = process.env.PORT;
-const corsOptions = {
-    origin: `http://localhost:${PORT}`,
-    optionsSuccessStatus: 200
-}
 
-app.use(cors(corsOptions));
+app.use(cors());
 
 
 app.get('/', (req: Request, res: Response) => {
