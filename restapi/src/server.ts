@@ -3,6 +3,8 @@ import type { Express, Request, Response } from 'express';
 import runDbMigrations from './db/migrations/index.js';
 import { router as jobRoutes } from './jobs/routes.js';
 
+const cors = require('cors')
+
 const app = express();
 app.use(express.json());
 
@@ -10,6 +12,13 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const PORT = process.env.PORT;
+const corsOptions = {
+    origin: `http://localhost:${PORT}`,
+    optionsSuccessStatus: 200
+}
+
+app.use(cors(corsOptions));
+
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello World');
