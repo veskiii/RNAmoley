@@ -2,7 +2,13 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { v4 as uuid4 } from 'uuid';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, deleteFile, fetchPdbFile, generateFilename, MAX_FILE_SIZE, uploadFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, deleteFile, deleteJobFiles, fetchPdbFile, generateFilename, MAX_FILE_SIZE, uploadFile, validateFile } from "./utils.js";
+import fetch from 'node-fetch';
+
+interface AnnotateResult {
+    sequence: string;
+    dotbracket: string;
+}
 
 export async function getJobs(req: Request, res: Response) {
     db.query(getJobsQuery, (err, result) => {
@@ -52,6 +58,8 @@ export async function createJob(req: Request, res: Response) {
     var id: string;
     var newFilename: string;
     var originalFilename: string;
+    var finalFilename: string;
+    var originalExtension: string;
 
     if (!rnaFile && pdbCode === '') {
         res.status(400).send('Either RNA file or PDB code is required');
@@ -69,16 +77,7 @@ export async function createJob(req: Request, res: Response) {
         id = rnaFile.filename.split('.')[0] as string;
         newFilename = rnaFile.filename;
         originalFilename = rnaFile.originalname;
-
-        db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
-            if (err) {
-                console.error(err);
-                deleteFile(newFilename);
-                res.status(500).send('An error occurred');
-                return;
-            }
-            res.status(201).json(result.rows[0]);
-        });
+        originalExtension = rnaFile.originalname.split('.').pop() as string;
 
     } else {
         // use pdbCode
@@ -96,23 +95,55 @@ export async function createJob(req: Request, res: Response) {
 
         id = uuid4();
         originalFilename = `${pdbCode}.pdb`;
+        originalExtension = 'pdb';
         newFilename = generateFilename(id, pdbCodeFile);
         await uploadFile(pdbCodeFile, newFilename);
-
-        db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
-            if (err) {
-                console.error(err);
-                deleteFile(newFilename);
-                res.status(500).send('An error occurred');
-                return;
-            }
-            res.status(201).json(result.rows[0]);
-        });
     }
 
-    // TODO: if not mmcif or cif, convert to pdb
-    // code here...
+    // TODO: if not pdb, convert to pdb
+    if (originalExtension != "pdb") {
+        try {
+            const convertResponse = await fetch(`http://tools:3002/convert?filename=${newFilename}`, {
+                method: 'POST'
+            })
+            finalFilename = newFilename.split('.')[0] + '.pdb';
+        } catch (error) {
+            console.error(error);
+            deleteJobFiles(id);
+            res.status(500).send('An error occurred: conversion error');
+            return;
+        }
+    } else {
+        finalFilename = newFilename;
+    }
 
     // TODO: annotate file
-    // code here...
+    var annotateResponse;
+    try {
+        annotateResponse = await fetch(`http://tools:3002/annotate?filename=${finalFilename}`, {
+            method: 'POST'
+        });
+    } catch (error) {
+        console.error(error);
+        deleteJobFiles(id);
+        res.status(500).send('An error occurred: annotation error');
+        return;
+    }
+
+    // @ts-ignore
+    const annotateResult: object = await annotateResponse.json();
+    db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
+        if (err) {
+            console.error(err);
+            deleteJobFiles(id);
+            res.status(500).send('An error occurred: db error');
+            return;
+        }
+
+        // send fields form result with annotate results
+        res.status(201).json({
+            ...result.rows[0],
+            ...annotateResult
+        });
+    });
 }

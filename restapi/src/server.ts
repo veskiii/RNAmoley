@@ -17,15 +17,6 @@ app.get('/', (req: Request, res: Response) => {
 
 app.use('/api/v1/jobs', jobRoutes);
 
-app.post('/create', (req: Request, res: Response) => {
-    const name = req.body.name;
-    const pdbCode = req.body.pdbCode;
-    const file = req.body.file;
-
-    res.status(201).send('Job created');
-
-});
-
 await runDbMigrations();
 
 app.listen(
