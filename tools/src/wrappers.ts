@@ -1,4 +1,12 @@
 import { execSync } from 'child_process';
+import { log } from 'console';
+
+const JOBS_DIR = 'user_data';
+
+interface annotatorOutput {
+    sequnece?: string;
+    dotbracket?: string;
+}
 
 async function handler(command: string) {
     const output = execSync(command, { encoding: 'utf-8' }).toString();
@@ -7,6 +15,32 @@ async function handler(command: string) {
     return JSON.stringify(filtered);
 }
 
+export async function runConverter(filename: string) {
+    const filenameNoExt = filename.split('.')[0];
+    try {
+        console.log(`converting ${filename} to pdb`);
+        const result = await handler(`maxit -input ${JOBS_DIR}/${filename} -output ${JOBS_DIR}/${filenameNoExt}.pdb -o 2`);
+        return result;
+
+    } catch (error) {
+        console.error('Error converting file: ', error);
+    }
+}
+
 export async function runAnnotator(filename: string) {
-    
+    try {
+        const result = await handler(`annotator ${JOBS_DIR}/${filename}`);
+        const resultSplit = result.split("\\n");
+        const output: annotatorOutput = {
+            sequnece: resultSplit[1],
+            dotbracket: resultSplit[2]
+        }
+        console.log(output);
+
+        return output;
+
+    } catch (error) {
+        console.error('Error running annotator: ', error);
+    }
+
 }

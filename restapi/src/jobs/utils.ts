@@ -4,10 +4,11 @@ import multer from 'multer';
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
+export const JOBS_DIR = 'public/jobs';
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "public/jobs");
+        cb(null, JOBS_DIR);
     },
     filename: function (req, file, cb) {
         const ext = file.originalname.split('.').pop();
@@ -27,11 +28,19 @@ export async function uploadFile(rnaFile: File, newName: string) {
     const arrayBuffer = await rnaFile.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
 
-    await fs.writeFile(`public/jobs/${newName}`, buffer);
+    await fs.writeFile(`${JOBS_DIR}/${newName}`, buffer);
 }
 
 export async function deleteFile(filename: string) {
-    await fs.unlink(`public/jobs/${filename}`);
+    await fs.unlink(`${JOBS_DIR}/${filename}`);
+}
+
+export async function deleteJobFiles(id: string) {
+    const files = await fs.readdir(JOBS_DIR);
+    const jobFiles = files.filter(file => file.startsWith(id));
+    for (const file of jobFiles) {
+        await fs.unlink(`${JOBS_DIR}/${file}`);
+    }
 }
 
 export const generateFilename = (id: string, file: File) => {
