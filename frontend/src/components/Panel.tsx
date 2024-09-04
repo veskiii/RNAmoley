@@ -1,26 +1,68 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import DownloadLink from "./downloadLink";
 import Loading from "./loading";
+import FornacComponent from "./fornaComponent";
+import DownloadLink from "./downloadLink";
 
 //  TODO : change for backend data
 //Now testing on local json server
 
 interface Job {
   id: number;
+  originalfilename: string;
+  name: string;
+  createdat: Date;
+  updatedat: Date;
   sequence: string;
-  dot_bracket: string;
+  dotbracket: string;
 }
 
-async function fetchMyData(): Promise<Job[]> {
+async function fetchMyData(): Promise<Job> {
   const response = await fetch("http://localhost:4200/jobs");
   const data = await response.json();
   return data;
 }
 const Panel: React.FC = () => {
   const { jobId } = useParams();
-  const [myData, setMyData] = useState<Job[]>([]);
+  const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
+  const [labelInterval, setLabelInterval] = useState(10);
+  const [numbering, setNumbering] = useState(true);
+  const [nodeOutline, setNodeOutline] = useState(true);
+  const [nodeLabel, setNodeLabel] = useState(true);
+  const [links, setLinks] = useState(true);
+  const [directionArrows, setDirectionArrows] = useState(true);
+  const [animation, setAnimation] = useState(true);
+
+  const handleLabelIntervalChange = (e: any) => {
+    setLabelInterval(parseInt(e.target.value, 10));
+  };
+
+  const handleNumberingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNumbering(e.target.checked);
+  };
+
+  const handleNodeOutlineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNodeOutline(e.target.checked);
+  };
+
+  const handleNodeLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNodeLabel(e.target.checked);
+  };
+
+  const handleLinksChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLinks(e.target.checked);
+  };
+
+  const handleDirectionArrowsChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setDirectionArrows(e.target.checked);
+  };
+
+  const handleAnimationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAnimation(e.target.checked);
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -29,7 +71,6 @@ const Panel: React.FC = () => {
         const data = await fetchMyData();
         setMyData(data);
       } catch (error) {
-        let errorMessage = "Failed to fetch data";
         if (error instanceof Error) {
           setError(error.message);
         }
@@ -42,23 +83,93 @@ const Panel: React.FC = () => {
   if (!myData) {
     return <Loading />;
   }
-  return (
-    <div className="flex h-screen flex-col md:flex-row md:overflow-hidden">
-      <div className="w-full flex-none md:w-80 bg-slate-300 m-5 rounded-lg">
-        {/* TODO: analysis Panel with accordion */}
-        {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
 
+  return (
+    <div className="flex  h-screen flex-col md:flex-row md:overflow-hidden">
+      <div className="w-full flex-none md:w-80 bg-slate-300 m-5 rounded-lg">
+        {/* TODO: accordion */}
+        {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
+        <div className="flex flex-col h-[80%] ml-4 mt-10 pl-4 ">
+          <label className="">
+            Label interval:
+            <br />
+            <input
+              type="number"
+              value={labelInterval}
+              onChange={handleLabelIntervalChange}
+              placeholder="Label Interval"
+              className="rounded-lg w-24 mb-2"
+            />
+          </label>
+          <label className="options">
+            <input
+              type="checkbox"
+              id="displNumbering"
+              defaultChecked
+              checked={numbering}
+              onChange={handleNumberingChange}
+            />{" "}
+            Numbering
+          </label>
+          <label className="options">
+            <input
+              type="checkbox"
+              id="displNodeOutline"
+              defaultChecked
+              checked={nodeOutline}
+              onChange={handleNodeOutlineChange}
+            />{" "}
+            Node Outline
+          </label>
+          <label className="options">
+            <input
+              type="checkbox"
+              id="displNodeLabel"
+              defaultChecked
+              checked={nodeLabel}
+              onChange={handleNodeLabelChange}
+            />{" "}
+            Node Label
+          </label>
+          <label className="options">
+            <input
+              type="checkbox"
+              id="displLinks"
+              defaultChecked
+              checked={links}
+              onChange={handleLinksChange}
+            />{" "}
+            Links
+          </label>
+          <label className="options">
+            <input
+              type="checkbox"
+              id="displDirectionArrows"
+              defaultChecked
+              checked={directionArrows}
+              onChange={handleDirectionArrowsChange}
+            />{" "}
+            Direction Arrows
+          </label>
+          <label className="options">
+            <input
+              type="checkbox"
+              id="animation"
+              defaultChecked
+              checked={animation}
+              onChange={handleAnimationChange}
+            />{" "}
+            Enable Animation
+          </label>
+          <p className="mt-5 mb-5">
+            [ctrl + left click] select multiple nodes (can drag only when
+            animation is enabled)
+            <br />
+            [c] center the graph
+          </p>
+        </div>
         <div className="flex flex-col h-[20%] ml-4 mt-3">
           <DownloadLink />
-
-          {/* TODO: Summary page */}
-          {/* Button to summary page */}
-          {/* <button className="font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[70%] my-1 transition-colors bg-rose-300/80 hover:bg-teal-600">
-            Save your analysis{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </button> */}
         </div>
       </div>
       <div className="flex-grow relative my-5 mx-10 rounded-lg bg-slate-300">
@@ -75,15 +186,22 @@ const Panel: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="absolute bottom-0 h-[90%] flex-grow w-full py-12 rounded-b-lg bg-slate-600">
-          {/* {myData.map((data) => (
-            <div key={data.id}>
-              <h1>{data.id}</h1>
+        <div key={myData.id}>
+          {/* <h1>{data.id}</h1>
               <h2>{data.sequence}</h2>
-              <p>{data.dot_bracket}</p>
-            </div>
-          ))} */}
+              <p>{data.dotbracket}</p>
+              <p>{data.originalfilename}</p> */}
+          <FornacComponent
+            structure={myData.dotbracket}
+            sequence={myData.sequence}
+            labelInterval={labelInterval}
+            numbering={numbering}
+            nodeOutline={nodeOutline}
+            nodeLabel={nodeLabel}
+            links={links}
+            directionArrows={directionArrows}
+            setAnimation={animation}
+          />
         </div>
       </div>
     </div>

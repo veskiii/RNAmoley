@@ -6,7 +6,7 @@ export default function Loading() {
       <h1 className="my-36">Loading...</h1>
       <ReactLoading
         type="spinningBubbles"
-        color="#0000FF"
+        color="#33a19a"
         height={300}
         width={150}
       />

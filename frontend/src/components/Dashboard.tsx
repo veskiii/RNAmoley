@@ -7,10 +7,12 @@ function checkConditions(
   pdbCode: string,
   radiobutton: string
 ): boolean {
-  var countConditions = 0;
+  let countConditions = 0;
   if (radiobutton !== "None") countConditions++;
   if (rnaFile) countConditions++;
-  if (pdbCode) countConditions++;
+  if (pdbCode) {
+    if (pdbCode.length === 4) countConditions++;
+  }
   if (countConditions === 1) return true;
   return false;
 }
@@ -38,7 +40,7 @@ const Dashboard: React.FC = () => {
     });
 
     //Sending request to backend
-    const API_URL = "http://localhost:4200/jobs"; //temp api url
+    const API_URL = "http://localhost:4200/RNAmoley"; //temp api url
     try {
       const response = await fetch(`${API_URL}`, {
         method: "POST",
@@ -150,8 +152,10 @@ const Dashboard: React.FC = () => {
               <input
                 type="text"
                 value={pdbCode}
+                id="pdbCodeInput"
                 className="w-full flex justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 onChange={(e) => setPdbCode(e.target.value)}
+                maxLength={4}
                 placeholder="Enter a PDB code"
               />
             </div>

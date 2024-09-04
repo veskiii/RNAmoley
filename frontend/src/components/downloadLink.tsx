@@ -5,7 +5,9 @@ const DownloadLink = () => {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(content);
-      console.log("Copied to clipboard:", content);
+      //console.log("Copied to clipboard:", content);
+
+      alert("Copied to clipboard");
     } catch (error) {
       console.error("Unable to copy to clipboard:", error);
     }
