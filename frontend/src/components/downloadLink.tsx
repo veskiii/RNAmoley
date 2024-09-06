@@ -5,9 +5,9 @@ const DownloadLink = () => {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(content);
-      //console.log("Copied to clipboard:", content);
-
-      alert("Copied to clipboard");
+      let saveButton = document.getElementById("saveButton") as HTMLElement;
+      saveButton.textContent = "✔️ Copied link!";
+      saveButton.style.backgroundColor = "teal";
     } catch (error) {
       console.error("Unable to copy to clipboard:", error);
     }
@@ -15,12 +15,13 @@ const DownloadLink = () => {
 
   return (
     <button
+      id="saveButton"
       onClick={handleCopy}
       className={
         "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors bg-rose-300/80 hover:bg-teal-600"
       }
     >
-      Download link to workspace
+      Copy link to workspace
     </button>
   );
 };

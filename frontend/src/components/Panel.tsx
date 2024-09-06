@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import Loading from "./loading";
 import FornacComponent from "./fornaComponent";
 import DownloadLink from "./downloadLink";
+import ThreeDView from "./ThreeDView";
 
 //  TODO : change for backend data
 //Now testing on local json server
@@ -33,6 +34,27 @@ const Panel: React.FC = () => {
   const [links, setLinks] = useState(true);
   const [directionArrows, setDirectionArrows] = useState(true);
   const [animation, setAnimation] = useState(true);
+  const [is2Dview, setIs2Dview] = useState(true);
+
+  function toggle() {
+    setIs2Dview((is2Dview) => {
+      is2Dview = !is2Dview;
+      console.log(is2Dview);
+      let switchViewButton = document.getElementById(
+        "switchViewButton"
+      ) as HTMLElement;
+      let viewLabel = document.getElementById("viewLabel") as HTMLElement;
+
+      if (is2Dview) {
+        switchViewButton.textContent = "3D view";
+        viewLabel.textContent = "2D view";
+      } else {
+        switchViewButton.textContent = "2D view";
+        viewLabel.textContent = "3D view";
+      }
+      return is2Dview;
+    });
+  }
 
   const handleLabelIntervalChange = (e: any) => {
     setLabelInterval(parseInt(e.target.value, 10));
@@ -176,13 +198,17 @@ const Panel: React.FC = () => {
         <div className="absolute top-0 h-[10%] flex-grow w-full p-2 rounded-t-lg bg-slate-300 ">
           <div className="grid relative">
             <label
-              htmlFor="viewLabel"
+              id="viewLabel"
               className="text-2xl font-bold place-self-center my-1"
             >
-              3D view
-            </label>
-            <button className="font-bold absolute right-0 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300/80 hover:bg-teal-600">
               2D view
+            </label>
+            <button
+              id="switchViewButton"
+              onClick={toggle}
+              className="font-bold absolute right-0 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300/80 hover:bg-teal-600"
+            >
+              3D view
             </button>
           </div>
         </div>
@@ -191,17 +217,20 @@ const Panel: React.FC = () => {
               <h2>{data.sequence}</h2>
               <p>{data.dotbracket}</p>
               <p>{data.originalfilename}</p> */}
-          <FornacComponent
-            structure={myData.dotbracket}
-            sequence={myData.sequence}
-            labelInterval={labelInterval}
-            numbering={numbering}
-            nodeOutline={nodeOutline}
-            nodeLabel={nodeLabel}
-            links={links}
-            directionArrows={directionArrows}
-            setAnimation={animation}
-          />
+          {is2Dview && (
+            <FornacComponent
+              structure={myData.dotbracket}
+              sequence={myData.sequence}
+              labelInterval={labelInterval}
+              numbering={numbering}
+              nodeOutline={nodeOutline}
+              nodeLabel={nodeLabel}
+              links={links}
+              directionArrows={directionArrows}
+              setAnimation={animation}
+            />
+          )}
+          {!is2Dview && <ThreeDView />}
         </div>
       </div>
     </div>
