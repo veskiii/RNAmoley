@@ -15,6 +15,8 @@ const FornacComponent = ({
   links,
   directionArrows,
   setAnimation,
+  selectedNts,
+  setSelectedNts,
 }: {
   sequence: string;
   structure: string;
@@ -25,8 +27,10 @@ const FornacComponent = ({
   links: boolean;
   directionArrows: boolean;
   setAnimation: boolean;
+  selectedNts: number[];
+  setSelectedNts: React.Dispatch<React.SetStateAction<number[]>>;
 }) => {
-  const [selectedNts, setSelectedNts] = React.useState<number[]>([]);
+  //const [selectedNts, setSelectedNts] = React.useState<number[]>([]);
   // const [labelInterval, setLabelInterval] = useState(1);
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import Loading from "./loading";
 import FornacComponent from "./fornaComponent";
 import DownloadLink from "./downloadLink";
 import ThreeDView from "./ThreeDView";
+import ThreeView from "./testD";
 
 //  TODO : change for backend data
 //Now testing on local json server
@@ -35,6 +36,12 @@ const Panel: React.FC = () => {
   const [directionArrows, setDirectionArrows] = useState(true);
   const [animation, setAnimation] = useState(true);
   const [is2Dview, setIs2Dview] = useState(true);
+
+  const [selectedNts, setSelectedNts] = useState<number[]>([]);
+
+  const updateSelectedNts = (newSelection: number[]) => {
+    setSelectedNts(newSelection);
+  };
 
   function toggle() {
     setIs2Dview((is2Dview) => {
@@ -212,6 +219,7 @@ const Panel: React.FC = () => {
             </button>
           </div>
         </div>
+
         <div key={myData.id}>
           {/* <h1>{data.id}</h1>
               <h2>{data.sequence}</h2>
@@ -228,9 +236,11 @@ const Panel: React.FC = () => {
               links={links}
               directionArrows={directionArrows}
               setAnimation={animation}
+              selectedNts={selectedNts}
+              setSelectedNts={setSelectedNts}
             />
           )}
-          {!is2Dview && <ThreeDView />}
+          {!is2Dview && <ThreeView sequence={myData.sequence} />}
         </div>
       </div>
     </div>

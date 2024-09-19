@@ -4,6 +4,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 const ThreeDView = () => {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const spheresRef = useRef<THREE.Mesh[]>([]);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+
   const coords = [
     [0, 0, 0],
     [1, 1, -1],
@@ -16,65 +20,15 @@ const ThreeDView = () => {
     if (!mountRef.current) return;
 
     const scene = new THREE.Scene();
-    // const camera = new THREE.PerspectiveCamera(
-    //   75,
-    //   window.innerWidth / window.innerHeight,
-    //   0.1,
-    //   1000
-    // );
 
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
+    rendererRef.current = renderer;
     mountRef.current.appendChild(renderer.domElement);
 
     const sphereGeometry = new THREE.SphereGeometry(4);
-    //const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff69b4 });
 
-    const vertexShader = [
-      "precision highp float;",
-
-      "uniform mat4 modelViewMatrix;",
-      "uniform mat4 projectionMatrix;",
-      "uniform mat4 normalMatrix;",
-      "attribute vec2 uv;",
-      "attribute vec3 position;",
-      "attribute vec3 offset;",
-      "attribute vec3 normal;",
-      "varying vec2 vUv;",
-      "varying vec3 vNormal;",
-      "varying vec3 vPosition;",
-
-      "void main() {",
-
-      "vNormal = normal;",
-      "vPosition = position;",
-      "vUv = uv;",
-      "gl_Position = projectionMatrix * modelViewMatrix * vec4( offset + position, 1.0 );",
-      "}",
-    ].join("\n");
-
-    const fragmentShader = [
-      "precision highp float;",
-      "varying vec3 vNormal;",
-      "varying vec2 vUv;",
-      "varying vec3 vPosition;",
-      "uniform vec3 cameraPosition;",
-      "void main() {",
-      "",
-      " gl_FragColor = vec4(normalize(vNormal), 1.0);",
-      "",
-      "}",
-    ].join("\n");
-    const sphereMaterial = new THREE.RawShaderMaterial({
-      uniforms: {},
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
-      side: THREE.DoubleSide,
-      transparent: false,
-    });
-
-    // const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    // scene.add(sphere);
+    let sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 
     //temp variable to see distances better
     var Distance = 5;
@@ -88,18 +42,8 @@ const ThreeDView = () => {
       sphere.position.y = Distance * coords[i][1];
       sphere.position.z = Distance * coords[i][2];
       scene.add(sphere);
+      spheresRef.current.push(sphere);
     }
-
-    // camera.position.z = 35;
-    // camera.position.y = 5;
-
-    // function animate() {
-    //   sphere.rotation.x += 0.01;
-    //   sphere.rotation.y += 0.01;
-
-    //   renderer.render(scene, camera);
-    // }
-    // renderer.setAnimationLoop(animate);
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -112,36 +56,74 @@ const ThreeDView = () => {
 
     //controls.update() must be called after any manual changes to the camera's transform
     camera.position.set(0, 20, 100);
+    cameraRef.current = camera;
     controls.update();
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    function onPointerMove(event: PointerEvent) {
+      // calculate pointer position in normalized device coordinates
+      // (-1 to +1) for both components
+      event.preventDefault();
+      if (rendererRef.current) {
+        const rect = rendererRef.current.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      }
+    }
 
     function animate() {
       requestAnimationFrame(animate);
+
+      scene.children.forEach((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.material.color.set(0xffffff); // Zmieniamy na domyślny kolor, np. biały
+        }
+      });
+
+      // update the picking ray with the camera and pointer position
+      raycaster.setFromCamera(pointer, camera);
+
+      // calculate objects intersecting the picking ray
+      const intersects = raycaster.intersectObjects(spheresRef.current, true);
+      for (let i = 0; i < intersects.length; i++) {
+        const intersectedObject = intersects[i].object;
+
+        // Check if the object is a Mesh before trying to access the material
+        if (intersectedObject instanceof THREE.Mesh) {
+          intersectedObject.material.color.set(0xff0000); // Change color to red
+        }
+      }
 
       // required if controls.enableDamping or controls.autoRotate are set to true
       controls.update();
 
       renderer.render(scene, camera);
     }
-    renderer.setAnimationLoop(animate);
+    //renderer.setAnimationLoop(animate);
+    animate();
 
     controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
       MIDDLE: THREE.MOUSE.DOLLY,
       RIGHT: THREE.MOUSE.PAN,
     };
-    controls.keys = {
-      LEFT: "ArrowLeft", //left arrow
-      UP: "ArrowUp", // up arrow
-      RIGHT: "ArrowRight", // right arrow
-      BOTTOM: "ArrowDown", // down arrow
+
+    //Reset camera position on key down "c"
+    const CkeydownHandler = (e: KeyboardEvent) => {
+      if (e.key === "c" && cameraRef.current) {
+        cameraRef.current.position.set(0, 20, 100);
+        controls.update();
+      }
     };
-    controls.touches = {
-      ONE: THREE.TOUCH.ROTATE,
-      TWO: THREE.TOUCH.DOLLY_PAN,
-    };
+    document.addEventListener("keydown", CkeydownHandler);
+    window.addEventListener("pointermove", onPointerMove);
 
     //Cleaning ref (otherwise it's causing double rendering of scene)
     return () => {
+      document.removeEventListener("keydown", CkeydownHandler);
+      window.removeEventListener("pointermove", onPointerMove);
       if (mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
       }

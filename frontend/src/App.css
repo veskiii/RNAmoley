@@ -88,3 +88,8 @@ button:hover{
   width: 100%;
   margin-bottom: 0.5rem;
 }
+.frame { 
+  display: flex;
+  width: 50vw;
+  height: 50vh;
+}
