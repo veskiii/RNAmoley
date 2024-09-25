@@ -1,14 +1,30 @@
-import React, { useRef, useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import clsx from "clsx";
 
-const ThreeDView = () => {
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const spheresRef = useRef<THREE.Mesh[]>([]);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+type ThreeViewProps = {
+  sequence: string;
+  SELECTED: number[];
+  setSELECTED: React.Dispatch<React.SetStateAction<number[]>>;
+};
 
-  const coords = [
+const ThreeView: React.FC<ThreeViewProps> = ({
+  sequence,
+  SELECTED,
+  setSELECTED,
+}) => {
+  //const [SELECTED, setSELECTED] = useState<number[]>([]);
+  const [rotate, setRotate] = useState<boolean>(true);
+  const objects: THREE.Object3D[] = [];
+  const [labels, setLabels] = useState<
+    { id: number; position: THREE.Vector3 }[]
+  >([]);
+  let objectMap: Map<number, THREE.Object3D> | null = null;
+  //const container = document.getElementById("container") as HTMLElement;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const coords: [number, number, number][] = [
     [0, 0, 0],
     [1, 1, -1],
     [1.2, 1.2, 1.2],
@@ -17,143 +33,196 @@ const ThreeDView = () => {
   ];
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    let camera: THREE.PerspectiveCamera,
+      scene: THREE.Scene,
+      raycaster: THREE.Raycaster,
+      renderer: THREE.WebGLRenderer,
+      controls: OrbitControls;
+    let INTERSECTED: THREE.Object3D | null = null;
+    let theta = 0;
 
-    const scene = new THREE.Scene();
+    const radius = 5;
 
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
-    rendererRef.current = renderer;
-    mountRef.current.appendChild(renderer.domElement);
+    const init = () => {
+      camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        100
+      );
+      camera.position.set(0, 20, 10);
 
-    const sphereGeometry = new THREE.SphereGeometry(4);
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf0f0f0);
 
-    let sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      const light = new THREE.DirectionalLight(0xffffff, 3);
+      light.position.set(1, 1, 1).normalize();
+      scene.add(light);
 
-    //temp variable to see distances better
-    var Distance = 5;
+      const geometry = new THREE.SphereGeometry();
+      const Distance = 5;
 
-    //initial offset so does not start in middle.
-    //var xOffset = -80;
+      const tempLabels: { id: number; position: THREE.Vector3 }[] = [];
 
-    for (var i = 0; i < coords.length; i++) {
-      var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      sphere.position.x = Distance * coords[i][0];
-      sphere.position.y = Distance * coords[i][1];
-      sphere.position.z = Distance * coords[i][2];
-      scene.add(sphere);
-      spheresRef.current.push(sphere);
-    }
+      coords.forEach((coord, index) => {
+        const object = new THREE.Mesh(
+          geometry,
+          new THREE.MeshLambertMaterial({ color: 0x000ff0 })
+        );
+        object.position.set(
+          Distance * coord[0],
+          Distance * coord[1],
+          Distance * coord[2]
+        );
+        (object as any).isGraphElement = true;
+        (object as any).customId = index + 1;
+        scene.add(object);
 
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      window.innerWidth / window.innerHeight,
-      1,
-      10000
-    );
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-
-    //controls.update() must be called after any manual changes to the camera's transform
-    camera.position.set(0, 20, 100);
-    cameraRef.current = camera;
-    controls.update();
-
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-
-    function onPointerMove(event: PointerEvent) {
-      // calculate pointer position in normalized device coordinates
-      // (-1 to +1) for both components
-      event.preventDefault();
-      if (rendererRef.current) {
-        const rect = rendererRef.current.domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      }
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      scene.children.forEach((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.material.color.set(0xffffff); // Zmieniamy na domyślny kolor, np. biały
-        }
+        tempLabels.push({ id: index + 1, position: object.position.clone() });
       });
+      setLabels(tempLabels);
 
-      // update the picking ray with the camera and pointer position
-      raycaster.setFromCamera(pointer, camera);
+      objectMap = new Map(
+        scene.children.map((obj) => [(obj as any).customId, obj])
+      );
 
-      // calculate objects intersecting the picking ray
-      const intersects = raycaster.intersectObjects(spheresRef.current, true);
-      for (let i = 0; i < intersects.length; i++) {
-        const intersectedObject = intersects[i].object;
+      raycaster = new THREE.Raycaster();
 
-        // Check if the object is a Mesh before trying to access the material
-        if (intersectedObject instanceof THREE.Mesh) {
-          intersectedObject.material.color.set(0xff0000); // Change color to red
-        }
-      }
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth / 1.4, window.innerHeight / 1.3);
+      renderer.setAnimationLoop(animate);
+      // document.body.appendChild(renderer.domElement);
+      if (containerRef.current)
+        containerRef.current.appendChild(renderer.domElement);
 
-      // required if controls.enableDamping or controls.autoRotate are set to true
+      controls = new OrbitControls(camera, renderer.domElement);
       controls.update();
-
-      renderer.render(scene, camera);
-    }
-    //renderer.setAnimationLoop(animate);
-    animate();
-
-    controls.mouseButtons = {
-      LEFT: THREE.MOUSE.ROTATE,
-      MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.PAN,
+      controls.mouseButtons = {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN,
+      };
+      document.addEventListener("mousedown", onCtrlClick);
+      document.addEventListener("keydown", CkeydownHandler);
+      window.addEventListener("resize", onWindowResize);
     };
 
-    //Reset camera position on key down "c"
-    const CkeydownHandler = (e: KeyboardEvent) => {
-      if (e.key === "c" && cameraRef.current) {
-        cameraRef.current.position.set(0, 20, 100);
+    const onWindowResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+
+    const CkeydownHandler = (event: KeyboardEvent) => {
+      if (event.key === "c") {
+        camera.position.set(0, 20, 10);
         controls.update();
       }
     };
-    document.addEventListener("keydown", CkeydownHandler);
-    window.addEventListener("pointermove", onPointerMove);
 
-    //Cleaning ref (otherwise it's causing double rendering of scene)
-    return () => {
-      document.removeEventListener("keydown", CkeydownHandler);
-      window.removeEventListener("pointermove", onPointerMove);
-      if (mountRef.current) {
-        mountRef.current.removeChild(renderer.domElement);
+    const onCtrlClick = (event: MouseEvent) => {
+      if (event.ctrlKey && event.button === 0) {
+        event.preventDefault();
+
+        const pointer = new THREE.Vector2();
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x =
+          ((event.clientX - rect.left) / (rect.right - rect.left)) * 2 - 1;
+        pointer.y =
+          -((event.clientY - rect.top) / (rect.bottom - rect.top)) * 2 + 1;
+
+        // pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        // pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, camera);
+        const intersects = raycaster.intersectObjects(scene.children, false);
+
+        if (intersects.length > 0) {
+          const clickedObject = intersects[0].object as any;
+
+          if (clickedObject.isGraphElement) {
+            setSELECTED((prevSelected) => {
+              const isSelected = prevSelected.includes(clickedObject.customId);
+              if (isSelected) {
+                clickedObject.material.color.set(0x0000ff); //blue
+                return prevSelected.filter(
+                  (id) => id !== clickedObject.customId
+                );
+              } else {
+                clickedObject.material.color.set(0x00ff00); //green
+                return [...prevSelected, clickedObject.customId];
+              }
+            });
+          }
+        } else {
+          setSELECTED((prevSelected) => {
+            prevSelected.forEach((id) => {
+              const obj = objectMap?.get(id);
+              if (obj) (obj as any).material.color.set(0x0000ff); //blue
+            });
+            return [];
+          });
+        }
       }
-      renderer.setAnimationLoop(null);
     };
-  }, []);
+
+    const rotating = () => {
+      if (rotate) {
+        const time = Date.now() * 0.0004;
+        scene.rotation.x = time;
+        scene.rotation.y = time * 0.7;
+      } else {
+        scene.rotation.x = 0;
+        scene.rotation.y = 0;
+      }
+    };
+
+    const animate = () => {
+      rotating();
+      renderScene();
+      controls.update();
+    };
+
+    const renderScene = () => {
+      renderer.render(scene, camera);
+    };
+
+    init();
+
+    return () => {
+      if (containerRef.current)
+        containerRef.current.removeChild(renderer.domElement);
+      document.removeEventListener("mousedown", onCtrlClick);
+      document.removeEventListener("keydown", CkeydownHandler);
+      window.removeEventListener("resize", onWindowResize);
+    };
+  }, [rotate, setSELECTED]);
+
+  useEffect(() => {
+    console.log("Updated SELECTED:", SELECTED);
+    SELECTED.forEach((id) => {
+      const obj = objectMap?.get(id);
+      if (obj) (obj as any).material.color.set(0x00ff00);
+    });
+  }, [SELECTED]);
 
   return (
     <div className="absolute bottom-0 h-[90%] flex-grow w-full rounded-b-lg bg-slate-600">
-      <div
-        className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
-      >
-        {/* {sequence.split("").map((nt, index) => (
-                <span
-                  className={clsx(
-                    selectedNts.includes(index + 1) ? "text-red-500" : ""
-                  )}
-                  key={index}
-                >
-                  {nt}
-                </span>
-              ))} */}
-        <span>Sequence</span>
-      </div>
-      <div
-        ref={mountRef}
-        className="rounded-lg border-black border-solid border-2 bg-gray-100 m-2"
-        style={{ width: "100%", height: "90%" }}
-      />
+      {/* <div className="text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl">
+        {sequence.split("").map((nt, index) => (
+          <span
+            className={clsx(SELECTED.includes(index + 1) ? "text-red-500" : "")}
+            key={index}
+          >
+            {nt}
+          </span>
+        ))}
+      </div> */}
+      <div id="container" ref={containerRef}></div>
     </div>
   );
 };
-export default ThreeDView;
+
+export default ThreeView;
