@@ -4,7 +4,8 @@ import Loading from "./loading";
 import FornacComponent from "./fornaComponent";
 import DownloadLink from "./downloadLink";
 import ThreeDView from "./ThreeDView";
-import ThreeView from "./testD";
+import clsx from "clsx";
+import TwoDView from "./TwoDView";
 
 //  TODO : change for backend data
 //Now testing on local json server
@@ -38,10 +39,6 @@ const Panel: React.FC = () => {
   const [is2Dview, setIs2Dview] = useState(true);
 
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
-
-  const updateSelectedNts = (newSelection: number[]) => {
-    setSelectedNts(newSelection);
-  };
 
   function toggle() {
     setIs2Dview((is2Dview) => {
@@ -221,26 +218,57 @@ const Panel: React.FC = () => {
         </div>
 
         <div key={myData.id}>
-          {/* <h1>{data.id}</h1>
+          <div className="absolute bottom-0 h-[90%] flex-grow w-full rounded-b-lg bg-slate-600">
+            {/* <div
+              className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
+            >
+              {myData.dotbracket}
+            </div> */}
+            <div className="text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl">
+              {myData.sequence.split("").map((nt, index) => (
+                <span
+                  className={clsx(
+                    selectedNts.includes(index + 1) ? "text-red-500" : ""
+                  )}
+                  key={index}
+                >
+                  {nt}
+                </span>
+              ))}
+            </div>
+            {/* <h1>{data.id}</h1>
               <h2>{data.sequence}</h2>
               <p>{data.dotbracket}</p>
               <p>{data.originalfilename}</p> */}
-          {is2Dview && (
-            <FornacComponent
-              structure={myData.dotbracket}
-              sequence={myData.sequence}
-              labelInterval={labelInterval}
-              numbering={numbering}
-              nodeOutline={nodeOutline}
-              nodeLabel={nodeLabel}
-              links={links}
-              directionArrows={directionArrows}
-              setAnimation={animation}
-              selectedNts={selectedNts}
-              setSelectedNts={setSelectedNts}
-            />
-          )}
-          {!is2Dview && <ThreeView sequence={myData.sequence} />}
+            {is2Dview && (
+              // <FornacComponent
+              //   structure={myData.dotbracket}
+              //   sequence={myData.sequence}
+              //   labelInterval={labelInterval}
+              //   numbering={numbering}
+              //   nodeOutline={nodeOutline}
+              //   nodeLabel={nodeLabel}
+              //   links={links}
+              //   directionArrows={directionArrows}
+              //   setAnimation={animation}
+              //   selectedNts={selectedNts}
+              //   setSelectedNts={setSelectedNts}
+              // />
+              <TwoDView
+                sequence={myData.sequence}
+                structure={myData.dotbracket}
+                SELECTED={selectedNts}
+                setSELECTED={setSelectedNts}
+              />
+            )}
+            {!is2Dview && (
+              <ThreeDView
+                sequence={myData.sequence}
+                SELECTED={selectedNts}
+                setSELECTED={setSelectedNts}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

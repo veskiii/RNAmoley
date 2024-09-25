@@ -112,11 +112,12 @@ const FornacComponent = ({
     links,
     directionArrows,
     setAnimation,
+    setSelectedNts,
   ]);
 
   return (
     <div className="absolute bottom-0 h-[90%] flex-grow w-full rounded-b-lg bg-slate-600">
-      <div
+      {/* <div
         className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
       >
         {sequence.split("").map((nt, index) => (
@@ -129,7 +130,7 @@ const FornacComponent = ({
             {nt}
           </span>
         ))}
-      </div>
+      </div> */}
       <div
         id="rna_ss"
         className="rounded-lg border-black border-solid border-2 bg-gray-100 m-2"
