@@ -193,12 +193,18 @@ const TwoDView: React.FC<TwoViewProps> = ({
 
     const initialPositions: NucleotidePosition[] = sequence
       .split("")
-      .map((pos, index) => ({
-        id: index,
-        x: centerX + r * Math.cos(angleStep * index),
-        y: centerY + r * Math.sin(angleStep * index),
-        fill: "lightblue",
-      }));
+      .map((pos, index) => {
+        let colorName = "lightblue";
+        if (SELECTED.includes(index)) {
+          colorName = "pink";
+        }
+        return {
+          id: index,
+          x: centerX + r * Math.cos(angleStep * index),
+          y: centerY + r * Math.sin(angleStep * index),
+          fill: colorName,
+        };
+      });
     // const initialPositions = generatePositions();
     setPositions(initialPositions);
 
