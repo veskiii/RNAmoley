@@ -6,6 +6,7 @@ import DownloadLink from "./downloadLink";
 import ThreeDView from "./ThreeDView";
 import clsx from "clsx";
 import TwoDView from "./TwoDView";
+import RNAVisualizer from "./tescik";
 
 //  TODO : change for backend data
 //Now testing on local json server
@@ -37,8 +38,9 @@ const Panel: React.FC = () => {
   const [directionArrows, setDirectionArrows] = useState(true);
   const [animation, setAnimation] = useState(true);
   const [is2Dview, setIs2Dview] = useState(true);
-
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
+  const width = document.getElementById("container")?.clientWidth || 1000;
+  const height = document.getElementById("container")?.clientHeight || 550;
 
   function toggle() {
     setIs2Dview((is2Dview) => {
@@ -131,62 +133,62 @@ const Panel: React.FC = () => {
             <input
               type="checkbox"
               id="displNumbering"
-              defaultChecked
+              // defaultChecked
               checked={numbering}
               onChange={handleNumberingChange}
             />{" "}
             Numbering
           </label>
-          <label className="options">
+          {/* <label className="options">
             <input
               type="checkbox"
               id="displNodeOutline"
-              defaultChecked
+              // defaultChecked
               checked={nodeOutline}
               onChange={handleNodeOutlineChange}
             />{" "}
             Node Outline
-          </label>
+          </label> */}
           <label className="options">
             <input
               type="checkbox"
               id="displNodeLabel"
-              defaultChecked
+              // defaultChecked
               checked={nodeLabel}
               onChange={handleNodeLabelChange}
             />{" "}
             Node Label
           </label>
-          <label className="options">
+          {/* <label className="options">
             <input
               type="checkbox"
               id="displLinks"
-              defaultChecked
+              // defaultChecked
               checked={links}
               onChange={handleLinksChange}
             />{" "}
             Links
-          </label>
+          </label> */}
           <label className="options">
             <input
               type="checkbox"
               id="displDirectionArrows"
-              defaultChecked
+              // defaultChecked
               checked={directionArrows}
               onChange={handleDirectionArrowsChange}
             />{" "}
             Direction Arrows
           </label>
-          <label className="options">
+          {/* <label className="options">
             <input
               type="checkbox"
               id="animation"
-              defaultChecked
+              // defaultChecked
               checked={animation}
               onChange={handleAnimationChange}
             />{" "}
             Enable Animation
-          </label>
+          </label> */}
           <p className="mt-5 mb-5">
             [ctrl + left click] select multiple nodes (can drag only when
             animation is enabled)
@@ -228,7 +230,7 @@ const Panel: React.FC = () => {
               {myData.sequence.split("").map((nt, index) => (
                 <span
                   className={clsx(
-                    selectedNts.includes(index + 1) ? "text-red-500" : ""
+                    selectedNts.includes(index) ? "text-red-500" : ""
                   )}
                   key={index}
                 >
@@ -240,34 +242,45 @@ const Panel: React.FC = () => {
               <h2>{data.sequence}</h2>
               <p>{data.dotbracket}</p>
               <p>{data.originalfilename}</p> */}
-            {is2Dview && (
-              // <FornacComponent
-              //   structure={myData.dotbracket}
-              //   sequence={myData.sequence}
-              //   labelInterval={labelInterval}
-              //   numbering={numbering}
-              //   nodeOutline={nodeOutline}
-              //   nodeLabel={nodeLabel}
-              //   links={links}
-              //   directionArrows={directionArrows}
-              //   setAnimation={animation}
-              //   selectedNts={selectedNts}
-              //   setSelectedNts={setSelectedNts}
-              // />
-              <TwoDView
-                sequence={myData.sequence}
-                structure={myData.dotbracket}
-                SELECTED={selectedNts}
-                setSELECTED={setSelectedNts}
-              />
-            )}
-            {!is2Dview && (
-              <ThreeDView
-                sequence={myData.sequence}
-                SELECTED={selectedNts}
-                setSELECTED={setSelectedNts}
-              />
-            )}
+            <div id="container">
+              {is2Dview && (
+                // <FornacComponent
+                //   structure={myData.dotbracket}
+                //   sequence={myData.sequence}
+                //   labelInterval={labelInterval}
+                //   numbering={numbering}
+                //   nodeOutline={nodeOutline}
+                //   nodeLabel={nodeLabel}
+                //   links={links}
+                //   directionArrows={directionArrows}
+                //   setAnimation={animation}
+                //   selectedNts={selectedNts}
+                //   setSelectedNts={setSelectedNts}
+                // />
+
+                <TwoDView
+                  sequence={myData.sequence}
+                  structure={myData.dotbracket}
+                  SELECTED={selectedNts}
+                  setSELECTED={setSelectedNts}
+                  nodeLabel={nodeLabel}
+                  directionArrows={directionArrows}
+                  numbering={numbering}
+                  labelInterval={labelInterval}
+                  width={width}
+                  height={height}
+                />
+
+                // <RNAVisualizer />
+              )}
+              {!is2Dview && (
+                <ThreeDView
+                  sequence={myData.sequence}
+                  SELECTED={selectedNts}
+                  setSELECTED={setSelectedNts}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
