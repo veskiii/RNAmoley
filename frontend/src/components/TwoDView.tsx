@@ -224,10 +224,17 @@ const TwoDView: React.FC<TwoViewProps> = ({
           .distance(60)
       )
       .force("collision", d3.forceCollide().radius(radius + 5))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .on("tick", () => {
-        setPositions([...initialPositions]);
-      });
+      .force("center", d3.forceCenter(width / 2, height / 2));
+    // .on("tick", () => {
+    //   setPositions([...initialPositions]);
+    // });
+
+    // Ręczne wywołanie symulacji tylko raz
+    for (let i = 0; i < 300; i++) {
+      simulation.tick();
+    }
+    simulation.stop();
+
     simulationRef.current = simulation;
     document.addEventListener("keydown", handleCKeyDown);
 
@@ -261,13 +268,13 @@ const TwoDView: React.FC<TwoViewProps> = ({
     (index: number, e: React.MouseEvent<SVGCircleElement, MouseEvent>) => {
       const pos = positions[index];
       if (pos) {
-        if (pos.fill === "lightblue" && e.ctrlKey) {
+        if (pos.fill === "lightblue") {
           setSELECTED((prevSelected) => {
             if (!prevSelected.includes(index)) return [...prevSelected, index];
             return prevSelected;
           });
         }
-        if (pos.fill === "pink" && e.shiftKey) {
+        if (pos.fill === "pink") {
           setSELECTED((prevSelected) => {
             if (prevSelected.includes(index)) {
               return prevSelected.filter((id) => id !== index);
@@ -308,6 +315,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
       simulationRef.current.stop() &&
       e.key === "c"
     ) {
+      simulationRef.current.stop();
       simulationRef.current.restart();
     }
   };
@@ -475,7 +483,8 @@ const TwoDView: React.FC<TwoViewProps> = ({
     <svg
       width={width}
       height={height}
-      style={{ border: "1px solid black" }}
+      //Czarna ramka pomaga zobaczyć rozmiar okna svg
+      // style={{ border: "1px solid black" }}
       onMouseDown={(e) => {
         handleMultipleSelectingMouseDown(e);
         handleDraggingMouseDown(e);
@@ -538,26 +547,26 @@ const TwoDView: React.FC<TwoViewProps> = ({
               {index % labelInterval === 0 && (
                 <line
                   key={index}
-                  x1={pos?.x ?? 0}
-                  y1={pos?.y ?? 0}
-                  x2={pos?.x + 40 ?? 0}
-                  y2={pos?.y ?? 0}
+                  x1={pos?.x}
+                  y1={pos?.y}
+                  x2={pos?.x + 40}
+                  y2={pos?.y}
                   stroke="grey"
                   strokeWidth="2"
                 />
               )}
               {index % labelInterval === 0 && (
                 <circle
-                  cx={pos?.x + 40 ?? 0}
-                  cy={pos?.y ?? 0}
+                  cx={pos?.x + 40}
+                  cy={pos?.y}
                   r={radius}
                   fill={"white"}
                 ></circle>
               )}
               {index % labelInterval === 0 && (
                 <text
-                  x={pos?.x + 40 ?? 0}
-                  y={pos?.y ?? 0}
+                  x={pos?.x + 40}
+                  y={pos?.y}
                   textAnchor="middle"
                   dy=".3em"
                   style={{ userSelect: "none", pointerEvents: "none" }}
