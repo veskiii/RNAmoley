@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import clsx from "clsx";
 
 type ThreeViewProps = {
   sequence: string;
@@ -14,14 +13,12 @@ const ThreeView: React.FC<ThreeViewProps> = ({
   SELECTED,
   setSELECTED,
 }) => {
-  //const [SELECTED, setSELECTED] = useState<number[]>([]);
   const [rotate, setRotate] = useState<boolean>(true);
   const objects: THREE.Object3D[] = [];
   const [labels, setLabels] = useState<
     { id: number; position: THREE.Vector3 }[]
   >([]);
-  let objectMap: Map<number, THREE.Object3D> | null = null;
-  //const container = document.getElementById("container") as HTMLElement;
+  const objectMap = useRef<Map<number, THREE.Object3D>>(new Map());
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const coords: [number, number, number][] = [
@@ -30,6 +27,25 @@ const ThreeView: React.FC<ThreeViewProps> = ({
     [1.2, 1.2, 1.2],
     [1.5, -2.2, 0.3],
     [-1, 0.2, -0.9],
+    [2.4, -0.3, 1.8],
+    [-2.5, 1.1, 0.9],
+    [0.7, -1.8, -0.7],
+    [-1.5, -0.5, 1.7],
+    [0.3, 2.1, -1.6],
+    [-1.9, 0.4, -2.3],
+    [2.1, -0.6, 0.6],
+    [1.9, 1.5, -0.3],
+    [-0.8, -2.1, 1.5],
+    [2.5, 0.7, -1.2],
+    [-1.4, -0.9, 2.3],
+    [1.1, -2.4, 0.8],
+    [0.9, 2.3, -0.5],
+    [-2.2, 1.8, 0.4],
+    [1.6, -1.5, -2.1],
+    [0.5, 0.9, 1.7],
+    [-1.8, 2.2, -0.4],
+    [2.0, -0.7, 1.9],
+    [-0.2, -2.0, -1.4],
   ];
 
   useEffect(() => {
@@ -45,18 +61,22 @@ const ThreeView: React.FC<ThreeViewProps> = ({
 
     const init = () => {
       camera = new THREE.PerspectiveCamera(
-        70,
+        45,
         window.innerWidth / window.innerHeight,
-        0.1,
-        100
+        1,
+        1000
       );
       camera.position.set(0, 20, 10);
 
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf0f0f0);
+      scene.background = new THREE.Color(0xffffff);
+
+      //zapewnia lepsze doświetlenie
+      scene.add(new THREE.AmbientLight(0xffffff, 1));
 
       const light = new THREE.DirectionalLight(0xffffff, 3);
       light.position.set(1, 1, 1).normalize();
+
       scene.add(light);
 
       const geometry = new THREE.SphereGeometry();
@@ -67,7 +87,7 @@ const ThreeView: React.FC<ThreeViewProps> = ({
       coords.forEach((coord, index) => {
         const object = new THREE.Mesh(
           geometry,
-          new THREE.MeshLambertMaterial({ color: 0x000ff0 })
+          new THREE.MeshLambertMaterial({ color: 0x38bdf8 })
         );
         object.position.set(
           Distance * coord[0],
@@ -75,24 +95,20 @@ const ThreeView: React.FC<ThreeViewProps> = ({
           Distance * coord[2]
         );
         (object as any).isGraphElement = true;
-        (object as any).customId = index + 1;
+        (object as any).customId = index;
         scene.add(object);
+        objectMap.current.set(index, object);
 
-        tempLabels.push({ id: index + 1, position: object.position.clone() });
+        tempLabels.push({ id: index, position: object.position.clone() });
       });
       setLabels(tempLabels);
-
-      objectMap = new Map(
-        scene.children.map((obj) => [(obj as any).customId, obj])
-      );
 
       raycaster = new THREE.Raycaster();
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(window.innerWidth / 1.4, window.innerHeight / 1.3);
+      renderer.setSize(window.innerWidth / 1.2, window.innerHeight);
       renderer.setAnimationLoop(animate);
-      // document.body.appendChild(renderer.domElement);
       if (containerRef.current)
         containerRef.current.appendChild(renderer.domElement);
 
@@ -103,7 +119,7 @@ const ThreeView: React.FC<ThreeViewProps> = ({
         MIDDLE: THREE.MOUSE.DOLLY,
         RIGHT: THREE.MOUSE.PAN,
       };
-      document.addEventListener("mousedown", onCtrlClick);
+      document.addEventListener("mousedown", onClick);
       document.addEventListener("keydown", CkeydownHandler);
       window.addEventListener("resize", onWindowResize);
     };
@@ -121,8 +137,8 @@ const ThreeView: React.FC<ThreeViewProps> = ({
       }
     };
 
-    const onCtrlClick = (event: MouseEvent) => {
-      if (event.ctrlKey && event.button === 0) {
+    const onClick = (event: MouseEvent) => {
+      if (event.button === 0) {
         event.preventDefault();
 
         const pointer = new THREE.Vector2();
@@ -132,9 +148,6 @@ const ThreeView: React.FC<ThreeViewProps> = ({
           ((event.clientX - rect.left) / (rect.right - rect.left)) * 2 - 1;
         pointer.y =
           -((event.clientY - rect.top) / (rect.bottom - rect.top)) * 2 + 1;
-
-        // pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-        // pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
         raycaster.setFromCamera(pointer, camera);
         const intersects = raycaster.intersectObjects(scene.children, false);
@@ -146,25 +159,28 @@ const ThreeView: React.FC<ThreeViewProps> = ({
             setSELECTED((prevSelected) => {
               const isSelected = prevSelected.includes(clickedObject.customId);
               if (isSelected) {
-                clickedObject.material.color.set(0x0000ff); //blue
+                clickedObject.material.color.set(0x38bdf8); //blue
                 return prevSelected.filter(
                   (id) => id !== clickedObject.customId
                 );
               } else {
-                clickedObject.material.color.set(0x00ff00); //green
+                clickedObject.material.color.set(0xf97386); //pink
+                console.log(clickedObject.customId);
                 return [...prevSelected, clickedObject.customId];
               }
             });
           }
-        } else {
-          setSELECTED((prevSelected) => {
-            prevSelected.forEach((id) => {
-              const obj = objectMap?.get(id);
-              if (obj) (obj as any).material.color.set(0x0000ff); //blue
-            });
-            return [];
-          });
         }
+        //Jeśli kliknie się na pusta przestrzeń to sie odznacza
+        // else {
+        //   setSELECTED((prevSelected) => {
+        //     prevSelected.forEach((id) => {
+        //       const obj = objectMap?.get(id);
+        //       if (obj) (obj as any).material.color.set(0x38bdf8); //blue
+        //     });
+        //     return [];
+        //   });
+        // }
       }
     };
 
@@ -180,7 +196,7 @@ const ThreeView: React.FC<ThreeViewProps> = ({
     };
 
     const animate = () => {
-      rotating();
+      //rotating();
       renderScene();
       controls.update();
     };
@@ -194,7 +210,7 @@ const ThreeView: React.FC<ThreeViewProps> = ({
     return () => {
       if (containerRef.current)
         containerRef.current.removeChild(renderer.domElement);
-      document.removeEventListener("mousedown", onCtrlClick);
+      document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", CkeydownHandler);
       window.removeEventListener("resize", onWindowResize);
     };
@@ -202,24 +218,17 @@ const ThreeView: React.FC<ThreeViewProps> = ({
 
   useEffect(() => {
     console.log("Updated SELECTED:", SELECTED);
-    SELECTED.forEach((id) => {
-      const obj = objectMap?.get(id);
-      if (obj) (obj as any).material.color.set(0x00ff00);
+    objectMap.current.forEach((object, id) => {
+      if (SELECTED.includes(id)) {
+        (object as any).material.color.set(0xf97386);
+      } else {
+        (object as any).material.color.set(0x38bdf8);
+      }
     });
   }, [SELECTED]);
 
   return (
-    <div className="absolute bottom-0 h-[90%] flex-grow w-full rounded-b-lg bg-slate-600">
-      {/* <div className="text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl">
-        {sequence.split("").map((nt, index) => (
-          <span
-            className={clsx(SELECTED.includes(index + 1) ? "text-red-500" : "")}
-            key={index}
-          >
-            {nt}
-          </span>
-        ))}
-      </div> */}
+    <div className="h-full w-full">
       <div id="container" ref={containerRef}></div>
     </div>
   );
