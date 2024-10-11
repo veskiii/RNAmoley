@@ -6,6 +6,9 @@ import DownloadLink from "./downloadLink";
 import ThreeDView from "./ThreeDView";
 import clsx from "clsx";
 import TwoDView from "./TwoDView";
+import RNAVisualizer from "./tescik";
+import "../App.css";
+import { eventNames } from "process";
 
 //  TODO : change for backend data
 //Now testing on local json server
@@ -37,8 +40,10 @@ const Panel: React.FC = () => {
   const [directionArrows, setDirectionArrows] = useState(true);
   const [animation, setAnimation] = useState(true);
   const [is2Dview, setIs2Dview] = useState(true);
-
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
+  const width = document.getElementById("container")?.clientWidth || 1300;
+  const height = document.getElementById("container")?.clientHeight || 650;
+  let color = "black";
 
   function toggle() {
     setIs2Dview((is2Dview) => {
@@ -90,6 +95,25 @@ const Panel: React.FC = () => {
     setAnimation(e.target.checked);
   };
 
+  const setColor = (index: number) => {
+    if (selectedNts.includes(index)) {
+      setSelectedNts((prevSelected) => {
+        if (prevSelected.includes(index)) {
+          return prevSelected.filter((id) => id !== index);
+        }
+
+        return prevSelected;
+      });
+    } else {
+      {
+        setSelectedNts((prevSelected) => {
+          if (!prevSelected.includes(index)) return [...prevSelected, index];
+          return prevSelected;
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -111,11 +135,11 @@ const Panel: React.FC = () => {
   }
 
   return (
-    <div className="flex  h-screen flex-col md:flex-row md:overflow-hidden">
-      <div className="w-full flex-none md:w-80 bg-slate-300 m-5 rounded-lg">
+    <div className="flex h-screen w-screen flex-row overflow-hidden">
+      <div className="w-[300px] bg-neutral-200">
         {/* TODO: accordion */}
         {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
-        <div className="flex flex-col h-[80%] ml-4 mt-10 pl-4 ">
+        <div className="flex flex-col h-[80%] ml-4 mt-10 p-2 ">
           <label className="">
             Label interval:
             <br />
@@ -131,65 +155,68 @@ const Panel: React.FC = () => {
             <input
               type="checkbox"
               id="displNumbering"
-              defaultChecked
+              // defaultChecked
               checked={numbering}
               onChange={handleNumberingChange}
             />{" "}
             Numbering
           </label>
-          <label className="options">
+          {/* <label className="options">
             <input
               type="checkbox"
               id="displNodeOutline"
-              defaultChecked
+              // defaultChecked
               checked={nodeOutline}
               onChange={handleNodeOutlineChange}
             />{" "}
             Node Outline
-          </label>
+          </label> */}
           <label className="options">
             <input
               type="checkbox"
               id="displNodeLabel"
-              defaultChecked
+              // defaultChecked
               checked={nodeLabel}
               onChange={handleNodeLabelChange}
             />{" "}
             Node Label
           </label>
-          <label className="options">
+          {/* <label className="options">
             <input
               type="checkbox"
               id="displLinks"
-              defaultChecked
+              // defaultChecked
               checked={links}
               onChange={handleLinksChange}
             />{" "}
             Links
-          </label>
+          </label> */}
           <label className="options">
             <input
               type="checkbox"
               id="displDirectionArrows"
-              defaultChecked
+              // defaultChecked
               checked={directionArrows}
               onChange={handleDirectionArrowsChange}
             />{" "}
             Direction Arrows
           </label>
-          <label className="options">
+          {/* <label className="options">
             <input
               type="checkbox"
               id="animation"
-              defaultChecked
+              // defaultChecked
               checked={animation}
               onChange={handleAnimationChange}
             />{" "}
             Enable Animation
-          </label>
+          </label> */}
           <p className="mt-5 mb-5">
-            [ctrl + left click] select multiple nodes (can drag only when
-            animation is enabled)
+            [left click] select nodes
+            <br />
+            [left click + drag] drag/rotate object
+            <br />
+            [ctrl + left click + drag] box selecting
             <br />
             [c] center the graph
           </p>
@@ -198,48 +225,55 @@ const Panel: React.FC = () => {
           <DownloadLink />
         </div>
       </div>
-      <div className="flex-grow relative my-5 mx-10 rounded-lg bg-slate-300">
-        <div className="absolute top-0 h-[10%] flex-grow w-full p-2 rounded-t-lg bg-slate-300 ">
-          <div className="grid relative">
-            <label
-              id="viewLabel"
-              className="text-2xl font-bold place-self-center my-1"
-            >
-              2D view
-            </label>
-            <button
-              id="switchViewButton"
-              onClick={toggle}
-              className="font-bold absolute right-0 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300/80 hover:bg-teal-600"
-            >
-              3D view
-            </button>
-          </div>
+      {/* 
+      <div className="absolute top-0 h-[10%] flex-grow w-full p-2 rounded-t-lg bg-slate-300 ">
+        <div className="grid relative">
+          <label
+            id="viewLabel"
+            className="text-2xl font-bold place-self-center my-1"
+          >
+            2D view
+          </label>
+          <button
+            id="switchViewButton"
+            onClick={toggle}
+            className="font-bold absolute right-0 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300/80 hover:bg-teal-600"
+          >
+            3D view
+          </button>
         </div>
+      </div> */}
 
-        <div key={myData.id}>
-          <div className="absolute bottom-0 h-[90%] flex-grow w-full rounded-b-lg bg-slate-600">
-            {/* <div
+      <div key={myData.id} className="flex-grow relative overflow-hidden">
+        <div className="h-full">
+          {/* <div
               className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
             >
               {myData.dotbracket}
             </div> */}
-            <div className="text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl">
-              {myData.sequence.split("").map((nt, index) => (
-                <span
-                  className={clsx(
-                    selectedNts.includes(index + 1) ? "text-red-500" : ""
-                  )}
-                  key={index}
-                >
-                  {nt}
-                </span>
-              ))}
-            </div>
-            {/* <h1>{data.id}</h1>
+
+          {/* <h1>{data.id}</h1>
               <h2>{data.sequence}</h2>
               <p>{data.dotbracket}</p>
               <p>{data.originalfilename}</p> */}
+          <div id="container">
+            <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent ">
+              <div className="grid relative">
+                <label
+                  id="viewLabel"
+                  className="text-2xl font-bold place-self-center my-1"
+                >
+                  2D view
+                </label>
+                <button
+                  id="switchViewButton"
+                  onClick={toggle}
+                  className="font-bold absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+                >
+                  3D view
+                </button>
+              </div>
+            </div>
             {is2Dview && (
               // <FornacComponent
               //   structure={myData.dotbracket}
@@ -254,12 +288,21 @@ const Panel: React.FC = () => {
               //   selectedNts={selectedNts}
               //   setSelectedNts={setSelectedNts}
               // />
+
               <TwoDView
                 sequence={myData.sequence}
                 structure={myData.dotbracket}
                 SELECTED={selectedNts}
                 setSELECTED={setSelectedNts}
+                nodeLabel={nodeLabel}
+                directionArrows={directionArrows}
+                numbering={numbering}
+                labelInterval={labelInterval}
+                width={width}
+                height={height}
               />
+
+              // <RNAVisualizer />
             )}
             {!is2Dview && (
               <ThreeDView
@@ -268,6 +311,22 @@ const Panel: React.FC = () => {
                 setSELECTED={setSelectedNts}
               />
             )}
+          </div>
+
+          <div className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl">
+            <div className="whitespace-nowrap w-max cursor-pointer ml-2">
+              {myData.sequence.split("").map((nt, index) => (
+                <span
+                  className={clsx(
+                    selectedNts.includes(index) ? "text-red-500" : ""
+                  )}
+                  key={index}
+                  onClick={() => setColor(index)}
+                >
+                  {nt}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
