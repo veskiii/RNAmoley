@@ -58,6 +58,14 @@ const TwoDView: React.FC<TwoViewProps> = ({
   const simulationRef = useRef<d3.Simulation<NucleotidePosition, Link> | null>(
     null
   );
+  let svg = document.getElementById("svg_id") as SVGElement | null;
+  var mouseStartPosition = { x: 0, y: 0 };
+  var mousePosition = { x: 0, y: 0 };
+  var viewboxStartPosition = { x: 0, y: 0 };
+  var viewboxPosition = { x: 0, y: 0 };
+  var viewboxSize = { x: width, y: height };
+  var viewboxScale = 1.0;
+  var mouseDown = false;
   //const [nodeLabel, setNodeLabel] = useState(true);
 
   // Lista pozycji każdego nukleotydu
@@ -78,7 +86,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
         loop.forEach((nucleotide, index) => {
           const x = centerX + r * Math.cos(angleStep * index);
           const y = centerY + r * Math.sin(angleStep * index);
-          positions.push({ id: indeks, x, y, fill: "lightblue" });
+          positions.push({ id: indeks, x, y, fill: "#38bdf8" }); //blue
           indeks += 1;
           console.log("nts i indeks: ", nucleotide, indeks);
         });
@@ -194,9 +202,9 @@ const TwoDView: React.FC<TwoViewProps> = ({
     const initialPositions: NucleotidePosition[] = sequence
       .split("")
       .map((pos, index) => {
-        let colorName = "lightblue";
+        let colorName = "#38bdf8"; //blue
         if (SELECTED.includes(index)) {
-          colorName = "pink";
+          colorName = "#f97386";
         }
         return {
           id: index,
@@ -238,24 +246,34 @@ const TwoDView: React.FC<TwoViewProps> = ({
     simulationRef.current = simulation;
     document.addEventListener("keydown", handleCKeyDown);
 
+    svg?.addEventListener("mousemove", mousemove);
+    svg?.addEventListener("mousedown", mousedown);
+    console.log("inicjalizacja wheel", mousePosition.x);
+    svg?.addEventListener("wheel", wheel);
+
     return () => {
       simulation.stop();
       document.removeEventListener("keydown", handleCKeyDown);
     };
   }, [sequence, structure, width, height]);
 
+  // Wykonuje się po odświeżeniu widoku
   // W momencie otrzymania tablicy lub jej modyfikacji obsluguje zmianę koloru obiektów
   useEffect(() => {
     if (positions.length === 0) return;
 
     // console.log("Updated SELECTED:", SELECTED);
 
+    svg?.addEventListener("mousemove", mousemove);
+    svg?.addEventListener("mousedown", mousedown);
+    console.log("inicjalizacja wheel");
+    svg?.addEventListener("wheel", wheel);
     const newPositions = positions.map((pos, index) => {
       console.log(index);
       if (SELECTED.includes(index)) {
-        return { ...pos, fill: "pink" };
+        return { ...pos, fill: "#f97386" }; //pink
       }
-      return { ...pos, fill: "lightblue" };
+      return { ...pos, fill: "#38bdf8" }; //blue
     });
 
     if (JSON.stringify(newPositions) !== JSON.stringify(positions)) {
@@ -268,13 +286,15 @@ const TwoDView: React.FC<TwoViewProps> = ({
     (index: number, e: React.MouseEvent<SVGCircleElement, MouseEvent>) => {
       const pos = positions[index];
       if (pos) {
-        if (pos.fill === "lightblue") {
+        //blue
+        if (pos.fill === "#38bdf8") {
           setSELECTED((prevSelected) => {
             if (!prevSelected.includes(index)) return [...prevSelected, index];
             return prevSelected;
           });
         }
-        if (pos.fill === "pink") {
+        //pink
+        if (pos.fill === "#f97386") {
           setSELECTED((prevSelected) => {
             if (prevSelected.includes(index)) {
               return prevSelected.filter((id) => id !== index);
@@ -350,6 +370,8 @@ const TwoDView: React.FC<TwoViewProps> = ({
 
         setPositions(newPositions);
         setDragOffset({ x: cursorX, y: cursorY });
+        mousePosition.x = cursorX;
+        mousePosition.y = cursorY;
       }
     },
     [dragOffset, positions]
@@ -408,7 +430,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
           newSelected.forEach((index) => {
             const newPositions = [...positions];
             const pos = newPositions[index];
-            newPositions[index] = { ...pos, fill: "lightblue" };
+            newPositions[index] = { ...pos, fill: "#38bdf8" }; //blue
             setPositions(newPositions);
 
             setSELECTED((prevSelected) => {
@@ -448,6 +470,77 @@ const TwoDView: React.FC<TwoViewProps> = ({
     [isSelecting, cursorStart]
   );
 
+  function setviewbox() {
+    console.log("set viewbox");
+    var vp = { x: 0, y: 0 };
+    var vs = { x: 0, y: 0 };
+
+    vp.x = viewboxPosition.x;
+    vp.y = viewboxPosition.y;
+
+    vs.x = viewboxSize.x * viewboxScale;
+    vs.y = viewboxSize.y * viewboxScale;
+
+    let shape = document.getElementById("svg_id") as HTMLElement;
+    shape.setAttribute("viewBox", vp.x + " " + vp.y + " " + vs.x + " " + vs.y);
+  }
+
+  function mousedown(e: MouseEvent) {
+    console.log("mousedown");
+    mouseStartPosition.x = e.pageX;
+    mouseStartPosition.y = e.pageY;
+
+    viewboxStartPosition.x = viewboxPosition.x;
+    viewboxStartPosition.y = viewboxPosition.y;
+
+    window.addEventListener("mouseup", mouseup);
+
+    mouseDown = true;
+  }
+
+  function mouseup(e: MouseEvent) {
+    console.log("mouseup");
+    window.removeEventListener("mouseup", mouseup);
+
+    mouseDown = false;
+  }
+
+  function mousemove(e: MouseEvent) {
+    console.log("mousemove");
+    mousePosition.x = e.offsetX;
+    mousePosition.y = e.offsetY;
+
+    if (mouseDown) {
+      viewboxPosition.x =
+        viewboxStartPosition.x +
+        (mouseStartPosition.x - e.pageX) * viewboxScale;
+      viewboxPosition.y =
+        viewboxStartPosition.y +
+        (mouseStartPosition.y - e.pageY) * viewboxScale;
+
+      setviewbox();
+    }
+  }
+
+  const wheel = (e: WheelEvent) => {
+    var scale = e.deltaY < 0 ? 0.8 : 1.2;
+
+    if (viewboxScale * scale < 8 && viewboxScale * scale > 1 / 256) {
+      var mpos = {
+        x: mousePosition.x * viewboxScale,
+        y: mousePosition.y * viewboxScale,
+      };
+      var vpos = { x: viewboxPosition.x, y: viewboxPosition.y };
+      var cpos = { x: mpos.x + vpos.x, y: mpos.y + vpos.y };
+
+      viewboxPosition.x = (viewboxPosition.x - cpos.x) * scale + cpos.x;
+      viewboxPosition.y = (viewboxPosition.y - cpos.y) * scale + cpos.y;
+      viewboxScale *= scale;
+
+      setviewbox();
+    }
+  };
+
   const renderSelectionArea = () => {
     if (cursorStart && cursorStop) {
       const avg_x = Math.min(cursorStart.x, cursorStop.x);
@@ -481,6 +574,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
 
   return (
     <svg
+      id="svg_id"
       width={width}
       height={height}
       //Czarna ramka pomaga zobaczyć rozmiar okna svg
@@ -582,7 +676,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
             cx={pos?.x ?? 0}
             cy={pos?.y ?? 0}
             r={radius}
-            fill={pos.fill || "lightblue"}
+            fill={pos.fill || "38bdf8"} //blue
             onMouseDown={(e) => {
               handleSingleSelecting(index, e);
 

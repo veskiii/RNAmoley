@@ -42,7 +42,7 @@ const Panel: React.FC = () => {
   const [is2Dview, setIs2Dview] = useState(true);
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
   const width = document.getElementById("container")?.clientWidth || 1300;
-  const height = document.getElementById("container")?.clientHeight || 650;
+  const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
 
   function toggle() {
@@ -136,7 +136,7 @@ const Panel: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-[300px] bg-neutral-200">
+      <div className="w-80 bg-neutral-200">
         {/* TODO: accordion */}
         {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
         <div className="flex flex-col h-[80%] ml-4 mt-10 p-2 ">
