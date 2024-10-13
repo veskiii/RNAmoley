@@ -1,6 +1,8 @@
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
+// @ts-ignore
+import parsePdb from 'parse-pdb';
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
@@ -66,4 +68,17 @@ export async function fetchPdbFile(pdbId: string) {
     const data = await response.blob();
     const file = new File([data], `${pdbId}.pdb`);
     return file;
+}
+
+export async function fetchAnnotationFile(id: string) {
+    const filename = `${id}.json`;
+    const data = await fs.readFile(`${JOBS_DIR}/${filename}`);
+    return JSON.parse(data.toString());
+}
+
+export async function fetchPdbFileAsJSON(id: string) {
+    const filename = `${id}.pdb`;
+    const data = await fs.readFile(`${JOBS_DIR}/${filename}`, 'utf-8');
+    const parsed = parsePdb(data);
+    return parsed;
 }
