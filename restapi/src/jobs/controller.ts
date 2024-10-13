@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { v4 as uuid4 } from 'uuid';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, deleteFile, deleteJobFiles, fetchPdbFile, generateFilename, MAX_FILE_SIZE, uploadFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, deleteFile, deleteJobFiles, fetchAnnotationFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, uploadFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
 
 interface AnnotateResult {
@@ -36,6 +36,19 @@ export async function getJobById(req: Request, res: Response) {
         return;
     }
 
+    //load annotation json file
+    const annotation = await fetchAnnotationFile(id);
+    if (!annotation) {
+        res.status(500).send('An error occurred: annotation file not found');
+        return;
+    }
+
+    const pdbFile = await fetchPdbFileAsJSON(id);
+    if (!pdbFile) {
+        res.status(500).send('An error occurred: pdb file not found');
+        return;
+    }
+
     db.query(getJobByIdQuery, [id], (err, result) => {
         if (err) {
             console.error(err);
@@ -46,7 +59,13 @@ export async function getJobById(req: Request, res: Response) {
             res.status(404).send('Job not found');
             return;
         }
-        res.status(200).json(result.rows[0]);
+        // res.status(200).json(result.rows[0]);
+
+        res.status(200).json({
+            ...result.rows[0],
+            ...annotation,
+            data: pdbFile
+        });
     });
 }
 
@@ -117,7 +136,7 @@ export async function createJob(req: Request, res: Response) {
         finalFilename = newFilename;
     }
 
-    // TODO: annotate file
+    // annotate file
     var annotateResponse;
     try {
         annotateResponse = await fetch(`http://tools:3002/annotate?filename=${finalFilename}`, {
