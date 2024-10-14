@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
-import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
+import { randomUUID } from 'crypto';
 // @ts-ignore
 import parsePdb from 'parse-pdb';
 import type { UUID } from 'crypto';
@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const ext = file.originalname.split('.').pop();
-        const filename = `${uuidv4() + '.' + ext}`;
+        const filename = `${randomUUID() + '.' + ext}`;
         cb(null, filename);
     }
 });
