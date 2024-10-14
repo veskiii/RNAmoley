@@ -1,17 +1,32 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "./loading";
-import FornacComponent from "./fornaComponent";
 import DownloadLink from "./downloadLink";
 import ThreeDView from "./ThreeDView";
 import clsx from "clsx";
 import TwoDView from "./TwoDView";
-import RNAVisualizer from "./tescik";
 import "../App.css";
-import { eventNames } from "process";
+import { NameContext } from "../App";
 
 //  TODO : change for backend data
 //Now testing on local json server
+
+interface Atom {
+  serial: number;
+  name: string;
+  altLoc: string;
+  resName: string;
+  chainID: string;
+  resSeq: number;
+  iCode: string;
+  x: number;
+  y: number;
+  z: number;
+  occupancy: number;
+  tempFactor: number;
+  element: string;
+  charge: string;
+}
 
 interface Job {
   id: number;
@@ -19,12 +34,16 @@ interface Job {
   name: string;
   createdat: Date;
   updatedat: Date;
-  sequence: string;
+  sequnece: string;
   dotbracket: string;
+  data: {
+    atoms: Atom[];
+  };
 }
 
-async function fetchMyData(): Promise<Job> {
-  const response = await fetch("http://localhost:4200/jobs");
+async function fetchMyData(jobID: string | undefined): Promise<Job> {
+  //http://localhost:4200/jobs
+  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`);
   const data = await response.json();
   return data;
 }
@@ -44,6 +63,11 @@ const Panel: React.FC = () => {
   const width = document.getElementById("container")?.clientWidth || 1300;
   const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
+  const context = useContext(NameContext);
+  if (context) {
+    const { jobID } = context;
+    console.log("Got jobID:", jobID);
+  }
 
   function toggle() {
     setIs2Dview((is2Dview) => {
@@ -114,12 +138,15 @@ const Panel: React.FC = () => {
     }
   };
 
+  const jobID = context?.jobID;
   useEffect(() => {
+    if (!jobID) return;
     async function fetchData() {
       try {
         // throw Error("Testing throw error");
-        const data = await fetchMyData();
+        const data = await fetchMyData(jobID);
         setMyData(data);
+        console.log("data:", data);
       } catch (error) {
         if (error instanceof Error) {
           setError(error.message);
@@ -128,7 +155,7 @@ const Panel: React.FC = () => {
       }
     }
     fetchData();
-  }, [jobId]);
+  }, [jobID]);
 
   if (!myData) {
     return <Loading />;
@@ -253,69 +280,75 @@ const Panel: React.FC = () => {
             </div> */}
 
           {/* <h1>{data.id}</h1>
-              <h2>{data.sequence}</h2>
+              <h2>{data.sequnece}</h2>
               <p>{data.dotbracket}</p>
               <p>{data.originalfilename}</p> */}
-          <div id="container">
-            <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent ">
-              <div className="grid relative">
-                <label
-                  id="viewLabel"
-                  className="text-2xl font-bold place-self-center my-1"
-                >
-                  2D view
-                </label>
-                <button
-                  id="switchViewButton"
-                  onClick={toggle}
-                  className="font-bold absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
-                >
-                  3D view
-                </button>
+          {myData ? (
+            <div id="container">
+              <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent ">
+                <div className="grid relative">
+                  <label
+                    id="viewLabel"
+                    className="text-2xl font-bold place-self-center my-1"
+                  >
+                    2D view
+                  </label>
+                  <button
+                    id="switchViewButton"
+                    onClick={toggle}
+                    className="font-bold absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+                  >
+                    3D view
+                  </button>
+                </div>
               </div>
+
+              {is2Dview && (
+                // <FornacComponent
+                //   structure={myData.dotbracket}
+                //   sequnece={myData.sequnece}
+                //   labelInterval={labelInterval}
+                //   numbering={numbering}
+                //   nodeOutline={nodeOutline}
+                //   nodeLabel={nodeLabel}
+                //   links={links}
+                //   directionArrows={directionArrows}
+                //   setAnimation={animation}
+                //   selectedNts={selectedNts}
+                //   setSelectedNts={setSelectedNts}
+                // />
+
+                <TwoDView
+                  sequence={myData.sequnece}
+                  structure={myData.dotbracket}
+                  SELECTED={selectedNts}
+                  setSELECTED={setSelectedNts}
+                  nodeLabel={nodeLabel}
+                  directionArrows={directionArrows}
+                  numbering={numbering}
+                  labelInterval={labelInterval}
+                  width={width}
+                  height={height}
+                />
+
+                // <RNAVisualizer />
+              )}
+              {!is2Dview && (
+                <ThreeDView
+                  sequence={myData.sequnece}
+                  SELECTED={selectedNts}
+                  setSELECTED={setSelectedNts}
+                  atoms={myData.data.atoms}
+                />
+              )}
             </div>
-            {is2Dview && (
-              // <FornacComponent
-              //   structure={myData.dotbracket}
-              //   sequence={myData.sequence}
-              //   labelInterval={labelInterval}
-              //   numbering={numbering}
-              //   nodeOutline={nodeOutline}
-              //   nodeLabel={nodeLabel}
-              //   links={links}
-              //   directionArrows={directionArrows}
-              //   setAnimation={animation}
-              //   selectedNts={selectedNts}
-              //   setSelectedNts={setSelectedNts}
-              // />
-
-              <TwoDView
-                sequence={myData.sequence}
-                structure={myData.dotbracket}
-                SELECTED={selectedNts}
-                setSELECTED={setSelectedNts}
-                nodeLabel={nodeLabel}
-                directionArrows={directionArrows}
-                numbering={numbering}
-                labelInterval={labelInterval}
-                width={width}
-                height={height}
-              />
-
-              // <RNAVisualizer />
-            )}
-            {!is2Dview && (
-              <ThreeDView
-                sequence={myData.sequence}
-                SELECTED={selectedNts}
-                setSELECTED={setSelectedNts}
-              />
-            )}
-          </div>
+          ) : (
+            <Loading />
+          )}
 
           <div className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl">
             <div className="whitespace-nowrap w-max cursor-pointer ml-2">
-              {myData.sequence.split("").map((nt, index) => (
+              {myData.sequnece.split("").map((nt, index) => (
                 <span
                   className={clsx(
                     selectedNts.includes(index) ? "text-red-500" : ""

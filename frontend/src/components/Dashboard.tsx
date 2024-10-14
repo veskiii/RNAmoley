@@ -1,6 +1,8 @@
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, FormEvent, useContext } from "react";
 import "../App.css";
 import RadioButtons from "./radioButtons";
+import { NameContext } from "../App";
+import { useNavigate } from "react-router-dom";
 
 function checkConditions(
   rnaFile: File | null,
@@ -22,6 +24,17 @@ const Dashboard: React.FC = () => {
   const [pdbCode, setPdbCode] = useState<string>("");
   const [rnaFile, setRnaFile] = useState<File | null>(null);
   const [radiobutton, setRadiobutton] = useState<string>("None");
+  const context = useContext(NameContext);
+  const navigate = useNavigate();
+
+  function handle(id: string) {
+    if (context) {
+      const { setId } = context;
+      setId(id);
+      console.log("Setted jobID:", id);
+      navigate("/Panel");
+    }
+  }
 
   //Backend is not connected yet; errors are logged, no data is sent.
   //TODO: Check if it's working correctly on backend data
@@ -40,22 +53,19 @@ const Dashboard: React.FC = () => {
     });
 
     //Sending request to backend
-    const API_URL = "http://localhost:4200/RNAmoley"; //temp api url
+    //http://localhost:4200/RNAMoley
+    const API_URL = "http://localhost:3000/api/v1/jobs"; //temp api url
     try {
       const response = await fetch(`${API_URL}`, {
         method: "POST",
-        //    headers: {
-        //  'Content-Type': 'multipart/form-data',
-        // },
         body: formData,
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Job created successfully:", data);
-
+        console.log("Job created successfully:", data.id);
+        handle(data.id);
         //TODO?: change link from "/Panel" to `/Panel/${jobId}`
-        window.location.href = "/Panel";
       } else {
         let errorData = await response.json();
         console.error("Error creating job:", errorData);
