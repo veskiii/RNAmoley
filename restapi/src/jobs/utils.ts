@@ -34,6 +34,10 @@ export async function uploadFile(rnaFile: File, newName: string) {
     await fs.writeFile(`${JOBS_DIR}/${newName}`, buffer);
 }
 
+export async function uploadJSONFile(data: any, newName: string) {
+    await fs.writeFile(`${JOBS_DIR}/${newName}`, JSON.stringify(data));
+}
+
 export async function deleteFile(filename: string) {
     await fs.unlink(`${JOBS_DIR}/${filename}`);
 }
@@ -71,8 +75,7 @@ export async function fetchPdbFile(pdbId: string) {
     return file;
 }
 
-export async function fetchAnnotationFile(id: UUID) {
-    const filename = `${id}.json`;
+export async function fetchJSONFile(filename: string) {
     const data = await fs.readFile(`${JOBS_DIR}/${filename}`);
     return JSON.parse(data.toString());
 }
