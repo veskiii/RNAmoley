@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import { log } from 'console';
 import { resolve } from 'path';
-import fs from 'fs';
+import fs from "node:fs/promises";
 
 const JOBS_DIR = 'user_data';
 
@@ -43,7 +43,7 @@ export async function runAnnotator(filename: string) {
         const outputFilename = filename.split('.')[0] + '.json';
         const outputString = JSON.stringify(output);
         const outputFilePath = resolve(JOBS_DIR, outputFilename);
-        fs.writeFileSync(outputFilePath, outputString);
+        await fs.writeFile(outputFilePath, outputString);
 
         return output;
 

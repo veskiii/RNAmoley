@@ -1,8 +1,9 @@
 import fs from 'fs/promises';
-import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
+import { randomUUID } from 'crypto';
 // @ts-ignore
 import parsePdb from 'parse-pdb';
+import type { UUID } from 'crypto';
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
@@ -14,7 +15,7 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const ext = file.originalname.split('.').pop();
-        const filename = `${uuidv4() + '.' + ext}`;
+        const filename = `${randomUUID() + '.' + ext}`;
         cb(null, filename);
     }
 });
@@ -37,7 +38,7 @@ export async function deleteFile(filename: string) {
     await fs.unlink(`${JOBS_DIR}/${filename}`);
 }
 
-export async function deleteJobFiles(id: string) {
+export async function deleteJobFiles(id: UUID) {
     const files = await fs.readdir(JOBS_DIR);
     const jobFiles = files.filter(file => file.startsWith(id));
     for (const file of jobFiles) {
@@ -45,7 +46,7 @@ export async function deleteJobFiles(id: string) {
     }
 }
 
-export const generateFilename = (id: string, file: File) => {
+export const generateFilename = (id: UUID, file: File) => {
     const extension = file.name.split('.').pop();
     return `${id}.${extension}`;
 }
@@ -70,15 +71,37 @@ export async function fetchPdbFile(pdbId: string) {
     return file;
 }
 
-export async function fetchAnnotationFile(id: string) {
+export async function fetchAnnotationFile(id: UUID) {
     const filename = `${id}.json`;
     const data = await fs.readFile(`${JOBS_DIR}/${filename}`);
     return JSON.parse(data.toString());
 }
 
-export async function fetchPdbFileAsJSON(id: string) {
+export async function fetchPdbFileAsJSON(id: UUID) {
     const filename = `${id}.pdb`;
     const data = await fs.readFile(`${JOBS_DIR}/${filename}`, 'utf-8');
     const parsed = parsePdb(data);
     return parsed;
+}
+
+export async function analyzeStructureFragment(id: UUID, residuesIds: number[]) {
+    const pdbFile = await fs.readFile(`${JOBS_DIR}/${id}.pdb`, 'utf8');
+    const textByLine = pdbFile.split("\n");
+    var newPdbFile = "";
+    textByLine.forEach((line) => {
+        if (line.startsWith("ATOM") && !residuesIds.includes(parseInt(line.substring(23, 26)))) {
+
+        } else {
+
+            newPdbFile += line + "\n";
+        }
+    });
+
+    //save the new file
+    await fs.writeFile(`${JOBS_DIR}/${id}_selected.pdb`, newPdbFile);
+
+    // run clashscore
+    const res = await fetch(`molprobity:3001/oneline-analysis?filename=${id}_selected.pdb`);
+
+    return res.json();
 }
