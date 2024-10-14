@@ -84,12 +84,12 @@ export async function fetchPdbFileAsJSON(id: UUID) {
     return parsed;
 }
 
-export async function analyzeStructureFragment(id: UUID, residuesIds: number[]) {
+export async function analyzeStructureFragment(id: UUID, residueIds: number[]) {
     const pdbFile = await fs.readFile(`${JOBS_DIR}/${id}.pdb`, 'utf8');
     const textByLine = pdbFile.split("\n");
     var newPdbFile = "";
     textByLine.forEach((line) => {
-        if (line.startsWith("ATOM") && !residuesIds.includes(parseInt(line.substring(23, 26)))) {
+        if (line.startsWith("ATOM") && !residueIds.includes(parseInt(line.substring(23, 26)))) {
 
         } else {
 
@@ -101,7 +101,7 @@ export async function analyzeStructureFragment(id: UUID, residuesIds: number[]) 
     await fs.writeFile(`${JOBS_DIR}/${id}_selected.pdb`, newPdbFile);
 
     // run clashscore
-    const res = await fetch(`molprobity:3001/oneline-analysis?filename=${id}_selected.pdb`);
-
-    return res.json();
+    const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=${id}_selected.pdb`);
+    const data = await res.json();
+    return data;
 }

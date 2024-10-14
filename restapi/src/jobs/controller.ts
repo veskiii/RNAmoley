@@ -169,12 +169,14 @@ export async function analyzeFragment(req: Request, res: Response) {
     const id: UUID = req.body.id;
     const residues: number[] = req.body.residues;
 
+    console.log(id, residues);
+
     if (!id || !residues) {
         res.status(400).send('ID and residue list are required');
         return;
     }
 
-    const result = analyzeStructureFragment(id, residues);
+    const result = await analyzeStructureFragment(id, residues);
     if (!result) {
         res.status(500).send('An error occurred');
         return;
