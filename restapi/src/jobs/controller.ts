@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobFiles, fetchAnnotationFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, uploadFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobFiles, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, uploadFile, uploadJSONFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 
@@ -47,7 +47,7 @@ export async function getJobById(req: Request, res: Response) {
         }
         // res.status(200).json(result.rows[0]);
         //load annotation json file
-        const annotation = await fetchAnnotationFile(id);
+        const annotation = await fetchJSONFile(`${id}.json`);
         if (!annotation) {
             res.status(500).send('An error occurred: annotation file not found');
             return;
@@ -182,5 +182,46 @@ export async function analyzeFragment(req: Request, res: Response) {
         return;
     }
 
+    // save the result as json file
+    const filename = `${id}_result.json`;
+    await uploadJSONFile(result, filename);
+
     res.status(200).json(result);
+}
+
+export async function getJobResult(req: Request, res: Response) {
+    // check if id is provided
+    const id = req.params.id as UUID;
+    if (!id) {
+        res.status(400).send('Job ID is required');
+        return;
+    }
+
+    // check if id is valid
+    if (id.length !== 36) {
+        res.status(422).send('Invalid job ID');
+        return;
+    }
+
+    // check if job exists
+    db.query(getJobByIdQuery, [id], async (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('An error occurred');
+            return;
+        }
+        if (result.rows.length === 0) {
+            res.status(404).send('Job not found');
+            return;
+        }
+
+        // check if result file exists
+        const resultFile = await fetchJSONFile(`${id}_result.json`);
+        if (!resultFile) {
+            res.status(500).send('An error occurred: result file not found');
+            return;
+        }
+
+        res.status(200).json(resultFile);
+    });
 }
