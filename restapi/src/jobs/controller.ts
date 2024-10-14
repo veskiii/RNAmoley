@@ -1,9 +1,10 @@
 import db from "../db/index.js";
 import type { Request, Response } from 'express';
-import { v4 as uuid4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, deleteFile, deleteJobFiles, fetchAnnotationFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, uploadFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobFiles, fetchAnnotationFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, uploadFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
+import type { UUID } from "crypto";
 
 interface AnnotateResult {
     sequence: string;
@@ -22,34 +23,19 @@ export async function getJobs(req: Request, res: Response) {
 }
 
 export async function getJobById(req: Request, res: Response) {
-
-    const uuidv4Regex = new RegExp('^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89a-b][a-f0-9]{3}-[a-f0-9]{12}$');
-    const id = req.params.id;
+    const id = req.params.id as UUID;
 
     if (!id) {
         res.status(400).send('Job ID is required');
         return;
     }
 
-    if (!uuidv4Regex.test(id)) {
+    if (id.length !== 36) {
         res.status(422).send('Invalid job ID');
         return;
     }
 
-    //load annotation json file
-    const annotation = await fetchAnnotationFile(id);
-    if (!annotation) {
-        res.status(500).send('An error occurred: annotation file not found');
-        return;
-    }
-
-    const pdbFile = await fetchPdbFileAsJSON(id);
-    if (!pdbFile) {
-        res.status(500).send('An error occurred: pdb file not found');
-        return;
-    }
-
-    db.query(getJobByIdQuery, [id], (err, result) => {
+    db.query(getJobByIdQuery, [id], async (err, result) => {
         if (err) {
             console.error(err);
             res.status(500).send('An error occurred');
@@ -60,6 +46,18 @@ export async function getJobById(req: Request, res: Response) {
             return;
         }
         // res.status(200).json(result.rows[0]);
+        //load annotation json file
+        const annotation = await fetchAnnotationFile(id);
+        if (!annotation) {
+            res.status(500).send('An error occurred: annotation file not found');
+            return;
+        }
+
+        const pdbFile = await fetchPdbFileAsJSON(id);
+        if (!pdbFile) {
+            res.status(500).send('An error occurred: pdb file not found');
+            return;
+        }
 
         res.status(200).json({
             ...result.rows[0],
@@ -74,7 +72,7 @@ export async function createJob(req: Request, res: Response) {
     const pdbCode = req.body.pdbCode;
     const jobname = req.body.jobName as string || "Untitled job";
 
-    var id: string;
+    var id: UUID;
     var newFilename: string;
     var originalFilename: string;
     var finalFilename: string;
@@ -93,7 +91,7 @@ export async function createJob(req: Request, res: Response) {
             return;
         }
 
-        id = rnaFile.filename.split('.')[0] as string;
+        id = rnaFile.filename.split('.')[0] as UUID;
         newFilename = rnaFile.filename;
         originalFilename = rnaFile.originalname;
         originalExtension = rnaFile.originalname.split('.').pop() as string;
@@ -112,7 +110,7 @@ export async function createJob(req: Request, res: Response) {
             return;
         }
 
-        id = uuid4();
+        id = randomUUID();
         originalFilename = `${pdbCode}.pdb`;
         originalExtension = 'pdb';
         newFilename = generateFilename(id, pdbCodeFile);
@@ -165,4 +163,22 @@ export async function createJob(req: Request, res: Response) {
             ...annotateResult
         });
     });
+}
+
+export async function analyzeFragment(req: Request, res: Response) {
+    const id: UUID = req.body.id;
+    const residues: number[] = req.body.residues;
+
+    if (!id || !residues) {
+        res.status(400).send('ID and residue list are required');
+        return;
+    }
+
+    const result = analyzeStructureFragment(id, residues);
+    if (!result) {
+        res.status(500).send('An error occurred');
+        return;
+    }
+
+    res.status(200).json(result);
 }
