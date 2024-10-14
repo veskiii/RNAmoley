@@ -7,10 +7,12 @@ function checkConditions(
   pdbCode: string,
   radiobutton: string
 ): boolean {
-  var countConditions = 0;
+  let countConditions = 0;
   if (radiobutton !== "None") countConditions++;
   if (rnaFile) countConditions++;
-  if (pdbCode) countConditions++;
+  if (pdbCode) {
+    if (pdbCode.length === 4) countConditions++;
+  }
   if (countConditions === 1) return true;
   return false;
 }
@@ -27,19 +29,20 @@ const Dashboard: React.FC = () => {
     e.preventDefault();
 
     const formData = new FormData();
-    formData.append("jobName", jobName);
-    formData.append("pdbCode", pdbCode);
+    formData.append("jobName", jobName || "");
+    formData.append("pdbCode", pdbCode || "");
     if (rnaFile) formData.append("rnaFile", rnaFile);
-    formData.append("radioButton", radiobutton);
+    else formData.append("rnaFile", "");
+    formData.append("radioButton", radiobutton || "None");
 
     formData.forEach((value, key) => {
       console.log(key, value);
     });
 
     //Sending request to backend
-    const API_URL = "http://localhost:3000"; //temp api url
+    const API_URL = "http://localhost:4200/RNAmoley"; //temp api url
     try {
-      const response = await fetch(`${API_URL}/create`, {
+      const response = await fetch(`${API_URL}`, {
         method: "POST",
         //    headers: {
         //  'Content-Type': 'multipart/form-data',
@@ -54,7 +57,7 @@ const Dashboard: React.FC = () => {
         //TODO?: change link from "/Panel" to `/Panel/${jobId}`
         window.location.href = "/Panel";
       } else {
-        const errorData = await response.json();
+        let errorData = await response.json();
         console.error("Error creating job:", errorData);
         const errorMessage = errorData?.message || "Unknown error";
         alert("Failed to create job: " + errorMessage);
@@ -149,8 +152,10 @@ const Dashboard: React.FC = () => {
               <input
                 type="text"
                 value={pdbCode}
+                id="pdbCodeInput"
                 className="w-full flex justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 onChange={(e) => setPdbCode(e.target.value)}
+                maxLength={4}
                 placeholder="Enter a PDB code"
               />
             </div>
