@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobFiles, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, uploadFile, uploadJSONFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, deleteJobFiles, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, uploadFile, uploadJSONFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 
@@ -114,7 +114,7 @@ export async function createJob(req: Request, res: Response) {
         originalFilename = `${pdbCode}.pdb`;
         originalExtension = 'pdb';
         newFilename = generateFilename(id, pdbCodeFile);
-        await uploadFile(pdbCodeFile, newFilename);
+        await uploadFile(pdbCodeFile, id, newFilename);
     }
 
     // TODO: if not pdb, convert to pdb
@@ -126,13 +126,16 @@ export async function createJob(req: Request, res: Response) {
             finalFilename = newFilename.split('.')[0] + '.pdb';
         } catch (error) {
             console.error(error);
-            deleteJobFiles(id);
+            deleteJobDirectory(id);
             res.status(500).send('An error occurred: conversion error');
             return;
         }
     } else {
         finalFilename = newFilename;
     }
+
+    // move file to job directory
+    await moveToJobDirectroy(finalFilename, id);
 
     // annotate file
     var annotateResponse;
@@ -142,7 +145,7 @@ export async function createJob(req: Request, res: Response) {
         });
     } catch (error) {
         console.error(error);
-        deleteJobFiles(id);
+        deleteJobDirectory(id);
         res.status(500).send('An error occurred: annotation error');
         return;
     }
@@ -152,7 +155,7 @@ export async function createJob(req: Request, res: Response) {
     db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
         if (err) {
             console.error(err);
-            deleteJobFiles(id);
+            deleteJobDirectory(id);
             res.status(500).send('An error occurred: db error');
             return;
         }

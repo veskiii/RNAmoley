@@ -34,6 +34,10 @@ export async function uploadFile(rnaFile: File, jobID: string, newName: string) 
     await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, buffer);
 }
 
+export async function moveToJobDirectroy(filename: string, jobID: UUID) {
+    return fs.rename(JOBS_DIR, `${JOBS_DIR}/${jobID}/${filename}`);
+}
+
 export async function uploadJSONFile(data: any, jobID: string, newName: string) {
     await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, JSON.stringify(data));
 }
@@ -92,7 +96,7 @@ export async function fetchPdbFileAsJSON(jobID: UUID) {
 }
 
 export async function analyzeStructureFragment(jobID: UUID, residueIds: number[]) {
-    const pdbFile = await fs.readFile(`${JOBS_DIR}/${jobID}.pdb`, 'utf8');
+    const pdbFile = await fs.readFile(`${JOBS_DIR}/${jobID}/${jobID}.pdb`, 'utf8');
     const textByLine = pdbFile.split("\n");
     var newPdbFile = "";
     textByLine.forEach((line) => {
@@ -105,10 +109,10 @@ export async function analyzeStructureFragment(jobID: UUID, residueIds: number[]
     });
 
     //save the new file
-    await fs.writeFile(`${JOBS_DIR}/${jobID}_selected.pdb`, newPdbFile);
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/${jobID}_selected.pdb`, newPdbFile);
 
     // run clashscore
-    const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=${jobID}_selected.pdb`);
+    const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=${jobID}/${jobID}_selected.pdb`);
     const data = await res.json();
     return data;
 }
