@@ -46,13 +46,13 @@ export async function deleteFile(filename: string) {
     await fs.unlink(`${JOBS_DIR}/${filename}`);
 }
 
-export async function deleteJobFiles(jobID: UUID) {
-    const files = await fs.readdir(JOBS_DIR);
-    const jobFiles = files.filter(file => file.startsWith(jobID));
-    for (const file of jobFiles) {
-        await fs.unlink(`${JOBS_DIR}/${file}`);
-    }
-}
+// export async function deleteJobFiles(jobID: UUID) {
+//     const files = await fs.readdir(JOBS_DIR);
+//     const jobFiles = files.filter(file => file.startsWith(jobID));
+//     for (const file of jobFiles) {
+//         await fs.unlink(`${JOBS_DIR}/${file}`);
+//     }
+// }
 
 export async function deleteJobDirectory(id: UUID) {
     await fs.rmdir(`${JOBS_DIR}/${id}`, { recursive: true });
