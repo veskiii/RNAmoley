@@ -27,6 +27,13 @@ export const upload = multer({
     }
 });
 
+export async function uploadFileFromPDBCode(rnaFile: File, newName: string) {
+    const arrayBuffer = await rnaFile.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
+
+    await fs.writeFile(`${JOBS_DIR}/${newName}`, buffer);
+}
+
 export async function uploadFile(rnaFile: File, jobID: string, newName: string) {
     const arrayBuffer = await rnaFile.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
@@ -35,7 +42,16 @@ export async function uploadFile(rnaFile: File, jobID: string, newName: string) 
 }
 
 export async function moveToJobDirectroy(filename: string, jobID: UUID) {
-    return fs.rename(JOBS_DIR, `${JOBS_DIR}/${jobID}/${filename}`);
+    // create directory if it does not exist
+    try {
+        await fs.mkdir(`${JOBS_DIR}/${jobID}`);
+    } catch (err: any) {
+        if (err.code !== 'EEXIST') {
+            throw err;
+        }
+    }
+
+    return fs.rename(`${JOBS_DIR}/${filename}`, `${JOBS_DIR}/${jobID}/${filename}`);
 }
 
 export async function uploadJSONFile(data: any, jobID: string, newName: string) {
@@ -112,7 +128,7 @@ export async function analyzeStructureFragment(jobID: UUID, residueIds: number[]
     await fs.writeFile(`${JOBS_DIR}/${jobID}/${jobID}_selected.pdb`, newPdbFile);
 
     // run clashscore
-    const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=${jobID}/${jobID}_selected.pdb`);
+    const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=/${jobID}/${jobID}_selected.pdb`);
     const data = await res.json();
     return data;
 }

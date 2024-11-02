@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, uploadFile, uploadJSONFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, uploadFile, uploadFileFromPDBCode, uploadJSONFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 
@@ -69,8 +69,9 @@ export async function getJobById(req: Request, res: Response) {
 
 export async function createJob(req: Request, res: Response) {
     const rnaFile = req.file as Express.Multer.File;
-    const pdbCode = req.body.pdbCode;
+    var pdbCode = req.body.pdbCode;
     const jobname = req.body.jobName as string || "Untitled job";
+    const radioButton = req.body.radioButton as string || "None";
 
     var id: UUID;
     var newFilename: string;
@@ -78,7 +79,11 @@ export async function createJob(req: Request, res: Response) {
     var finalFilename: string;
     var originalExtension: string;
 
-    if (!rnaFile && pdbCode === '') {
+    if (radioButton.length == 4 && radioButton != "None") {
+        pdbCode = radioButton;
+    }
+
+    if (!rnaFile && pdbCode === '' && radioButton === 'None') {
         res.status(400).send('Either RNA file or PDB code is required');
         return;
     }
@@ -114,8 +119,11 @@ export async function createJob(req: Request, res: Response) {
         originalFilename = `${pdbCode}.pdb`;
         originalExtension = 'pdb';
         newFilename = generateFilename(id, pdbCodeFile);
-        await uploadFile(pdbCodeFile, id, newFilename);
+        await uploadFileFromPDBCode(pdbCodeFile, newFilename);
     }
+
+    // move file to job directory
+    await moveToJobDirectroy(newFilename, id);
 
     // TODO: if not pdb, convert to pdb
     if (originalExtension != "pdb") {
@@ -133,9 +141,6 @@ export async function createJob(req: Request, res: Response) {
     } else {
         finalFilename = newFilename;
     }
-
-    // move file to job directory
-    await moveToJobDirectroy(finalFilename, id);
 
     // annotate file
     var annotateResponse;

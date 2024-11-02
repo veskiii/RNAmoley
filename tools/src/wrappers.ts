@@ -39,7 +39,8 @@ export async function runAnnotator(id: string, filename: string) {
         console.log(output);
 
         // save output as json file
-        const outputFilename = filename.split('.')[0] + '.json';
+        // const outputFilename = filename.split('.')[0] + '.json';
+        const outputFilename = 'annotation.json';
         const outputString = JSON.stringify(output);
         const outputFilePath = resolve(`${JOBS_DIR}/${id}`, outputFilename);
         await fs.writeFile(outputFilePath, outputString);
