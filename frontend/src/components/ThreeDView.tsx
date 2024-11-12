@@ -105,8 +105,9 @@ const ThreeView: React.FC<ThreeViewProps> = ({
 
       let index = 0;
       atoms.forEach((atom) => {
-        const c_atom = /^C1/;
-        if (c_atom.test(atom.name)) {
+        const c_atom = "C1'"; // /^C1/
+        if (atom.name === c_atom) {
+          //c_atom.test(atom.name)
           const object = new THREE.Mesh(
             geometry,
             new THREE.MeshLambertMaterial({ color: 0x38bdf8 })
