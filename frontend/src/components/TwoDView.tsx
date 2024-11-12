@@ -103,16 +103,30 @@ const TwoDView: React.FC<TwoViewProps> = ({
   };
 
   const getBasePairs = (): [number, number][] => {
+    // const stack: number[] = [];
+    // const pairs: [number, number][] = [];
+
+    // for (let i = 0; i < structure.length; i++) {
+    //   if (structure[i] === "(") {
+    //     stack.push(i);
+    //   } else if (structure[i] === ")") {
+    //     const j = stack.pop();
+    //     if (j !== undefined) {
+    //       pairs.push([j, i]);
+    //     }
+    //   }
+    // }
+    // return pairs;
     const stack: number[] = [];
     const pairs: [number, number][] = [];
-
     for (let i = 0; i < structure.length; i++) {
-      if (structure[i] === "(") {
+      const char = structure[i];
+      if (char === "(" || char === "[") {
         stack.push(i);
-      } else if (structure[i] === ")") {
-        const j = stack.pop();
-        if (j !== undefined) {
-          pairs.push([j, i]);
+      } else if (char === ")" || char === "]") {
+        if (stack.length) {
+          const pairIndex = stack.pop()!;
+          pairs.push([pairIndex, i]);
         }
       }
     }
@@ -190,9 +204,15 @@ const TwoDView: React.FC<TwoViewProps> = ({
   //   setPositions(initialPositions); // Ustaw pozycje w stanie
   //   console.log(width, height);
   // }, [sequence, structure]);
+  sequence =
+    "GGGCCUAUAGCUCAGGCGGUUAGAGCGCUUCGCUGAUAACGAAGAGGUCGGAGGUUCGAGUCCUCCUAGGCCCACCAGGCGACGAUCCGGCCAUCACCGGGGAGCCUUCGGAAGAACGGCGCCGCCGGAAACGGCGGCGCUCAGUAGAACCGAACGGGUGAGCCCGUCACAGCUC";
+  structure =
+    "((((((...((((.....[...)))).(((((.......))))).....(((((..]....))))).))))))((..(((..(..(((((......)))))).)))(((((....((((((((((((....))))))))))..))....)))))[[[))((((]]].....))))";
 
   useEffect(() => {
     console.log("inicjalizacja");
+    console.log(sequence);
+    console.log(structure);
 
     const angleStep = (2 * Math.PI) / sequence.length;
     const centerX = width / 2;
@@ -218,7 +238,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
 
     const simulation = d3
       .forceSimulation(initialPositions)
-      .force("charge", d3.forceManyBody().strength(0))
+      .force("charge", d3.forceManyBody().strength(-100))
       .force(
         "link",
         d3
@@ -238,7 +258,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
     // });
 
     // Ręczne wywołanie symulacji tylko raz
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 30; i++) {
       simulation.tick();
     }
     simulation.stop();
@@ -246,14 +266,21 @@ const TwoDView: React.FC<TwoViewProps> = ({
     simulationRef.current = simulation;
     document.addEventListener("keydown", handleCKeyDown);
 
-    svg?.addEventListener("mousemove", mousemove);
-    svg?.addEventListener("mousedown", mousedown);
-    console.log("inicjalizacja wheel", mousePosition.x);
-    svg?.addEventListener("wheel", wheel);
+    // svg?.addEventListener("mousemove", mousemove);
+    // svg?.addEventListener("mousedown", mousedown);
+    // console.log("inicjalizacja wheel", mousePosition.x);
+
+    if (svg) {
+      svg?.addEventListener("wheel", wheel);
+      svg?.focus();
+    }
 
     return () => {
       simulation.stop();
       document.removeEventListener("keydown", handleCKeyDown);
+      if (svg) {
+        svg?.removeEventListener("wheel", wheel);
+      }
     };
   }, [sequence, structure, width, height]);
 
@@ -264,10 +291,15 @@ const TwoDView: React.FC<TwoViewProps> = ({
 
     // console.log("Updated SELECTED:", SELECTED);
 
-    svg?.addEventListener("mousemove", mousemove);
-    svg?.addEventListener("mousedown", mousedown);
-    console.log("inicjalizacja wheel");
-    svg?.addEventListener("wheel", wheel);
+    // svg?.addEventListener("mousemove", mousemove);
+    // svg?.addEventListener("mousedown", mousedown);
+    // console.log("inicjalizacja wheel");
+
+    if (svg) {
+      svg?.addEventListener("wheel", wheel);
+      svg?.focus();
+    }
+
     const newPositions = positions.map((pos, index) => {
       console.log(index);
       if (SELECTED.includes(index)) {
@@ -312,7 +344,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
   const handleDraggingMouseDown = useCallback(
     (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
       if (simulationRef.current) simulationRef.current.stop();
-      if (!(e.ctrlKey || e.shiftKey)) {
+      if (!e.shiftKey && !e.ctrlKey) {
         const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
 
@@ -348,7 +380,7 @@ const TwoDView: React.FC<TwoViewProps> = ({
   // Ruch przeciąganego modelu
   const handleDraggingMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
-      if (dragOffset && !(e.ctrlKey || e.shiftKey)) {
+      if (dragOffset && !e.shiftKey && !e.ctrlKey) {
         const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
 
@@ -379,7 +411,9 @@ const TwoDView: React.FC<TwoViewProps> = ({
 
   const handleMultipleSelectingMouseDown = useCallback(
     (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
-      if ((e.ctrlKey || e.shiftKey) && e.button === 0) {
+      setDragOffset(null);
+      if (!dragOffset && (e.shiftKey || e.ctrlKey)) {
+        setDragOffset(null);
         const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
 
@@ -399,12 +433,12 @@ const TwoDView: React.FC<TwoViewProps> = ({
       setIsSelecting(false);
 
       //calculate range of selected area
-      if (cursorStart && e.button === 0) {
+      if (!dragOffset && cursorStart && (e.ctrlKey || e.shiftKey)) {
         const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
 
-        const cursorX = e.clientX - rect.left;
-        const cursorY = e.clientY - rect.top;
+        const cursorX = (e.clientX - rect.left) / viewboxScale;
+        const cursorY = (e.clientY - rect.top) / viewboxScale;
 
         const x_min = Math.min(cursorStart.x, cursorX);
         const x_max = Math.max(cursorStart.x, cursorX);
@@ -453,7 +487,8 @@ const TwoDView: React.FC<TwoViewProps> = ({
   const handleMultipleSelecting = useCallback(
     (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
       if (
-        (e.ctrlKey || e.shiftKey) &&
+        (e.shiftKey || e.ctrlKey) &&
+        !dragOffset &&
         isSelecting &&
         cursorStart &&
         e.button === 0
@@ -471,73 +506,96 @@ const TwoDView: React.FC<TwoViewProps> = ({
   );
 
   function setviewbox() {
-    console.log("set viewbox");
-    var vp = { x: 0, y: 0 };
-    var vs = { x: 0, y: 0 };
-
-    vp.x = viewboxPosition.x;
-    vp.y = viewboxPosition.y;
-
-    vs.x = viewboxSize.x * viewboxScale;
-    vs.y = viewboxSize.y * viewboxScale;
-
     let shape = document.getElementById("svg_id") as HTMLElement;
-    shape.setAttribute("viewBox", vp.x + " " + vp.y + " " + vs.x + " " + vs.y);
+    if (shape) {
+      console.log("set viewbox");
+      var vp = { x: 0, y: 0 };
+      var vs = { x: 0, y: 0 };
+
+      vp.x = viewboxPosition.x;
+      vp.y = viewboxPosition.y;
+
+      vs.x = viewboxSize.x * viewboxScale;
+      vs.y = viewboxSize.y * viewboxScale;
+
+      shape.setAttribute(
+        "viewBox",
+        vp.x + " " + vp.y + " " + vs.x + " " + vs.y
+      );
+    }
   }
 
-  function mousedown(e: MouseEvent) {
+  function mousedown(e: React.MouseEvent<SVGSVGElement, MouseEvent>) {
     console.log("mousedown");
-    mouseStartPosition.x = e.pageX;
-    mouseStartPosition.y = e.pageY;
+    let shape = document.getElementById("svg_id") as HTMLElement;
+    if (shape) {
+      mouseStartPosition.x = e.pageX;
+      mouseStartPosition.y = e.pageY;
 
-    viewboxStartPosition.x = viewboxPosition.x;
-    viewboxStartPosition.y = viewboxPosition.y;
+      viewboxStartPosition.x = viewboxPosition.x;
+      viewboxStartPosition.y = viewboxPosition.y;
 
-    window.addEventListener("mouseup", mouseup);
+      window.addEventListener("mouseup", mouseup);
 
-    mouseDown = true;
+      mouseDown = true;
+    }
   }
 
   function mouseup(e: MouseEvent) {
     console.log("mouseup");
-    window.removeEventListener("mouseup", mouseup);
+    let shape = document.getElementById("svg_id") as HTMLElement;
+    if (shape) {
+      window.removeEventListener("mouseup", mouseup);
 
-    mouseDown = false;
+      mouseDown = false;
+    }
   }
 
-  function mousemove(e: MouseEvent) {
+  function mousemove(e: React.MouseEvent<SVGSVGElement, MouseEvent>) {
     console.log("mousemove");
-    mousePosition.x = e.offsetX;
-    mousePosition.y = e.offsetY;
+    let shape = document.getElementById("svg_id") as HTMLElement;
+    if (shape) {
+      const svg = e.currentTarget;
+      const rect = svg.getBoundingClientRect();
 
-    if (mouseDown) {
-      viewboxPosition.x =
-        viewboxStartPosition.x +
-        (mouseStartPosition.x - e.pageX) * viewboxScale;
-      viewboxPosition.y =
-        viewboxStartPosition.y +
-        (mouseStartPosition.y - e.pageY) * viewboxScale;
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
 
-      setviewbox();
+      mousePosition.x = cursorX;
+      mousePosition.y = cursorY;
+
+      if (mouseDown) {
+        viewboxPosition.x =
+          viewboxStartPosition.x +
+          (mouseStartPosition.x - e.pageX) * viewboxScale;
+        viewboxPosition.y =
+          viewboxStartPosition.y +
+          (mouseStartPosition.y - e.pageY) * viewboxScale;
+
+        setviewbox();
+      }
     }
   }
 
   const wheel = (e: WheelEvent) => {
-    var scale = e.deltaY < 0 ? 0.8 : 1.2;
+    let shape = document.getElementById("svg_id") as HTMLElement;
+    if (shape) {
+      var scale = e.deltaY < 0 ? 0.8 : 1.2;
 
-    if (viewboxScale * scale < 8 && viewboxScale * scale > 1 / 256) {
-      var mpos = {
-        x: mousePosition.x * viewboxScale,
-        y: mousePosition.y * viewboxScale,
-      };
-      var vpos = { x: viewboxPosition.x, y: viewboxPosition.y };
-      var cpos = { x: mpos.x + vpos.x, y: mpos.y + vpos.y };
+      if (viewboxScale * scale < 8 && viewboxScale * scale > 1 / 256) {
+        var mpos = {
+          x: mousePosition.x * viewboxScale,
+          y: mousePosition.y * viewboxScale,
+        };
+        var vpos = { x: viewboxPosition.x, y: viewboxPosition.y };
+        var cpos = { x: mpos.x + vpos.x, y: mpos.y + vpos.y };
 
-      viewboxPosition.x = (viewboxPosition.x - cpos.x) * scale + cpos.x;
-      viewboxPosition.y = (viewboxPosition.y - cpos.y) * scale + cpos.y;
-      viewboxScale *= scale;
+        viewboxPosition.x = (viewboxPosition.x - cpos.x) * scale + cpos.x;
+        viewboxPosition.y = (viewboxPosition.y - cpos.y) * scale + cpos.y;
+        viewboxScale *= scale;
 
-      setviewbox();
+        setviewbox();
+      }
     }
   };
 
@@ -575,23 +633,27 @@ const TwoDView: React.FC<TwoViewProps> = ({
   return (
     <svg
       id="svg_id"
+      // tabIndex={0}
       width={width}
       height={height}
       //Czarna ramka pomaga zobaczyć rozmiar okna svg
-      // style={{ border: "1px solid black" }}
+      style={{ border: "1px solid white" }}
       onMouseDown={(e) => {
         handleMultipleSelectingMouseDown(e);
         handleDraggingMouseDown(e);
+        mousedown(e);
       }}
       // onMouseMove={handleMouseMove}
       onMouseMove={(e) => {
         handleMultipleSelecting(e);
         handleDraggingMouseMove(e);
+        mousemove(e);
       }}
       onMouseUp={(e) => {
         handleMultipleSelectingMouseUp(e);
         handleDraggingMouseUp();
       }}
+      // onWheel={() => wheel}
       // onMouseUp={handleMouseUp}
       //onMouseLeave={() => handleDraggingMouseUp()} // Zapobieganie przeciąganiu poza SVG
     >

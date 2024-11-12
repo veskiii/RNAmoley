@@ -7,6 +7,8 @@ import clsx from "clsx";
 import TwoDView from "./TwoDView";
 import "../App.css";
 import { NameContext } from "../App";
+import Molstar from "./mol";
+import FornacComponent from "./fornaComponent";
 
 //  TODO : change for backend data
 //Now testing on local json server
@@ -60,6 +62,7 @@ const Panel: React.FC = () => {
   const [animation, setAnimation] = useState(true);
   const [is2Dview, setIs2Dview] = useState(true);
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
+  const [initialized, setInitialized] = useState(false);
   const width = document.getElementById("container")?.clientWidth || 1300;
   const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
@@ -77,13 +80,16 @@ const Panel: React.FC = () => {
         "switchViewButton"
       ) as HTMLElement;
       let viewLabel = document.getElementById("viewLabel") as HTMLElement;
-
+      let bottom_seq = document.getElementById("bottom-seq") as HTMLElement;
       if (is2Dview) {
         switchViewButton.textContent = "3D view";
         viewLabel.textContent = "2D view";
+        bottom_seq.style.setProperty("display", "block", "important");
       } else {
         switchViewButton.textContent = "2D view";
         viewLabel.textContent = "3D view";
+
+        bottom_seq.style.setProperty("display", "none", "important");
       }
       return is2Dview;
     });
@@ -188,7 +194,7 @@ const Panel: React.FC = () => {
             />{" "}
             Numbering
           </label>
-          {/* <label className="options">
+          <label className="options">
             <input
               type="checkbox"
               id="displNodeOutline"
@@ -197,7 +203,7 @@ const Panel: React.FC = () => {
               onChange={handleNodeOutlineChange}
             />{" "}
             Node Outline
-          </label> */}
+          </label>
           <label className="options">
             <input
               type="checkbox"
@@ -208,7 +214,7 @@ const Panel: React.FC = () => {
             />{" "}
             Node Label
           </label>
-          {/* <label className="options">
+          <label className="options">
             <input
               type="checkbox"
               id="displLinks"
@@ -217,7 +223,7 @@ const Panel: React.FC = () => {
               onChange={handleLinksChange}
             />{" "}
             Links
-          </label> */}
+          </label>
           <label className="options">
             <input
               type="checkbox"
@@ -228,7 +234,7 @@ const Panel: React.FC = () => {
             />{" "}
             Direction Arrows
           </label>
-          {/* <label className="options">
+          <label className="options">
             <input
               type="checkbox"
               id="animation"
@@ -237,7 +243,7 @@ const Panel: React.FC = () => {
               onChange={handleAnimationChange}
             />{" "}
             Enable Animation
-          </label> */}
+          </label>
           <p className="mt-5 mb-5">
             [left click] select nodes
             <br />
@@ -245,7 +251,7 @@ const Panel: React.FC = () => {
             <br />
             [ctrl + left click + drag] box selecting
             <br />
-            [c] center the graph
+            {/* [c] center the graph */}
           </p>
         </div>
         <div className="flex flex-col h-[20%] ml-4 mt-3">
@@ -274,10 +280,10 @@ const Panel: React.FC = () => {
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
           {/* <div
-              className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
-            >
-              {myData.dotbracket}
-            </div> */}
+            className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
+          > */}
+          {/* {myData.dotbracket} */}
+          {/* </div> */}
 
           {/* <h1>{data.id}</h1>
               <h2>{data.sequnece}</h2>
@@ -285,7 +291,7 @@ const Panel: React.FC = () => {
               <p>{data.originalfilename}</p> */}
           {myData ? (
             <div id="container">
-              <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent ">
+              <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent z-100">
                 <div className="grid relative">
                   <label
                     id="viewLabel"
@@ -304,41 +310,49 @@ const Panel: React.FC = () => {
               </div>
 
               {is2Dview && (
-                // <FornacComponent
-                //   structure={myData.dotbracket}
-                //   sequnece={myData.sequnece}
-                //   labelInterval={labelInterval}
-                //   numbering={numbering}
-                //   nodeOutline={nodeOutline}
-                //   nodeLabel={nodeLabel}
-                //   links={links}
-                //   directionArrows={directionArrows}
-                //   setAnimation={animation}
-                //   selectedNts={selectedNts}
-                //   setSelectedNts={setSelectedNts}
-                // />
-
-                <TwoDView
-                  sequence={myData.sequnece}
+                <FornacComponent
                   structure={myData.dotbracket}
-                  SELECTED={selectedNts}
-                  setSELECTED={setSelectedNts}
-                  nodeLabel={nodeLabel}
-                  directionArrows={directionArrows}
-                  numbering={numbering}
+                  sequence={myData.sequnece}
                   labelInterval={labelInterval}
-                  width={width}
-                  height={height}
+                  numbering={numbering}
+                  nodeOutline={nodeOutline}
+                  nodeLabel={nodeLabel}
+                  links={links}
+                  directionArrows={directionArrows}
+                  setAnimation={animation}
+                  selectedNts={selectedNts}
+                  setSelectedNts={setSelectedNts}
                 />
+
+                // <TwoDView
+                //   sequence={myData.sequnece}
+                //   structure={myData.dotbracket}
+                //   SELECTED={selectedNts}
+                //   setSELECTED={setSelectedNts}
+                //   nodeLabel={nodeLabel}
+                //   directionArrows={directionArrows}
+                //   numbering={numbering}
+                //   labelInterval={labelInterval}
+                //   width={width}
+                //   height={height}
+                // />
 
                 // <RNAVisualizer />
               )}
               {!is2Dview && (
-                <ThreeDView
-                  sequence={myData.sequnece}
-                  SELECTED={selectedNts}
-                  setSELECTED={setSelectedNts}
-                  atoms={myData.data.atoms}
+                // <ThreeDView
+                //   sequence={myData.sequnece}
+                //   SELECTED={selectedNts}
+                //   setSELECTED={setSelectedNts}
+                //   atoms={myData.data.atoms}
+                // />
+                <Molstar
+                  useInterface={true}
+                  pdbId={"7kuc"}
+                  selectedNts={selectedNts}
+                  setSelectedNts={setSelectedNts}
+                  initialized={initialized}
+                  setInitialized={setInitialized}
                 />
               )}
             </div>
@@ -346,7 +360,18 @@ const Panel: React.FC = () => {
             <Loading />
           )}
 
-          <div className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl">
+          {/* <Molstar
+            useInterface={true}
+            pdbId="1cbs"
+            dimensions={["100%", "500px"]}
+            showControls={true}
+            showAxes={false}
+          /> */}
+
+          <div
+            id="bottom-seq"
+            className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl"
+          >
             <div className="whitespace-nowrap w-max cursor-pointer ml-2">
               {myData.sequnece.split("").map((nt, index) => (
                 <span
