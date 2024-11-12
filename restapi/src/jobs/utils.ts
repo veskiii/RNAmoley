@@ -27,27 +27,51 @@ export const upload = multer({
     }
 });
 
-export async function uploadFile(rnaFile: File, newName: string) {
+export async function uploadFileFromPDBCode(rnaFile: File, newName: string) {
     const arrayBuffer = await rnaFile.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
 
     await fs.writeFile(`${JOBS_DIR}/${newName}`, buffer);
 }
 
-export async function uploadJSONFile(data: any, newName: string) {
-    await fs.writeFile(`${JOBS_DIR}/${newName}`, JSON.stringify(data));
+export async function uploadFile(rnaFile: File, jobID: string, newName: string) {
+    const arrayBuffer = await rnaFile.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
+
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, buffer);
+}
+
+export async function moveToJobDirectroy(filename: string, jobID: UUID) {
+    // create directory if it does not exist
+    try {
+        await fs.mkdir(`${JOBS_DIR}/${jobID}`);
+    } catch (err: any) {
+        if (err.code !== 'EEXIST') {
+            throw err;
+        }
+    }
+
+    return fs.rename(`${JOBS_DIR}/${filename}`, `${JOBS_DIR}/${jobID}/${filename}`);
+}
+
+export async function uploadJSONFile(data: any, jobID: string, newName: string) {
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, JSON.stringify(data));
 }
 
 export async function deleteFile(filename: string) {
     await fs.unlink(`${JOBS_DIR}/${filename}`);
 }
 
-export async function deleteJobFiles(id: UUID) {
-    const files = await fs.readdir(JOBS_DIR);
-    const jobFiles = files.filter(file => file.startsWith(id));
-    for (const file of jobFiles) {
-        await fs.unlink(`${JOBS_DIR}/${file}`);
-    }
+// export async function deleteJobFiles(jobID: UUID) {
+//     const files = await fs.readdir(JOBS_DIR);
+//     const jobFiles = files.filter(file => file.startsWith(jobID));
+//     for (const file of jobFiles) {
+//         await fs.unlink(`${JOBS_DIR}/${file}`);
+//     }
+// }
+
+export async function deleteJobDirectory(id: UUID) {
+    await fs.rmdir(`${JOBS_DIR}/${id}`, { recursive: true });
 }
 
 export const generateFilename = (id: UUID, file: File) => {
@@ -65,30 +89,30 @@ export function validateFile(file: Express.Multer.File, maxFileSize: number, all
     return null;
 }
 
-export async function fetchPdbFile(pdbId: string) {
-    const response = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`);
+export async function fetchPdbFile(pdbCode: string) {
+    const response = await fetch(`https://files.rcsb.org/download/${pdbCode}.pdb`);
     if (!response.ok) {
         return "Error fetching PDB file";
     }
     const data = await response.blob();
-    const file = new File([data], `${pdbId}.pdb`);
+    const file = new File([data], `${pdbCode}.pdb`);
     return file;
 }
 
-export async function fetchJSONFile(filename: string) {
-    const data = await fs.readFile(`${JOBS_DIR}/${filename}`);
+export async function fetchJSONFile(jobID: UUID, filename: string) {
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`);
     return JSON.parse(data.toString());
 }
 
-export async function fetchPdbFileAsJSON(id: UUID) {
-    const filename = `${id}.pdb`;
-    const data = await fs.readFile(`${JOBS_DIR}/${filename}`, 'utf-8');
+export async function fetchPdbFileAsJSON(jobID: UUID) {
+    const filename = `${jobID}.pdb`;
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`, 'utf-8');
     const parsed = parsePdb(data);
     return parsed;
 }
 
-export async function analyzeStructureFragment(id: UUID, residueIds: number[]) {
-    const pdbFile = await fs.readFile(`${JOBS_DIR}/${id}.pdb`, 'utf8');
+export async function analyzeStructureFragment(jobID: UUID, residueIds: number[]) {
+    const pdbFile = await fs.readFile(`${JOBS_DIR}/${jobID}/${jobID}.pdb`, 'utf8');
     const textByLine = pdbFile.split("\n");
     var newPdbFile = "";
     textByLine.forEach((line) => {
@@ -101,10 +125,10 @@ export async function analyzeStructureFragment(id: UUID, residueIds: number[]) {
     });
 
     //save the new file
-    await fs.writeFile(`${JOBS_DIR}/${id}_selected.pdb`, newPdbFile);
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/${jobID}_selected.pdb`, newPdbFile);
 
     // run clashscore
-    const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=${id}_selected.pdb`);
+    const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=/${jobID}/${jobID}_selected.pdb`);
     const data = await res.json();
     return data;
 }
