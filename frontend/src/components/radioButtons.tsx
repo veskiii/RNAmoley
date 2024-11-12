@@ -22,13 +22,13 @@ const RadioButtons: React.FC<RadioButtonsProps> = ({
           <div className="radioButton">
             <input
               type="radio"
-              id="4BP7"
-              value="4BP7"
-              checked={selectedValue === "4BP7"}
-              onChange={() => handleRadioChange("4BP7")}
+              id="1FFK"
+              value="1FFK"
+              checked={selectedValue === "1FFK"}
+              onChange={() => handleRadioChange("1FFK")}
             />
-            <label htmlFor="4BP7" className="radioLabel">
-              4BP7
+            <label htmlFor="1FFK" className="radioLabel">
+              1FFK
             </label>
           </div>
 
@@ -48,13 +48,13 @@ const RadioButtons: React.FC<RadioButtonsProps> = ({
           <div className="radioButton">
             <input
               type="radio"
-              id="2A6E"
-              value="2A6E"
-              checked={selectedValue === "2A6E"}
-              onChange={() => handleRadioChange("2A6E")}
+              id="7KUC"
+              value="7KUC"
+              checked={selectedValue === "7KUC"}
+              onChange={() => handleRadioChange("7KUC")}
             />
-            <label htmlFor="2A6E" className="radioLabel">
-              2A6E
+            <label htmlFor="7KUC" className="radioLabel">
+              7KUC
             </label>
           </div>
 
