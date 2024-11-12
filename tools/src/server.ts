@@ -10,11 +10,16 @@ app.get('/', (req, res) => {
 
 app.post('/annotate', (req, res) => {
     const filename = req.query.filename as string;
+    const id = req.query.id as string;
     if (!filename) {
         res.status(400).send('Annotator error: filename is required');
         return;
     }
-    runAnnotator(filename).then((output) => {
+    if (!id) {
+        res.status(400).send('Annotator error: id is required');
+        return;
+    }
+    runAnnotator(id, filename).then((output) => {
         res.status(200).send(output);
     }).catch((error) => {
         res.status(500).send(error);
@@ -23,11 +28,16 @@ app.post('/annotate', (req, res) => {
 
 app.post('/convert', (req, res) => {
     const filename = req.query.filename as string;
+    const id = req.query.id as string;
     if (!filename) {
         res.status(400).send('Converson error: filename is required');
         return;
     }
-    runConverter(filename).then((output) => {
+    if (!id) {
+        res.status(400).send('Converson error: id is required');
+        return;
+    }
+    runConverter(id, filename).then((output) => {
         res.status(200).send(output);
     }).catch((error) => {
         res.status(500).send(error);

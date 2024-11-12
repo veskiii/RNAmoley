@@ -59,6 +59,10 @@ const Dashboard: React.FC = () => {
       const response = await fetch(`${API_URL}`, {
         method: "POST",
         body: formData,
+        headers: {
+          //   "Content-Type": "multipart/form-data",
+          "Access-Control-Allow-Origin": "http://localhost:3000",
+        }
       });
 
       if (response.ok) {
@@ -177,9 +181,8 @@ const Dashboard: React.FC = () => {
             <button
               type="submit"
               disabled={!isButtonEnabled}
-              className={`${
-                isButtonEnabled ? "" : "bg-gray-400 cursor-not-allowed"
-              } transition-colors`}
+              className={`${isButtonEnabled ? "" : "bg-gray-400 cursor-not-allowed"
+                } transition-colors`}
             >
               <h2 className="text-2xl text-black">
                 Run{" "}

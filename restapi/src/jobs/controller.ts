@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobFiles, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, uploadFile, uploadJSONFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, uploadFile, uploadFileFromPDBCode, uploadJSONFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 
@@ -47,7 +47,7 @@ export async function getJobById(req: Request, res: Response) {
         }
         // res.status(200).json(result.rows[0]);
         //load annotation json file
-        const annotation = await fetchJSONFile(`${id}.json`);
+        const annotation = await fetchJSONFile(id, `annotation.json`);
         if (!annotation) {
             res.status(500).send('An error occurred: annotation file not found');
             return;
@@ -69,8 +69,9 @@ export async function getJobById(req: Request, res: Response) {
 
 export async function createJob(req: Request, res: Response) {
     const rnaFile = req.file as Express.Multer.File;
-    const pdbCode = req.body.pdbCode;
+    var pdbCode = req.body.pdbCode;
     const jobname = req.body.jobName as string || "Untitled job";
+    const radioButton = req.body.radioButton as string || "None";
 
     var id: UUID;
     var newFilename: string;
@@ -78,7 +79,11 @@ export async function createJob(req: Request, res: Response) {
     var finalFilename: string;
     var originalExtension: string;
 
-    if (!rnaFile && pdbCode === '') {
+    if (radioButton.length == 4 && radioButton != "None") {
+        pdbCode = radioButton;
+    }
+
+    if (!rnaFile && pdbCode === '' && radioButton === 'None') {
         res.status(400).send('Either RNA file or PDB code is required');
         return;
     }
@@ -114,19 +119,22 @@ export async function createJob(req: Request, res: Response) {
         originalFilename = `${pdbCode}.pdb`;
         originalExtension = 'pdb';
         newFilename = generateFilename(id, pdbCodeFile);
-        await uploadFile(pdbCodeFile, newFilename);
+        await uploadFileFromPDBCode(pdbCodeFile, newFilename);
     }
+
+    // move file to job directory
+    await moveToJobDirectroy(newFilename, id);
 
     // TODO: if not pdb, convert to pdb
     if (originalExtension != "pdb") {
         try {
-            const convertResponse = await fetch(`http://tools:3002/convert?filename=${newFilename}`, {
+            const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
                 method: 'POST'
             })
             finalFilename = newFilename.split('.')[0] + '.pdb';
         } catch (error) {
             console.error(error);
-            deleteJobFiles(id);
+            deleteJobDirectory(id);
             res.status(500).send('An error occurred: conversion error');
             return;
         }
@@ -137,12 +145,12 @@ export async function createJob(req: Request, res: Response) {
     // annotate file
     var annotateResponse;
     try {
-        annotateResponse = await fetch(`http://tools:3002/annotate?filename=${finalFilename}`, {
+        annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
             method: 'POST'
         });
     } catch (error) {
         console.error(error);
-        deleteJobFiles(id);
+        deleteJobDirectory(id);
         res.status(500).send('An error occurred: annotation error');
         return;
     }
@@ -152,7 +160,7 @@ export async function createJob(req: Request, res: Response) {
     db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
         if (err) {
             console.error(err);
-            deleteJobFiles(id);
+            deleteJobDirectory(id);
             res.status(500).send('An error occurred: db error');
             return;
         }
@@ -183,8 +191,8 @@ export async function analyzeFragment(req: Request, res: Response) {
     }
 
     // save the result as json file
-    const filename = `${id}_result.json`;
-    await uploadJSONFile(result, filename);
+    const filename = `result.json`;
+    await uploadJSONFile(result, id, filename);
 
     res.status(200).json(result);
 }
@@ -216,7 +224,7 @@ export async function getJobResult(req: Request, res: Response) {
         }
 
         // check if result file exists
-        const resultFile = await fetchJSONFile(`${id}_result.json`);
+        const resultFile = await fetchJSONFile(id, `result.json`);
         if (!resultFile) {
             res.status(500).send('An error occurred: result file not found');
             return;
