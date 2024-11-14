@@ -90,10 +90,16 @@ export function validateFile(file: Express.Multer.File, maxFileSize: number, all
 }
 
 export async function fetchPdbFile(pdbCode: string) {
-    const response = await fetch(`https://files.rcsb.org/download/${pdbCode}.pdb`);
+    var response = await fetch(`https://files.rcsb.org/download/${pdbCode}.pdb`);
+
+    // fallback to cif if pdb is not available
     if (!response.ok) {
-        return "Error fetching PDB file";
+        var response = await fetch(`https://files.rcsb.org/download/${pdbCode}.cif`);
+        if (!response.ok) {
+            return "Error fetching PDB file";
+        }
     }
+
     const data = await response.blob();
     const file = new File([data], `${pdbCode}.pdb`);
     return file;
