@@ -125,19 +125,20 @@ export async function createJob(req: Request, res: Response) {
     // move file to job directory
     await moveToJobDirectroy(newFilename, id);
 
-    // TODO: if not pdb, convert to pdb
+    // if not pdb, convert to pdb
     if (originalExtension != "pdb") {
-        try {
-            const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
-                method: 'POST'
-            })
-            finalFilename = newFilename.split('.')[0] + '.pdb';
-        } catch (error) {
-            console.error(error);
+        const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
+            method: 'POST'
+        });
+
+        if (!convertResponse.ok) {
+            console.error('Conversion error');
             deleteJobDirectory(id);
             res.status(500).send('An error occurred: conversion error');
             return;
         }
+
+        finalFilename = newFilename.split('.')[0] + '.pdb';
     } else {
         finalFilename = newFilename;
     }
