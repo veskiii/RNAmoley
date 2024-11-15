@@ -143,20 +143,18 @@ export async function createJob(req: Request, res: Response) {
     }
 
     // annotate file
-    var annotateResponse;
-    try {
-        annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
-            method: 'POST'
-        });
-    } catch (error) {
-        console.error(error);
+    const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
+        method: 'POST'
+    });
+
+    if (!annotateResponse.ok) {
+        console.error('Annotation error');
         deleteJobDirectory(id);
         res.status(500).send('An error occurred: annotation error');
         return;
     }
 
-    // @ts-ignore
-    const annotateResult: object = await annotateResponse.json();
+    const annotateResult: AnnotateResult = await annotateResponse.json() as AnnotateResult;
     db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
         if (err) {
             console.error(err);
