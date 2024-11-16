@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 // @ts-ignore
 import parsePdb from 'parse-pdb';
 import type { UUID } from 'crypto';
+import type { PDBFile } from "./types.js";
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
@@ -110,10 +111,10 @@ export async function fetchJSONFile(jobID: UUID, filename: string) {
     return JSON.parse(data.toString());
 }
 
-export async function fetchPdbFileAsJSON(jobID: UUID) {
+export async function fetchPdbFileAsJSON(jobID: UUID): Promise<PDBFile> {
     const filename = `${jobID}.pdb`;
     const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`, 'utf-8');
-    const parsed = parsePdb(data);
+    const parsed: PDBFile = parsePdb(data);
     return parsed;
 }
 
