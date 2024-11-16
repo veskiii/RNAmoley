@@ -150,7 +150,25 @@ export async function createJob(req: Request, res: Response) {
         return;
     }
 
-    // run clean up script on pdb file
+    fileData.then((data) => {
+        // from the original numeration, create a json file with a map "newNumeration" -> ("originalNumeration", "chainID")
+        const newNumeration = new Map<string, [number, string]>();
+        var originalNumeration: Array<number> = [];
+        var number = 1;
+
+        data.atoms.forEach((atom) => {
+            if (atom.resSeq != originalNumeration.at(-1)) {
+                originalNumeration.push(atom.resSeq);
+                newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
+                number++;
+            }
+        });
+
+        console.log(newNumeration);
+        uploadJSONFile(Object.fromEntries(newNumeration), id, 'numeration.json');
+    });
+
+    // @TODO: run clean up script on pdb file
 
     // annotate file
     const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
