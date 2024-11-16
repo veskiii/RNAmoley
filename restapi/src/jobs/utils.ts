@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 // @ts-ignore
 import parsePdb from 'parse-pdb';
 import type { UUID } from 'crypto';
+import type { PDBFile } from "./types.js";
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
@@ -90,10 +91,16 @@ export function validateFile(file: Express.Multer.File, maxFileSize: number, all
 }
 
 export async function fetchPdbFile(pdbCode: string) {
-    const response = await fetch(`https://files.rcsb.org/download/${pdbCode}.pdb`);
+    var response = await fetch(`https://files.rcsb.org/download/${pdbCode}.pdb`);
+
+    // fallback to cif if pdb is not available
     if (!response.ok) {
-        return "Error fetching PDB file";
+        var response = await fetch(`https://files.rcsb.org/download/${pdbCode}.cif`);
+        if (!response.ok) {
+            return "Error fetching PDB file";
+        }
     }
+
     const data = await response.blob();
     const file = new File([data], `${pdbCode}.pdb`);
     return file;
@@ -104,10 +111,10 @@ export async function fetchJSONFile(jobID: UUID, filename: string) {
     return JSON.parse(data.toString());
 }
 
-export async function fetchPdbFileAsJSON(jobID: UUID) {
+export async function fetchPdbFileAsJSON(jobID: UUID): Promise<PDBFile> {
     const filename = `${jobID}.pdb`;
     const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`, 'utf-8');
-    const parsed = parsePdb(data);
+    const parsed: PDBFile = parsePdb(data);
     return parsed;
 }
 

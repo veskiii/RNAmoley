@@ -15,7 +15,7 @@ export async function getJobs(req: Request, res: Response) {
     db.query(getJobsQuery, (err, result) => {
         if (err) {
             console.error(err);
-            res.status(500).send('An error occurred');
+            res.status(500).send({ error: 'Database error.' });
             return;
         }
         res.status(200).json(result.rows);
@@ -26,36 +26,36 @@ export async function getJobById(req: Request, res: Response) {
     const id = req.params.id as UUID;
 
     if (!id) {
-        res.status(400).send('Job ID is required');
+        res.status(400).send({ error: 'Job ID is required.' });
         return;
     }
 
     if (id.length !== 36) {
-        res.status(422).send('Invalid job ID');
+        res.status(422).send({ error: 'Invalid job ID.' });
         return;
     }
 
     db.query(getJobByIdQuery, [id], async (err, result) => {
         if (err) {
             console.error(err);
-            res.status(500).send('An error occurred');
+            res.status(500).send({ error: 'Database error.' });
             return;
         }
         if (result.rows.length === 0) {
-            res.status(404).send('Job not found');
+            res.status(404).send({ error: 'Job not found.' });
             return;
         }
         // res.status(200).json(result.rows[0]);
         //load annotation json file
         const annotation = await fetchJSONFile(id, `annotation.json`);
         if (!annotation) {
-            res.status(500).send('An error occurred: annotation file not found');
+            res.status(500).send({ error: 'Annotation file not found.' });
             return;
         }
 
         const pdbFile = await fetchPdbFileAsJSON(id);
         if (!pdbFile) {
-            res.status(500).send('An error occurred: pdb file not found');
+            res.status(500).send({ error: 'PDB file not found.' });
             return;
         }
 
@@ -84,7 +84,7 @@ export async function createJob(req: Request, res: Response) {
     }
 
     if (!rnaFile && pdbCode === '' && radioButton === 'None') {
-        res.status(400).send('Either RNA file or PDB code is required');
+        res.status(400).send({ error: 'Either RNA file or PDB code is required' });
         return;
     }
 
@@ -104,7 +104,7 @@ export async function createJob(req: Request, res: Response) {
     } else {
         // use pdbCode
         if (pdbCode && pdbCode.length !== 4) {
-            res.status(422).send('Invalid PDB code');
+            res.status(422).send({ error: 'Invalid PDB code.' });
             return;
         }
 
@@ -125,43 +125,69 @@ export async function createJob(req: Request, res: Response) {
     // move file to job directory
     await moveToJobDirectroy(newFilename, id);
 
-    // TODO: if not pdb, convert to pdb
+    // if not pdb, convert to pdb
     if (originalExtension != "pdb") {
-        try {
-            const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
-                method: 'POST'
-            })
-            finalFilename = newFilename.split('.')[0] + '.pdb';
-        } catch (error) {
-            console.error(error);
+        const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
+            method: 'POST'
+        });
+
+        if (!convertResponse.ok) {
+            console.error('Conversion error');
             deleteJobDirectory(id);
-            res.status(500).send('An error occurred: conversion error');
+            res.status(500).send({ error: 'CIF to PDB conversion error.' });
             return;
         }
+
+        finalFilename = newFilename.split('.')[0] + '.pdb';
     } else {
         finalFilename = newFilename;
     }
 
-    // annotate file
-    var annotateResponse;
-    try {
-        annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
-            method: 'POST'
-        });
-    } catch (error) {
-        console.error(error);
-        deleteJobDirectory(id);
-        res.status(500).send('An error occurred: annotation error');
+    // save the original numeration of the pdb file
+    const fileData = fetchPdbFileAsJSON(id);
+    if (!fileData) {
+        res.status(500).send({ error: 'File data not found.' });
         return;
     }
 
-    // @ts-ignore
-    const annotateResult: object = await annotateResponse.json();
+    fileData.then((data) => {
+        // from the original numeration, create a json file with a map "newNumeration" -> ("originalNumeration", "chainID")
+        const newNumeration = new Map<string, [number, string]>();
+        var originalNumeration: Array<number> = [];
+        var number = 1;
+
+        data.atoms.forEach((atom) => {
+            if (atom.resSeq != originalNumeration.at(-1)) {
+                originalNumeration.push(atom.resSeq);
+                newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
+                number++;
+            }
+        });
+
+        console.log(newNumeration);
+        uploadJSONFile(Object.fromEntries(newNumeration), id, 'numeration.json');
+    });
+
+    // @TODO: run clean up script on pdb file
+
+    // annotate file
+    const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
+        method: 'POST'
+    });
+
+    if (!annotateResponse.ok) {
+        console.error('Annotation error');
+        deleteJobDirectory(id);
+        res.status(500).send({ error: 'Annotation error' });
+        return;
+    }
+
+    const annotateResult: AnnotateResult = await annotateResponse.json() as AnnotateResult;
     db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
         if (err) {
             console.error(err);
             deleteJobDirectory(id);
-            res.status(500).send('An error occurred: db error');
+            res.status(500).send({ error: 'Database error.' });
             return;
         }
 
@@ -180,13 +206,13 @@ export async function analyzeFragment(req: Request, res: Response) {
     console.log(id, residues);
 
     if (!id || !residues) {
-        res.status(400).send('ID and residue list are required');
+        res.status(400).send({ error: 'ID and residue list are required.' });
         return;
     }
 
     const result = await analyzeStructureFragment(id, residues);
     if (!result) {
-        res.status(500).send('An error occurred');
+        res.status(500).send({ error: 'Structure analysis error.' });
         return;
     }
 
@@ -201,13 +227,13 @@ export async function getJobResult(req: Request, res: Response) {
     // check if id is provided
     const id = req.params.id as UUID;
     if (!id) {
-        res.status(400).send('Job ID is required');
+        res.status(400).send({ error: 'Job ID is required.' });
         return;
     }
 
     // check if id is valid
     if (id.length !== 36) {
-        res.status(422).send('Invalid job ID');
+        res.status(422).send({ error: 'Invalid job ID.' });
         return;
     }
 
@@ -215,18 +241,18 @@ export async function getJobResult(req: Request, res: Response) {
     db.query(getJobByIdQuery, [id], async (err, result) => {
         if (err) {
             console.error(err);
-            res.status(500).send('An error occurred');
+            res.status(500).send({ error: 'An error occurred.' });
             return;
         }
         if (result.rows.length === 0) {
-            res.status(404).send('Job not found');
+            res.status(404).send({ error: 'Job not foun.' });
             return;
         }
 
         // check if result file exists
         const resultFile = await fetchJSONFile(id, `result.json`);
         if (!resultFile) {
-            res.status(500).send('An error occurred: result file not found');
+            res.status(500).send({ error: 'Result file not found' });
             return;
         }
 
