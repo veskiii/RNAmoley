@@ -4,9 +4,10 @@ import fs from "node:fs/promises";
 
 const JOBS_DIR = 'user_data';
 
-interface annotatorOutput {
-    sequnece?: string;
-    dotbracket?: string;
+interface Annotation {
+    name: string | undefined;
+    sequnece: string | undefined;
+    dotbracket: string | undefined;
 }
 
 async function handler(command: string) {
@@ -31,10 +32,21 @@ export async function runConverter(id: string, filename: string) {
 export async function runAnnotator(id: string, filename: string) {
     try {
         const result = await handler(`annotator ${JOBS_DIR}/${id}/${filename}`);
-        const resultSplit = result.split("\\n");
-        const output: annotatorOutput = {
-            sequnece: resultSplit[1],
-            dotbracket: resultSplit[2]
+
+        const resultSplit = result.trim().substring(2, result.length - 2).split("\\n");
+
+        console.log(result);
+
+
+        // parse output as list of annotations
+        // every 3 lines is a new annotation
+        const output: Annotation[] = [];
+        for (let i = 0; i < resultSplit.length - 1; i += 3) {
+            output.push({
+                name: resultSplit[i],
+                sequnece: resultSplit[i + 1],
+                dotbracket: resultSplit[i + 2]
+            });
         }
         console.log(output);
 
