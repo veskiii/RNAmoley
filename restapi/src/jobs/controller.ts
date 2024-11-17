@@ -6,9 +6,10 @@ import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDire
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 
-interface AnnotateResult {
-    sequence: string;
-    dotbracket: string;
+interface Annotation {
+    name: string | undefined;
+    sequnece: string | undefined;
+    dotbracket: string | undefined;
 }
 
 export async function getJobs(req: Request, res: Response) {
@@ -53,6 +54,12 @@ export async function getJobById(req: Request, res: Response) {
             return;
         }
 
+        const numeration = await fetchJSONFile(id, `numeration.json`);
+        if (!numeration) {
+            res.status(500).send({ error: 'Numeration file not found.' });
+            return;
+        }
+
         const pdbFile = await fetchPdbFileAsJSON(id);
         if (!pdbFile) {
             res.status(500).send({ error: 'PDB file not found.' });
@@ -61,7 +68,8 @@ export async function getJobById(req: Request, res: Response) {
 
         res.status(200).json({
             ...result.rows[0],
-            ...annotation,
+            annotation: annotation,
+            numeration: numeration,
             data: pdbFile
         });
     });
@@ -150,9 +158,9 @@ export async function createJob(req: Request, res: Response) {
         return;
     }
 
+    const newNumeration = new Map<string, [number, string]>();
     fileData.then((data) => {
         // from the original numeration, create a json file with a map "newNumeration" -> ("originalNumeration", "chainID")
-        const newNumeration = new Map<string, [number, string]>();
         var originalNumeration: Array<number> = [];
         var number = 1;
 
@@ -182,7 +190,7 @@ export async function createJob(req: Request, res: Response) {
         return;
     }
 
-    const annotateResult: AnnotateResult = await annotateResponse.json() as AnnotateResult;
+    const annotateResult: Annotation[] = await annotateResponse.json() as Annotation[];
     db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
         if (err) {
             console.error(err);
@@ -194,7 +202,8 @@ export async function createJob(req: Request, res: Response) {
         // send fields form result with annotate results
         res.status(201).json({
             ...result.rows[0],
-            ...annotateResult
+            annotation: annotateResult,
+            numeration: Object.fromEntries(newNumeration)
         });
     });
 }
