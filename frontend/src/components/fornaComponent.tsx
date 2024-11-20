@@ -5,9 +5,24 @@ import clsx from "clsx";
 
 declare const fornac: any;
 
+interface Nucleotide {
+  index: number; 
+  original_index: number; 
+  base: string; 
+  structure: string; 
+}
+
+interface Chain {
+  name: string; 
+  nucleotides: Nucleotide[]; 
+  sequence: string; 
+  dotBracket: string; 
+}
+
 const FornacComponent = ({
-  sequence,
-  structure,
+  sequences,
+  structures,
+  chains,
   labelInterval,
   numbering,
   nodeOutline,
@@ -18,8 +33,9 @@ const FornacComponent = ({
   selectedNts,
   setSelectedNts,
 }: {
-  sequence: string;
-  structure: string;
+  sequences: string[];
+  structures: string[];
+  chains: Chain[];
   labelInterval: number;
   numbering: boolean;
   nodeOutline: boolean;
@@ -46,19 +62,89 @@ const FornacComponent = ({
       directionArrows: directionArrows,
     });
 
-    const ntNumbers = sequence
-      .toString()
-      .split("")
-      .map((_, i) => "nt" + (i + 1).toString());
+    // console.log("chains:",chains);
 
-    const options = {
-      structure: structure,
-      sequence: sequence,
-      uids: ntNumbers,
+    //TODO: check for safety if chains are matching 
+    const isHybridized = (structure: string):boolean =>{
+      var count_openers = Array.from(structure).filter(x => (x === "(" || x=== "[")).length
+      var count_closers = Array.from(structure).filter(x => (x === ")" || x=== "]")).length
+      if(count_openers !== count_closers)
+        return true;
+      return false;
     };
 
+    var merged_structures: string[] = [];
+    var merged_sequences: string[] = [];
+
+    var hybridized_structures: string[] = [];
+    var hybridized_sequences: string[] = [];
+
+    structures.forEach((structure, index) =>{
+      if(isHybridized(structure)){
+        hybridized_structures.push(structure);
+        hybridized_sequences.push(sequences[index]);
+      }else{
+        merged_structures.push(structure);
+        merged_sequences.push(sequences[index]);
+      }
+    });
+
+    if(hybridized_sequences.length > 0 && hybridized_sequences.length < 3){
+      for(let i = 0; i < hybridized_sequences.length; i+=2){
+          var merged_sequence = hybridized_sequences[i] + "&  " + hybridized_sequences[i+1];
+          var merged_structure = hybridized_structures[i] + "&.." + hybridized_structures[i+1];
+
+          merged_sequences.push(merged_sequence);
+          merged_structures.push(merged_structure);
+      }
+    }else if(hybridized_sequences.length > 2){
+      //Throw new error;
+      console.log("Wiecej niż 2 sekwencje zhybrydyzowane!");
+    }
+
+
+    //TODO: function checking if sequences are compatible
+
+
     try {
-      container.addRNA(options.structure, options);
+
+      chains.forEach((chain) =>{
+          var options = {
+            structure: chain.dotBracket,
+            sequence: chain.sequence
+          }
+          container.addRNA(options.structure, options);
+
+          chain.nucleotides.forEach((nucleotide, index) =>{
+            //@ts-ignore
+            d3.select(`circle.fornac-node[node_num="${index+1}"]`).select("title").text(`${chain.name}`);
+
+            //@ts-ignore
+            d3.selectAll("text.fornac-nodeLabel").filter(function(){
+              //@ts-ignore
+              return d3.select(this).text() === `${index+1}`;}).text(`${nucleotide.original_index}`);
+          
+          });
+
+      });
+
+      // merged_structures.forEach((structure, index) =>{
+      //   var options = {
+      //     structure: structure,
+      //     sequence: merged_sequences[index],
+      //   };
+      //   console.log(options.structure, options.sequence);
+      //   container.addRNA(options.structure, options);
+
+      //   //@ts-ignore
+      //   d3.select('circle.fornac-node[node_num="2"]').select("title").text("Nowy tytuł");
+
+      //   //@ts-ignore
+      //   d3.selectAll("text.fornac-nodeLabel").filter(function(){
+      //     //@ts-ignore
+      //     return d3.select(this).text() === "2";}).text("10");
+      // });
+        
       // throw new Error("");
     } catch (error) {
       console.error("Failed to add RNA:", error);
@@ -103,8 +189,8 @@ const FornacComponent = ({
 
     setAnimation ? container.startAnimation() : container.stopAnimation();
   }, [
-    sequence,
-    structure,
+    sequences,
+    structures,
     labelInterval,
     numbering,
     nodeOutline,

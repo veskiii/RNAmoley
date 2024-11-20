@@ -10,13 +10,43 @@ import RNAVisualizer from "./tescik";
 import "../App.css";
 import { eventNames } from "process";
 
+<<<<<<< Updated upstream
 //  TODO : change for backend data
 //Now testing on local json server
+=======
+interface Atom {
+  serial: number;
+  name: string;
+  altLoc: string;
+  resName: string;
+  chainID: string;
+  resSeq: number;
+  iCode: string;
+  x: number;
+  y: number;
+  z: number;
+  occupancy: number;
+  tempFactor: number;
+  element: string;
+  charge: string;
+}
+
+interface Annotation{
+  name: string;
+  sequnece: string;
+  dotbracket: string;
+}
+
+interface Numeration {
+  [key: string] : [number, string];
+}
+>>>>>>> Stashed changes
 
 interface Job {
   id: number;
   originalfilename: string;
   name: string;
+<<<<<<< Updated upstream
   createdat: Date;
   updatedat: Date;
   sequence: string;
@@ -25,6 +55,70 @@ interface Job {
 
 async function fetchMyData(): Promise<Job> {
   const response = await fetch("http://localhost:4200/jobs");
+=======
+  createdat: string;
+  updatedat: string;
+  annotation: Annotation[];
+  numeration: Numeration;
+  data: {
+    atoms: Atom[];
+  };
+}
+
+
+interface Nucleotide {
+  index: number; 
+  original_index: number; 
+  base: string; 
+  structure: string; 
+}
+
+interface Chain {
+  name: string; 
+  nucleotides: Nucleotide[]; 
+  sequence: string; 
+  dotBracket: string; 
+}
+
+function transformJobToChains(job: Job): Chain[] {
+  const chains: Chain[] = [];
+  
+  // Iterate over each annotation to create a Chain object
+  job.annotation.forEach((annotation) => {
+      const chain: Chain = {
+          name: annotation.name,
+          sequence: annotation.sequnece,
+          dotBracket: annotation.dotbracket,
+          nucleotides: [] 
+      };
+
+      const startIndex = Math.min(...Object.values(job.numeration).map(entry => entry[0]));
+      // Iterate over the sequence and dotBracket to build Nucleotides
+      for (let i = 0; i < annotation.sequnece.length; i++) {
+          const numerationKey = Object.keys(job.numeration).find(key => job.numeration[key][0] === startIndex + i && job.numeration[key][1] === annotation.name.slice(-1));
+          
+          if (numerationKey) {
+              const nucleotide: Nucleotide = {
+                  index: parseInt(numerationKey),
+                  original_index: job.numeration[numerationKey][0],
+                  base: annotation.sequnece[i],
+                  structure: annotation.dotbracket[i]
+              };
+              chain.nucleotides.push(nucleotide);
+          }
+      }
+
+      chains.push(chain);
+  });
+
+  return chains;
+}
+
+
+async function fetchMyData(jobID: string | undefined): Promise<Job> {
+  //http://localhost:4200/jobs
+  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`);
+>>>>>>> Stashed changes
   const data = await response.json();
   return data;
 }
@@ -44,6 +138,15 @@ const Panel: React.FC = () => {
   const width = document.getElementById("container")?.clientWidth || 1300;
   const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
+<<<<<<< Updated upstream
+=======
+  
+  const context = useContext(NameContext);
+  if (context) {
+    const { jobID } = context;
+    console.log("Got jobID:", jobID);
+  }
+>>>>>>> Stashed changes
 
   function toggle() {
     setIs2Dview((is2Dview) => {
@@ -273,6 +376,57 @@ const Panel: React.FC = () => {
                   3D view
                 </button>
               </div>
+<<<<<<< Updated upstream
+=======
+
+              {is2Dview && (
+                <FornacComponent
+                  structures={myData.annotation.map((a) => a.dotbracket)}
+                  sequences={myData.annotation.map((a) => a.sequnece)}
+                  chains = {transformJobToChains(myData)}
+                  labelInterval={labelInterval}
+                  numbering={numbering}
+                  nodeOutline={nodeOutline}
+                  nodeLabel={nodeLabel}
+                  links={links}
+                  directionArrows={directionArrows}
+                  setAnimation={animation}
+                  selectedNts={selectedNts}
+                  setSelectedNts={setSelectedNts}
+                />
+
+                // <TwoDView
+                //   sequence={myData.sequnece}
+                //   structure={myData.dotbracket}
+                //   SELECTED={selectedNts}
+                //   setSELECTED={setSelectedNts}
+                //   nodeLabel={nodeLabel}
+                //   directionArrows={directionArrows}
+                //   numbering={numbering}
+                //   labelInterval={labelInterval}
+                //   width={width}
+                //   height={height}
+                // />
+
+                // <RNAVisualizer />
+              )}
+              {!is2Dview && (
+                // <ThreeDView
+                //   sequence={myData.sequnece}
+                //   SELECTED={selectedNts}
+                //   setSELECTED={setSelectedNts}
+                //   atoms={myData.data.atoms}
+                // />
+                <Molstar
+                  useInterface={true}
+                  pdbId={"7kuc"}
+                  selectedNts={selectedNts}
+                  setSelectedNts={setSelectedNts}
+                  initialized={initialized}
+                  setInitialized={setInitialized}
+                />
+              )}
+>>>>>>> Stashed changes
             </div>
             {is2Dview && (
               // <FornacComponent
@@ -302,6 +456,7 @@ const Panel: React.FC = () => {
                 height={height}
               />
 
+<<<<<<< Updated upstream
               // <RNAVisualizer />
             )}
             {!is2Dview && (
@@ -316,6 +471,14 @@ const Panel: React.FC = () => {
           <div className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl">
             <div className="whitespace-nowrap w-max cursor-pointer ml-2">
               {myData.sequence.split("").map((nt, index) => (
+=======
+          <div
+            id="bottom-seq"
+            className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl"
+          >
+            {/* <div className="whitespace-nowrap w-max cursor-pointer ml-2">
+              {myData.sequnece.split("").map((nt, index) => (
+>>>>>>> Stashed changes
                 <span
                   className={clsx(
                     selectedNts.includes(index) ? "text-red-500" : ""
@@ -326,7 +489,7 @@ const Panel: React.FC = () => {
                   {nt}
                 </span>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
