@@ -1,6 +1,4 @@
 import numpy as np
-from Bio.PDB import PDBParser
-import re
 import sys
 import shutil
 import os
@@ -15,14 +13,15 @@ for line in file:
 
 file.seek(0)
 
-y = sys.argv[1].split('/')
-y = y[-1].split('.')
+path_to_folder = Path(sys.argv[2])
+if not path_to_folder.exists():
+    path_to_folder.mkdir()
 
 if count == 1:
-    shutil.copy(os.path.abspath(sys.argv[1]), os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/Renumber/model1.pdb")
+    shutil.copy(os.path.abspath(sys.argv[1]), path_to_folder+"/1.pdb")
 else:
     for x in range(count):
-        f = open(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/Renumber/"+y[0]+"_model_"+str(x+1)+".pdb", "w")
+        f = open(os.path.abspath(path_to_folder)+"/"+str(x+1)+".pdb", "w")
         for line in file:
             if line[0:6] == 'ENDMDL':
                 break

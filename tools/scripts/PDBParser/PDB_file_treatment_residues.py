@@ -4,6 +4,7 @@ import re
 import sys
 import multiprocessing as mp
 import os
+from pathlib import Path
 
 parser = PDBParser()
 
@@ -21,13 +22,19 @@ count = 1
 #for residue in molecule.get_residues():
     #file_count.append(residue.id[1])
 
+path_to_folder = Path(sys.argv[2])
+if not path_to_folder.exists():
+    path_to_folder.mkdir()
+
+print(os.path.abspath(path_to_folder))
+
 def Walking_sphere(count):
     for main_atom in molecule.get_atoms():
         file = open(os.path.abspath(sys.argv[1]), 'r')
         if main_atom.id.strip("'") != "C1":
             continue
         list = []
-        f = open(os.path.dirname(os.path.abspath(__file__))+'/Walking_sphere_residues/pdb_'+str(count)+'.txt', 'w')
+        f = open(os.path.abspath(path_to_folder)+'/'+str(count)+'.pdb', 'w')
         count+=1
         for line in file:
             if line[0:4] != 'ATOM' and line[0:6] != 'HETATM':
