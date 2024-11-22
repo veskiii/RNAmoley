@@ -14,21 +14,11 @@ const PORT = process.env.PORT;
 
 app.use(cors());
 
-
 app.get('/', (req: Request, res: Response) => {
-    res.send('Hello World');
+    res.send('Hello World! Rest API is running');
 });
 
 app.use('/api/v1/jobs', jobRoutes);
-
-app.post('/create', (req: Request, res: Response) => {
-    const name = req.body.name;
-    const pdbCode = req.body.pdbCode;
-    const file = req.body.file;
-
-    res.status(201).send('Job created');
-
-});
 
 await runDbMigrations();
 

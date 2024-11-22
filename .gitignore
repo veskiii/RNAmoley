@@ -1,4 +1,5 @@
 restapi/.env
+restapi/.env.local
 restapi/node_modules
 restapi/public/*
 tools/.env

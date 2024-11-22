@@ -1,4 +1,3 @@
-import { Server } from 'http';
 import pg from 'pg';
 
 const PORT = (process.env.POSTGRES_PORT || 5432) as number;

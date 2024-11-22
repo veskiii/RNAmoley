@@ -6,9 +6,9 @@ services:
     shm_size: 128mb
     user: postgres
     expose:
-      - 5432
+      - "5432"
     healthcheck:
-      test: ["CMD", "pg_isready"]
+      test: [ "CMD", "pg_isready" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,7 +33,7 @@ services:
     image: dawidgrajek1/molprobity:latest
     restart: always
     ports:
-      - 3000:3000
+      - 3001:3001
     volumes:
       - user_data:/user_data
 
@@ -46,15 +46,22 @@ services:
       - 3002:3002
     volumes:
       - user_data:/usr/src/app/user_data
-  # restapi:
-  #   build:
-  #     context: ./restapi
-  #   restart: always
-  #   ports:
-  #     - 3000:3000
-  #   depends_on:
-  #     - db
-  #     - molprobity
+
+  restapi:
+    build:
+      context: ./restapi
+    restart: always
+    environment:
+      NODE_ENV: production
+    env_file:
+      - ./restapi/.env
+    ports:
+      - 3000:3000
+    volumes:
+      - user_data:/usr/src/app/public/jobs
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:

@@ -2,16 +2,35 @@ import React, { useEffect, useState, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
+interface Atom {
+  serial: number;
+  name: string;
+  altLoc: string;
+  resName: string;
+  chainID: string;
+  resSeq: number;
+  iCode: string;
+  x: number;
+  y: number;
+  z: number;
+  occupancy: number;
+  tempFactor: number;
+  element: string;
+  charge: string;
+}
+
 type ThreeViewProps = {
   sequence: string;
   SELECTED: number[];
   setSELECTED: React.Dispatch<React.SetStateAction<number[]>>;
+  atoms: Atom[];
 };
 
 const ThreeView: React.FC<ThreeViewProps> = ({
   sequence,
   SELECTED,
   setSELECTED,
+  atoms,
 }) => {
   const [rotate, setRotate] = useState<boolean>(true);
   const objects: THREE.Object3D[] = [];
@@ -21,32 +40,32 @@ const ThreeView: React.FC<ThreeViewProps> = ({
   const objectMap = useRef<Map<number, THREE.Object3D>>(new Map());
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const coords: [number, number, number][] = [
-    [0, 0, 0],
-    [1, 1, -1],
-    [1.2, 1.2, 1.2],
-    [1.5, -2.2, 0.3],
-    [-1, 0.2, -0.9],
-    [2.4, -0.3, 1.8],
-    [-2.5, 1.1, 0.9],
-    [0.7, -1.8, -0.7],
-    [-1.5, -0.5, 1.7],
-    [0.3, 2.1, -1.6],
-    [-1.9, 0.4, -2.3],
-    [2.1, -0.6, 0.6],
-    [1.9, 1.5, -0.3],
-    [-0.8, -2.1, 1.5],
-    [2.5, 0.7, -1.2],
-    [-1.4, -0.9, 2.3],
-    [1.1, -2.4, 0.8],
-    [0.9, 2.3, -0.5],
-    [-2.2, 1.8, 0.4],
-    [1.6, -1.5, -2.1],
-    [0.5, 0.9, 1.7],
-    [-1.8, 2.2, -0.4],
-    [2.0, -0.7, 1.9],
-    [-0.2, -2.0, -1.4],
-  ];
+  // const coords: [number, number, number][] = [
+  //   [0, 0, 0],
+  //   [1, 1, -1],
+  //   [1.2, 1.2, 1.2],
+  //   [1.5, -2.2, 0.3],
+  //   [-1, 0.2, -0.9],
+  //   [2.4, -0.3, 1.8],
+  //   [-2.5, 1.1, 0.9],
+  //   [0.7, -1.8, -0.7],
+  //   [-1.5, -0.5, 1.7],
+  //   [0.3, 2.1, -1.6],
+  //   [-1.9, 0.4, -2.3],
+  //   [2.1, -0.6, 0.6],
+  //   [1.9, 1.5, -0.3],
+  //   [-0.8, -2.1, 1.5],
+  //   [2.5, 0.7, -1.2],
+  //   [-1.4, -0.9, 2.3],
+  //   [1.1, -2.4, 0.8],
+  //   [0.9, 2.3, -0.5],
+  //   [-2.2, 1.8, 0.4],
+  //   [1.6, -1.5, -2.1],
+  //   [0.5, 0.9, 1.7],
+  //   [-1.8, 2.2, -0.4],
+  //   [2.0, -0.7, 1.9],
+  //   [-0.2, -2.0, -1.4],
+  // ];
 
   useEffect(() => {
     let camera: THREE.PerspectiveCamera,
@@ -80,26 +99,28 @@ const ThreeView: React.FC<ThreeViewProps> = ({
       scene.add(light);
 
       const geometry = new THREE.SphereGeometry();
-      const Distance = 5;
+      // const Distance = 5;
 
       const tempLabels: { id: number; position: THREE.Vector3 }[] = [];
 
-      coords.forEach((coord, index) => {
-        const object = new THREE.Mesh(
-          geometry,
-          new THREE.MeshLambertMaterial({ color: 0x38bdf8 })
-        );
-        object.position.set(
-          Distance * coord[0],
-          Distance * coord[1],
-          Distance * coord[2]
-        );
-        (object as any).isGraphElement = true;
-        (object as any).customId = index;
-        scene.add(object);
-        objectMap.current.set(index, object);
+      let index = 0;
+      atoms.forEach((atom) => {
+        const c_atom = "C1'"; // /^C1/
+        if (atom.name === c_atom) {
+          //c_atom.test(atom.name)
+          const object = new THREE.Mesh(
+            geometry,
+            new THREE.MeshLambertMaterial({ color: 0x38bdf8 })
+          );
+          object.position.set(atom.x, atom.y, atom.z);
+          (object as any).isGraphElement = true;
+          (object as any).customId = index;
+          scene.add(object);
+          objectMap.current.set(index, object);
 
-        tempLabels.push({ id: index, position: object.position.clone() });
+          tempLabels.push({ id: index, position: object.position.clone() });
+          index++;
+        }
       });
       setLabels(tempLabels);
 

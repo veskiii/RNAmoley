@@ -54,7 +54,7 @@ const FornacComponent = ({
       animation: setAnimation,
       zoomable: true,
       labelInterval: labelInterval,
-      initialSize: [41, 20],
+      initialSize: [41, 26],
       numbering: numbering,
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
@@ -169,13 +169,17 @@ const FornacComponent = ({
 
     // on click get the selected nucelotides
     var selectedNts;
-    document.addEventListener("click", () => {
-      // @ts-expect-error
-      selectedNts = nucleotides.filter((obj) => obj.selected);
-      console.log(selectedNts);
-      // @ts-expect-error
-      setSelectedNts(selectedNts.map((obj) => obj.num));
-    });
+    const handleClick = () => {
+      document.addEventListener("click", () => {
+        // @ts-expect-error
+        selectedNts = nucleotides.filter((obj) => obj.selected);
+        console.log(selectedNts);
+        // @ts-expect-error
+        setSelectedNts(selectedNts.map((obj) => obj.num));
+      });
+    };
+
+    document.addEventListener("click", handleClick);
 
     container.displayNumbering(numbering);
 
@@ -188,6 +192,10 @@ const FornacComponent = ({
     container.displayDirectionArrows(directionArrows);
 
     setAnimation ? container.startAnimation() : container.stopAnimation();
+
+    return () => {
+      document.removeEventListener("click", handleClick);
+    };
   }, [
     sequences,
     structures,
@@ -202,7 +210,7 @@ const FornacComponent = ({
   ]);
 
   return (
-    <div className="absolute bottom-0 h-[90%] flex-grow w-full rounded-b-lg bg-slate-600">
+    <div className="absolute bottom-0 h-[90%] flex-grow w-full bg-transparent">
       {/* <div
         className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
       >
@@ -219,7 +227,8 @@ const FornacComponent = ({
       </div> */}
       <div
         id="rna_ss"
-        className="rounded-lg border-black border-solid border-2 bg-gray-100 m-2"
+
+        //className="rounded-lg border-black border-solid border-2 bg-gray-100 m-2"
       ></div>
       <div id="containerLoadingText" className="p-2">
         <Loading />
