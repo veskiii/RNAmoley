@@ -46,6 +46,7 @@ export async function moveToJobDirectroy(filename: string, jobID: UUID) {
     // create directory if it does not exist
     try {
         await fs.mkdir(`${JOBS_DIR}/${jobID}`);
+        await fs.mkdir(`${JOBS_DIR}/${jobID}/models`);
     } catch (err: any) {
         if (err.code !== 'EEXIST') {
             throw err;
@@ -55,8 +56,12 @@ export async function moveToJobDirectroy(filename: string, jobID: UUID) {
     return fs.rename(`${JOBS_DIR}/${filename}`, `${JOBS_DIR}/${jobID}/${filename}`);
 }
 
-export async function uploadJSONFile(data: any, jobID: string, newName: string) {
-    await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, JSON.stringify(data));
+export async function uploadJSONFile(data: any, jobID: string, newName: string, modelNumber?: string) {
+    if (modelNumber) {
+        await fs.writeFile(`${JOBS_DIR}/${jobID}/models/${modelNumber}/${newName}`, JSON.stringify(data));
+    } else {
+        await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, JSON.stringify(data));
+    }
 }
 
 export async function deleteFile(filename: string) {
@@ -106,20 +111,25 @@ export async function fetchPdbFile(pdbCode: string) {
     return file;
 }
 
-export async function fetchJSONFile(jobID: UUID, filename: string) {
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`);
-    return JSON.parse(data.toString());
+export async function fetchJSONFile(jobID: UUID, filename: string, modelNumber?: string) {
+    if (modelNumber) {
+        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${modelNumber}/${filename}`);
+        return JSON.parse(data.toString());
+    } else {
+        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`);
+        return JSON.parse(data.toString());
+    }
 }
 
-export async function fetchPdbFileAsJSON(jobID: UUID): Promise<PDBFile> {
-    const filename = `${jobID}.pdb`;
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`, 'utf-8');
+export async function fetchPdbFileAsJSON(jobID: UUID, modelNumber: string): Promise<PDBFile> {
+    const filename = `${modelNumber}.pdb`;
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`, 'utf-8');
     const parsed: PDBFile = parsePdb(data);
     return parsed;
 }
 
-export async function analyzeStructureFragment(jobID: UUID, residueIds: number[]) {
-    const pdbFile = await fs.readFile(`${JOBS_DIR}/${jobID}/${jobID}.pdb`, 'utf8');
+export async function analyzeStructureFragment(jobID: UUID, modelNumber: string, residueIds: number[]) {
+    const pdbFile = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${modelNumber}.pdb`, 'utf8');
     const textByLine = pdbFile.split("\n");
     var newPdbFile = "";
     textByLine.forEach((line) => {

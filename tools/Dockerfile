@@ -46,7 +46,6 @@ ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g pnpm@${PNPM_VERSION}
 
-
 # install maxit
 WORKDIR /usr/src
 RUN wget https://sw-tools.rcsb.org/apps/MAXIT/maxit-v11.200-prod-src.tar.gz && \
@@ -63,6 +62,10 @@ RUN git clone https://github.com/tzok/rnapolis-py
 WORKDIR /usr/src/rnapolis-py
 RUN sudo pip install .
 ENV PATH="$PATH:/root/.local/bin"
+
+# add scripts to path
+ENV PATH="$PATH:/usr/src/app/scripts/PDBParser"
+ENV PATH="$PATH:/usr/src/app/scripts/Separate_models"
 
 # # Run the application as a non-root user.
 # RUN useradd -ms /bin/bash node

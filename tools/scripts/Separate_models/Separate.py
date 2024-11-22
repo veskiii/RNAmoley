@@ -1,8 +1,13 @@
-import numpy as np
+#!/usr/bin/env python3
+
 import sys
 import shutil
 import os
 from pathlib import Path
+
+if len(sys.argv) != 3:
+    print("Usage: python3 Separate.py <input_file> <output_folder>")
+    sys.exit(1)
 
 file = open(os.path.abspath(sys.argv[1]), 'r')
 count = 0

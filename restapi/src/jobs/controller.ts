@@ -25,6 +25,7 @@ export async function getJobs(req: Request, res: Response) {
 
 export async function getJobById(req: Request, res: Response) {
     const id = req.params.id as UUID;
+    const modelNumber = '1'
 
     if (!id) {
         res.status(400).send({ error: 'Job ID is required.' });
@@ -48,7 +49,7 @@ export async function getJobById(req: Request, res: Response) {
         }
         // res.status(200).json(result.rows[0]);
         //load annotation json file
-        const annotation = await fetchJSONFile(id, `annotation.json`);
+        const annotation = await fetchJSONFile(id, `${modelNumber}_annotation.json`, modelNumber);
         if (!annotation) {
             res.status(500).send({ error: 'Annotation file not found.' });
             return;
@@ -60,7 +61,7 @@ export async function getJobById(req: Request, res: Response) {
             return;
         }
 
-        const pdbFile = await fetchPdbFileAsJSON(id);
+        const pdbFile = await fetchPdbFileAsJSON(id, modelNumber);
         if (!pdbFile) {
             res.status(500).send({ error: 'PDB file not found.' });
             return;
