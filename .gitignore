@@ -9,3 +9,4 @@ tools/dist
 .vs
 tools/scripts/PDBParser/Walking_sphere
 tools/scripts/Correction/To_correct
+tools/scripts/Correction/Corrected
