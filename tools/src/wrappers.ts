@@ -1,6 +1,7 @@
 import { execSync, spawnSync } from 'child_process';
 import { resolve } from 'path';
 import fs from "node:fs/promises";
+import { raw } from 'express';
 
 const JOBS_DIR = 'user_data';
 
@@ -30,28 +31,33 @@ export async function runConverter(id: string, filename: string) {
     return result;
 }
 
-export async function splitModels(id: string, filename: string) {
-    console.log(`splitting ${filename} into models`);
+export async function splitModels(id: string) {
+    console.log(`Splitting ${id}.pdb into models...`);
 
-    const split = spawnSync('Spearate.py', [`${JOBS_DIR}/${id}/${filename}`, `${JOBS_DIR}/${id}/models`]);
+    const split = spawnSync('Separate.py', [`${JOBS_DIR}/${id}/${id}.pdb`, `${JOBS_DIR}/${id}/models`]);
     if (split.error) {
         console.error('Error running split: ', split.error);
-        return;
+        return { error: split.error };
     }
-    const result = await formatOutput(split.stdout.toString());
+    const rawResult = await formatOutput(split.stdout.toString());
+    const result = rawResult.substring(2, rawResult.length - 4);
+    console.log("Split models - number of models:", result);
 
-    return result;
+    const response = {
+        numberOfModels: parseInt(result)
+    }
+
+    return response;
 }
 
-export async function runAnnotator(id: string, modelNumber: string = '1') {
-    try {
-        const annotator = spawnSync('annotator', [`${JOBS_DIR}/${id}/models/${modelNumber}.pdb`], { encoding: 'utf-8' });
+export async function runAnnotator(id: string, numberOfModels: number) {
+    console.log(`Running annotator on ${id}...`);
+    const results = [];
+
+    for (let i = 1; i <= numberOfModels; i++) {
+        const annotator = spawnSync('annotator', [`${JOBS_DIR}/${id}/models/${i}.pdb`], { encoding: 'utf-8' });
         const result = await formatOutput(annotator.stdout.toString());
-
         const resultSplit = result.trim().substring(2, result.length - 2).split("\\n");
-
-        console.log(result);
-
 
         // parse output as list of annotations
         // every 3 lines is a new annotation
@@ -64,18 +70,15 @@ export async function runAnnotator(id: string, modelNumber: string = '1') {
             });
         }
         console.log(output);
+        results.push(output);
 
         // save output as json file
         // const outputFilename = filename.split('.')[0] + '.json';
-        const outputFilename = `${modelNumber}_annotation.json`;
+        const outputFilename = `${i}_annotation.json`;
         const outputString = JSON.stringify(output);
         const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
         await fs.writeFile(outputFilePath, outputString);
-
-        return output;
-
-    } catch (error) {
-        console.error('Error running annotator: ', error);
     }
 
+    return results;
 }

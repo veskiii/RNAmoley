@@ -6,6 +6,10 @@ import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDire
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 
+interface splitModelsResponse {
+    numberOfModels: number;
+}
+
 interface Annotation {
     name: string | undefined;
     sequnece: string | undefined;
@@ -152,35 +156,20 @@ export async function createJob(req: Request, res: Response) {
         finalFilename = newFilename;
     }
 
-    // save the original numeration of the pdb file
-    const fileData = fetchPdbFileAsJSON(id);
-    if (!fileData) {
-        res.status(500).send({ error: 'File data not found.' });
-        return;
-    }
-
-    const newNumeration = new Map<string, [number, string]>();
-    fileData.then((data) => {
-        // from the original numeration, create a json file with a map "newNumeration" -> ("originalNumeration", "chainID")
-        var originalNumeration: Array<number> = [];
-        var number = 1;
-
-        data.atoms.forEach((atom) => {
-            if (atom.resSeq != originalNumeration.at(-1)) {
-                originalNumeration.push(atom.resSeq);
-                newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
-                number++;
-            }
-        });
-
-        console.log(newNumeration);
-        uploadJSONFile(Object.fromEntries(newNumeration), id, 'numeration.json');
+    // split file into models
+    var numberOfModels = 1;
+    const splitResponse = await fetch(`http://tools:3002/split?id=${id}`, {
+        method: 'POST'
     });
+    numberOfModels = (await splitResponse.json() as splitModelsResponse).numberOfModels;
 
-    // @TODO: run clean up script on pdb file
+    // save the original numeration of all the models
+    const newNumeration = new Map<number, number>();
 
-    // annotate file
-    const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
+    // run clean up script on  all the models
+
+    // annotate all the models
+    const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&numberOfModels=${numberOfModels}`, {
         method: 'POST'
     });
 
@@ -191,7 +180,7 @@ export async function createJob(req: Request, res: Response) {
         return;
     }
 
-    const annotateResult: Annotation[] = await annotateResponse.json() as Annotation[];
+    const annotateResult: Annotation[][] = await annotateResponse.json() as Annotation[][];
     db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
         if (err) {
             console.error(err);
@@ -203,7 +192,7 @@ export async function createJob(req: Request, res: Response) {
         // send fields form result with annotate results
         res.status(201).json({
             ...result.rows[0],
-            annotation: annotateResult,
+            annotation: annotateResult[0],
             numeration: Object.fromEntries(newNumeration)
         });
     });
@@ -212,6 +201,7 @@ export async function createJob(req: Request, res: Response) {
 export async function analyzeFragment(req: Request, res: Response) {
     const id: UUID = req.body.id;
     const residues: number[] = req.body.residues;
+    const modelNumber = '1';
 
     console.log(id, residues);
 
@@ -220,7 +210,7 @@ export async function analyzeFragment(req: Request, res: Response) {
         return;
     }
 
-    const result = await analyzeStructureFragment(id, residues);
+    const result = await analyzeStructureFragment(id, modelNumber, residues);
     if (!result) {
         res.status(500).send({ error: 'Structure analysis error.' });
         return;

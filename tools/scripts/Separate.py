@@ -23,10 +23,10 @@ if not path_to_folder.exists():
     path_to_folder.mkdir()
 
 if count == 1:
-    shutil.copy(os.path.abspath(sys.argv[1]), path_to_folder+"/1.pdb")
+    shutil.copy(os.path.abspath(sys.argv[1]), path_to_folder + "/1.pdb")
 else:
     for x in range(count):
-        f = open(os.path.abspath(path_to_folder)+"/"+str(x+1)+".pdb", "w")
+        f = open(os.path.abspath(path_to_folder) + "/" + str(x + 1) + ".pdb", "w")
         for line in file:
             if line[0:6] == 'ENDMDL':
                 break
@@ -37,4 +37,5 @@ else:
         f.write("END")
         f.close()
 
-
+print(count)
+sys.stdout.flush()

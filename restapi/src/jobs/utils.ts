@@ -77,7 +77,7 @@ export async function deleteFile(filename: string) {
 // }
 
 export async function deleteJobDirectory(id: UUID) {
-    await fs.rmdir(`${JOBS_DIR}/${id}`, { recursive: true });
+    await fs.rm(`${JOBS_DIR}/${id}`, { recursive: true });
 }
 
 export const generateFilename = (id: UUID, file: File) => {
@@ -121,11 +121,18 @@ export async function fetchJSONFile(jobID: UUID, filename: string, modelNumber?:
     }
 }
 
-export async function fetchPdbFileAsJSON(jobID: UUID, modelNumber: string): Promise<PDBFile> {
-    const filename = `${modelNumber}.pdb`;
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`, 'utf-8');
-    const parsed: PDBFile = parsePdb(data);
-    return parsed;
+export async function fetchPdbFileAsJSON(jobID: UUID, modelNumber?: string): Promise<PDBFile> {
+    if (!modelNumber) {
+        const filename = `${jobID}.pdb`;
+        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`, 'utf-8');
+        const parsed: PDBFile = parsePdb(data);
+        return parsed;
+    } else {
+        const filename = `${modelNumber}.pdb`;
+        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`, 'utf-8');
+        const parsed: PDBFile = parsePdb(data);
+        return parsed;
+    }
 }
 
 export async function analyzeStructureFragment(jobID: UUID, modelNumber: string, residueIds: number[]) {

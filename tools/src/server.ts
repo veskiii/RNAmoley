@@ -1,5 +1,5 @@
 import express from 'express';
-import { runAnnotator, runConverter } from './wrappers.js';
+import { runAnnotator, runConverter, splitModels } from './wrappers.js';
 
 const app = express();
 const port = 3002;
@@ -9,17 +9,21 @@ app.get('/', (req, res) => {
 });
 
 app.post('/annotate', (req, res) => {
-    const filename = req.query.filename as string;
     const id = req.query.id as string;
-    if (!filename) {
-        res.status(400).send('Annotator error: filename is required');
-        return;
-    }
+    const numberOfModels = req.query.numberOfModels as string;
+
     if (!id) {
         res.status(400).send('Annotator error: id is required');
         return;
     }
-    runAnnotator(id, filename).then((output) => {
+
+    if (!numberOfModels) {
+        res.status(400).send('Annotator error: filename is required');
+        return;
+    }
+    console.log('Annotating', id, numberOfModels);
+
+    runAnnotator(id, parseInt(numberOfModels)).then((output) => {
         res.status(200).send(output);
     }).catch((error) => {
         res.status(500).send(error);
@@ -42,6 +46,21 @@ app.post('/convert', (req, res) => {
     }).catch((error) => {
         res.status(500).send(error);
     });
+});
+
+app.post('/split', (req, res) => {
+    const id = req.query.id as string;
+
+    if (!id) {
+        res.status(400).send({ error: 'Split error: id is required' });
+        return;
+    }
+
+    splitModels(id).then((output) => {
+        res.status(200).send(output);
+    }).catch((error) => {
+        res.status
+    })
 });
 
 app.listen(port, () => {

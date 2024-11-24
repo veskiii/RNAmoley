@@ -64,8 +64,7 @@ RUN sudo pip install .
 ENV PATH="$PATH:/root/.local/bin"
 
 # add scripts to path
-ENV PATH="$PATH:/usr/src/app/scripts/PDBParser"
-ENV PATH="$PATH:/usr/src/app/scripts/Separate_models"
+ENV PATH="$PATH:/usr/src/app/scripts"
 
 # # Run the application as a non-root user.
 # RUN useradd -ms /bin/bash node
