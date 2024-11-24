@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import shutil
 import os
 from pathlib import Path
 
@@ -22,8 +21,18 @@ path_to_folder = Path(sys.argv[2])
 if not path_to_folder.exists():
     path_to_folder.mkdir()
 
+# The file probably only contains one model
+if count == 0:
+    count += 1
+
 if count == 1:
-    shutil.copy(os.path.abspath(sys.argv[1]), path_to_folder + "/1.pdb")
+    with open(os.path.join(path_to_folder, "1.pdb"), "w") as f:
+        for line in file:
+            if line == "\n":
+                continue
+            f.write(line)
+        f.write("END")
+    
 else:
     for x in range(count):
         f = open(os.path.abspath(path_to_folder) + "/" + str(x + 1) + ".pdb", "w")

@@ -56,26 +56,22 @@ export async function moveToJobDirectroy(filename: string, jobID: UUID) {
     return fs.rename(`${JOBS_DIR}/${filename}`, `${JOBS_DIR}/${jobID}/${filename}`);
 }
 
-export async function uploadJSONFile(data: any, jobID: string, newName: string, modelNumber?: string) {
-    if (modelNumber) {
-        await fs.writeFile(`${JOBS_DIR}/${jobID}/models/${modelNumber}/${newName}`, JSON.stringify(data));
-    } else {
-        await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, JSON.stringify(data));
-    }
+// Saves a JSON file to the models directory
+export async function uploadJSONFile(data: any, jobID: string, newName: string) {
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/models/${newName}`, JSON.stringify(data));
 }
 
+// Saves a JSON file to the job's root directory
+export async function uploadResultFile(data: any, jobID: string, newName: string) {
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, JSON.stringify(data));
+}
+
+// not used anymore
 export async function deleteFile(filename: string) {
     await fs.unlink(`${JOBS_DIR}/${filename}`);
 }
 
-// export async function deleteJobFiles(jobID: UUID) {
-//     const files = await fs.readdir(JOBS_DIR);
-//     const jobFiles = files.filter(file => file.startsWith(jobID));
-//     for (const file of jobFiles) {
-//         await fs.unlink(`${JOBS_DIR}/${file}`);
-//     }
-// }
-
+// Removes the job directory and all its contents, used when deleting a job or an error occurs
 export async function deleteJobDirectory(id: UUID) {
     await fs.rm(`${JOBS_DIR}/${id}`, { recursive: true });
 }
@@ -102,7 +98,7 @@ export async function fetchPdbFile(pdbCode: string) {
     if (!response.ok) {
         var response = await fetch(`https://files.rcsb.org/download/${pdbCode}.cif`);
         if (!response.ok) {
-            return "Error fetching PDB file";
+            return "Error fetching PDB file: neither PDB nor CIF file found on RCSB server.";
         }
     }
 
@@ -113,7 +109,7 @@ export async function fetchPdbFile(pdbCode: string) {
 
 export async function fetchJSONFile(jobID: UUID, filename: string, modelNumber?: string) {
     if (modelNumber) {
-        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${modelNumber}/${filename}`);
+        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`);
         return JSON.parse(data.toString());
     } else {
         const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`);
@@ -121,18 +117,45 @@ export async function fetchJSONFile(jobID: UUID, filename: string, modelNumber?:
     }
 }
 
-export async function fetchPdbFileAsJSON(jobID: UUID, modelNumber?: string): Promise<PDBFile> {
-    if (!modelNumber) {
-        const filename = `${jobID}.pdb`;
-        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`, 'utf-8');
+export async function fetchPdbFileAsJSON(jobID: UUID, modelNumber?: string): Promise<PDBFile | null> {
+    try {
+        const filename = modelNumber ? `${modelNumber}.pdb` : `${jobID}.pdb`;
+        const filePath = modelNumber ? `${JOBS_DIR}/${jobID}/models/${filename}` : `${JOBS_DIR}/${jobID}/${filename}`;
+        const data = await fs.readFile(filePath, 'utf-8');
         const parsed: PDBFile = parsePdb(data);
         return parsed;
-    } else {
-        const filename = `${modelNumber}.pdb`;
-        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`, 'utf-8');
-        const parsed: PDBFile = parsePdb(data);
-        return parsed;
+    } catch (error) {
+        console.error(error);
+        return null;
     }
+}
+
+export async function saveOriginalNumeration(jobID: UUID, numberOfModels: number) {
+    const numeration = [];
+    for (let i = 1; i <= numberOfModels; i++) {
+        const pdbFile = await fetchPdbFileAsJSON(jobID, i.toString());
+        if (!pdbFile) {
+            console.error(`PDB file (Model ${i}) not found while saving its numeration.`);
+            return;
+        }
+
+        const newNumeration = new Map<string, [number, string]>();
+        var originalNumeration: Array<number> = [];
+        var number = 1;
+
+        pdbFile.atoms.forEach((atom) => {
+            if (atom.resSeq != originalNumeration.at(-1)) {
+                originalNumeration.push(atom.resSeq);
+                newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
+                number++;
+            }
+        });
+
+        numeration.push(newNumeration);
+        uploadJSONFile(Object.fromEntries(newNumeration), jobID, `${i}_numeration.json`);
+    }
+
+    return numeration;
 }
 
 export async function analyzeStructureFragment(jobID: UUID, modelNumber: string, residueIds: number[]) {

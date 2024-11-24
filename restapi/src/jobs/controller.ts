@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, uploadFile, uploadFileFromPDBCode, uploadJSONFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, uploadJSONFile, uploadResultFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 
@@ -164,7 +164,14 @@ export async function createJob(req: Request, res: Response) {
     numberOfModels = (await splitResponse.json() as splitModelsResponse).numberOfModels;
 
     // save the original numeration of all the models
-    const newNumeration = new Map<number, number>();
+    const newNumeration = await saveOriginalNumeration(id, numberOfModels);
+
+    if (!newNumeration) {
+        console.error('Numeration error');
+        deleteJobDirectory(id);
+        res.status(500).send({ error: 'Numeration error' });
+        return;
+    }
 
     // run clean up script on  all the models
 
@@ -189,11 +196,11 @@ export async function createJob(req: Request, res: Response) {
             return;
         }
 
-        // send fields form result with annotate results
+        // send fields from result with annotate results
         res.status(201).json({
             ...result.rows[0],
             annotation: annotateResult[0],
-            numeration: Object.fromEntries(newNumeration)
+            numeration: newNumeration[0] ? Object.fromEntries(newNumeration[0]) : {}
         });
     });
 }
@@ -218,7 +225,7 @@ export async function analyzeFragment(req: Request, res: Response) {
 
     // save the result as json file
     const filename = `result.json`;
-    await uploadJSONFile(result, id, filename);
+    await uploadResultFile(result, id, filename);
 
     res.status(200).json(result);
 }
