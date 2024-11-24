@@ -9,6 +9,7 @@ import "../App.css";
 import { NameContext } from "../App";
 import Molstar from "./mol";
 import FornacComponent from "./fornaComponent";
+import { useLocation } from "react-router-dom";
 
 interface Atom {
   serial: number;
@@ -56,6 +57,7 @@ interface Nucleotide {
   original_index: number; 
   base: string; 
   structure: string; 
+  selected: boolean;
 }
 
 interface Chain {
@@ -87,7 +89,8 @@ function transformJobToChains(job: Job): Chain[] {
                   index: parseInt(numerationKey),
                   original_index: job.numeration[numerationKey][0],
                   base: annotation.sequnece[i],
-                  structure: annotation.dotbracket[i]
+                  structure: annotation.dotbracket[i],
+                  selected: false,
               };
               chain.nucleotides.push(nucleotide);
           }
@@ -123,7 +126,16 @@ const Panel: React.FC = () => {
   const width = document.getElementById("container")?.clientWidth || 1300;
   const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
-  
+
+  const location = useLocation();
+  const rnaFile = location.state?.rnaFile;
+  var pdbCode = location.state?.pdbCode;
+  const pdbCodeRadioButton = location.state?.radiobutton;
+
+  if(!pdbCode){
+    pdbCode = pdbCodeRadioButton;
+  }
+
   const context = useContext(NameContext);
   if (context) {
     const { jobID } = context;
@@ -407,7 +419,8 @@ const Panel: React.FC = () => {
                 // />
                 <Molstar
                   useInterface={true}
-                  pdbId={"7kuc"}
+                  pdbId={pdbCode}
+                  file={rnaFile}
                   selectedNts={selectedNts}
                   setSelectedNts={setSelectedNts}
                   initialized={initialized}
