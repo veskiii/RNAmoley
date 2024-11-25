@@ -1,7 +1,6 @@
-import { execSync, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import { resolve } from 'path';
 import fs from "node:fs/promises";
-import { raw } from 'express';
 
 const JOBS_DIR = 'user_data';
 
@@ -19,7 +18,7 @@ async function formatOutput(output: string) {
 
 export async function runConverter(id: string, filename: string) {
     const filenameNoExt = filename.split('.')[0];
-    console.log(`converting ${filename} to pdb`);
+    console.log(`Converting ${filename} to pdb`);
     const maxit = spawnSync('maxit', [`-input`, `${JOBS_DIR}/${id}/${filename}`, `-output`, `${JOBS_DIR}/${id}/${filenameNoExt}.pdb`, '-o', '2']);
     if (maxit.error) {
         console.error('Error running maxit: ', maxit.error);
@@ -84,7 +83,7 @@ export async function runAnnotator(id: string, numberOfModels: number) {
                 dotbracket: resultSplit[i + 2]
             });
         }
-        console.log(output);
+        // console.log(output);
         results.push(output);
 
         // save output as json file

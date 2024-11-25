@@ -51,7 +51,7 @@ export async function getJobById(req: Request, res: Response) {
             return;
         }
 
-        const numeration = await fetchJSONFile(id, `numeration.json`);
+        const numeration = await fetchJSONFile(id, `${modelNumber}_numeration.json`, modelNumber);
         if (!numeration) {
             res.status(500).send({ error: 'Numeration file not found.' });
             return;
@@ -70,6 +70,8 @@ export async function getJobById(req: Request, res: Response) {
         }
 
         const results = await readResults(id);
+        console.log(results);
+
 
         const metadata = await readMetadata(id);
         if (!metadata) {
@@ -86,7 +88,7 @@ export async function getJobById(req: Request, res: Response) {
             created_at: result.rows[0].created_at,
             updated_at: result.rows[0].updated_at,
             annotation: annotation,
-            numeration: Object.fromEntries(numeration),
+            numeration: numeration,
             pdb_file: pdbFile,
             pdb_file_blob: blob,
             results: results
