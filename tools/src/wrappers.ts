@@ -55,7 +55,7 @@ export async function correctModels(id: string, numberOfModels: number) {
 
     for (let i = 1; i <= numberOfModels; i++) {
         console.log(`Correcting model ${i}...`);
-        const correct = spawnSync('Correction.py', [`${JOBS_DIR}/${id}/models/${i}.pdb`, `${JOBS_DIR}/${id}/models/${i}_corrected.pdb`]);
+        const correct = spawnSync('Correction.py', [`${JOBS_DIR}/${id}/models/${i}.pdb`, `${JOBS_DIR}/${id}/models`]);
         if (correct.error) {
             console.error('Error running correct: ', correct.error);
             return { error: correct.error };
