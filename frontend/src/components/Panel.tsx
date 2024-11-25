@@ -69,9 +69,19 @@ interface Chain {
 
 function transformJobToChains(job: Job): Chain[] {
   const chains: Chain[] = [];
+
+  // for (const key in job.numeration) {
+  //   if (job.numeration.hasOwnProperty(key)) {
+  //     const [num, letter] = job.numeration[key];
+  //     console.log(`Key: ${key}, Number: ${num}, Letter: ${letter}`);
+  //   }
+  // }
   
+  let startIndex = Math.min(...Object.values(job.numeration).map(entry => entry[0]));
+
   // Iterate over each annotation to create a Chain object
   job.annotation.forEach((annotation) => {
+    console.log("START INDEX = ", startIndex);
       const chain: Chain = {
           name: annotation.name,
           sequence: annotation.sequnece,
@@ -79,11 +89,11 @@ function transformJobToChains(job: Job): Chain[] {
           nucleotides: [] 
       };
 
-      const startIndex = Math.min(...Object.values(job.numeration).map(entry => entry[0]));
       // Iterate over the sequence and dotBracket to build Nucleotides
+      console.log(annotation.name, annotation.sequnece, annotation.sequnece.length);
       for (let i = 0; i < annotation.sequnece.length; i++) {
           const numerationKey = Object.keys(job.numeration).find(key => job.numeration[key][0] === startIndex + i && job.numeration[key][1] === annotation.name.slice(-1));
-          
+          // console.log(numerationKey, )
           if (numerationKey) {
               const nucleotide: Nucleotide = {
                   index: parseInt(numerationKey),
@@ -95,8 +105,10 @@ function transformJobToChains(job: Job): Chain[] {
               chain.nucleotides.push(nucleotide);
           }
       }
+      startIndex += annotation.sequnece.length;
 
       chains.push(chain);
+      console.log("CHAIN Z PANELU:", chain.name, chain.sequence, chain.nucleotides);
   });
 
   return chains;
@@ -126,6 +138,8 @@ const Panel: React.FC = () => {
   const width = document.getElementById("container")?.clientWidth || 1300;
   const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
+  
+  const [chainsState, setChainsState] = useState<Chain[]>([]);
 
   const location = useLocation();
   const rnaFile = location.state?.rnaFile;
@@ -222,6 +236,8 @@ const Panel: React.FC = () => {
         // throw Error("Testing throw error");
         const data = await fetchMyData(jobID);
         setMyData(data);
+        const chains = transformJobToChains(data);
+        setChainsState(chains);
         console.log("data:", data);
       } catch (error) {
         if (error instanceof Error) {
@@ -383,7 +399,7 @@ const Panel: React.FC = () => {
                 <FornacComponent
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
-                  chains = {transformJobToChains(myData)}
+                  chains = {chainsState}
                   labelInterval={labelInterval}
                   numbering={numbering}
                   nodeOutline={nodeOutline}

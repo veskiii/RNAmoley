@@ -56,7 +56,7 @@ const FornacComponent = ({
   //const [selectedNts, setSelectedNts] = React.useState<number[]>([]);
   // const [labelInterval, setLabelInterval] = useState(1);
   const [chainsState, setChainsState] = useState<Chain[]>(chains);
-  const [selectedChain, setSelectedChain] = useState('');
+  const [selectedChain, setSelectedChain] = useState<string>(chains[0]?.name.slice(-1));
 
   const handleChange = (event: SelectChangeEvent) => {
     setSelectedChain(event.target.value as string);
@@ -84,52 +84,57 @@ const FornacComponent = ({
       return false;
     };
 
-    var merged_chains: Chain[] = [];
+    // var merged_chains: Chain[] = [];
     var hybridized_chains: Chain[] = [];
 
     chains.forEach((chain, index) =>{
-      if(isHybridized(chain.dotBracket)){
+      if(isHybridized(chain.dotBracket) && hybridized_chains.length < 3){
         hybridized_chains.push(chain);
-        console.log(chain);
+        // console.log(hybridized_chains, index);
       }else{
-        merged_chains.push(chain);
+        console.log("Mogą być tylko 2 łańcuchy zhybrydyzowane");
       }
     });
 
 
-    if(hybridized_chains.length > 0 && hybridized_chains.length < 3){
+    // if(hybridized_chains.length === 2){
 
-      //Nie działa łączenie listy nukleotydów
-      var merged_sequence = hybridized_chains[0].sequence + hybridized_chains[1].sequence;
-      var merged_structure = hybridized_chains[0].dotBracket + hybridized_chains[1].dotBracket;
-      const merged_nucleotides = hybridized_chains[0].nucleotides.concat(hybridized_chains[1].nucleotides.map((nucleotide) => ({
-        ...nucleotide,
-        index: nucleotide.index + hybridized_chains[0].nucleotides.length,
-        original_index: nucleotide.original_index,
-        selected: nucleotide.selected,
-      })));
+    //   //Nie działa łączenie listy nukleotydów
+    //   var merged_sequence = hybridized_chains[0].sequence + hybridized_chains[1].sequence;
+    //   var merged_structure = hybridized_chains[0].dotBracket + hybridized_chains[1].dotBracket;
+    //   console.log(hybridized_chains[0].nucleotides)
+    //   console.log(hybridized_chains[1].nucleotides)
+    //   const merged_nucleotides = hybridized_chains[0].nucleotides.concat(hybridized_chains[1].nucleotides.map((nucleotide) => ({
+    //     ...nucleotide,
+    //     index: nucleotide.index,
+    //     original_index: nucleotide.original_index,
+    //     selected: nucleotide.selected,
+    //   })));
+    //   console.log("CONCAT:",merged_nucleotides);
 
       
-      var name = hybridized_chains[0].name + "_" +hybridized_chains[1].name;
+    //   var name = hybridized_chains[0].name + "_" +hybridized_chains[1].name;
 
-      const merged_chain: Chain = {
-        name: name,
-        sequence: merged_sequence,
-        dotBracket: merged_structure,
-        nucleotides: merged_nucleotides
-      }
-      merged_chains.push(merged_chain);
+    //   const merged_chain: Chain = {
+    //     name: name,
+    //     sequence: merged_sequence,
+    //     dotBracket: merged_structure,
+    //     nucleotides: merged_nucleotides
+    //   }
+    //   merged_chains.push(merged_chain);
 
-      console.log("Zhybrydyzowane łańcuchy: ",merged_chain.name, merged_chain.sequence, merged_chain.dotBracket, merged_chain.nucleotides);
+    //   console.log("Zhybrydyzowane łańcuchy: ",merged_chain.name, merged_chain.sequence, merged_chain.dotBracket, merged_chain.nucleotides);
   
-    }else if(hybridized_chains.length > 2){
-      //Throw new error;
-      console.log("Wiecej niż 2 sekwencje zhybrydyzowane!");
-    }
+    // }else if(hybridized_chains.length > 2){
+    //   //Throw new error;
+    //   console.log("Wiecej niż 2 sekwencje zhybrydyzowane!");
+    // }
 
     try {
 
-      merged_chains.forEach((chain) =>{
+      chains.forEach((chain) =>{
+        if(!(chain === hybridized_chains[0]  || chain === hybridized_chains[1]))
+        {
           var options = {
             structure: chain.dotBracket,
             sequence: chain.sequence
@@ -146,8 +151,33 @@ const FornacComponent = ({
               return d3.select(this).text() === `${index+1}`;}).text(`${nucleotide.original_index}`);
           
           });
-
+        }
       });
+      if(hybridized_chains.length > 1){
+        const merged_sequence = hybridized_chains[0].sequence + hybridized_chains[1].sequence;
+        const merged_structure = hybridized_chains[0].dotBracket + hybridized_chains[1].dotBracket;
+        var options = {
+          structure: merged_structure,
+          sequence: merged_sequence
+        }
+        container.addRNA(options.structure, options);
+
+        for(let i =0; i<2; i++){
+          hybridized_chains[i].nucleotides.forEach((nucleotide, index) =>{
+            //@ts-ignore
+            d3.select(`circle.fornac-node[node_num="${nucleotide.index}"]`).select("title").text(`${hybridized_chains[i].name} ${nucleotide.index}`);
+  
+            //@ts-ignore
+            d3.selectAll("text.fornac-nodeLabel").filter(function(){
+              //@ts-ignore
+              return d3.select(this).text() === `${nucleotide.index}`;}).text(`${nucleotide.original_index}`);
+          
+          });
+        }
+
+      }
+       
+      
 
       // throw new Error("");
     } catch (error) {
@@ -172,10 +202,10 @@ const FornacComponent = ({
     console.log(nucleotides);
 
     //Zaznaczamy elementy na podstawie parametru selected 
-    chains.forEach(chain =>{
+    chainsState.forEach(chain =>{
       chain.nucleotides.forEach((nucleotide, index) => {
         //@ts-ignore
-        const g = d3.select(`g.gnode[num="n${index+1}"]`);
+        const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
         g.attr("class", nucleotide.selected ?  "gnode fornac-selectedNode" : "gnode");
       });
     }) 
@@ -185,13 +215,14 @@ const FornacComponent = ({
       chain.nucleotides.forEach((nucleotide, index) => {
 
         //@ts-ignore
-        const g = d3.select(`g.gnode[num="n${index+1}"]`);
+        const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
 
         // TODO: dodaj obsługę gdy przeciagnięcie
         g.on("click", ()=>{
           const newChains = [...chainsState];
           newChains[chainIndex].nucleotides[index].selected = (g.attr("class") === "gnode") ? false : true;
           setChainsState(newChains);
+          
           console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
 
         })
@@ -245,14 +276,14 @@ const FornacComponent = ({
           onChange={handleChange}
         >
           {chains.map((chain, chainIndex) => (
-            <MenuItem value={chainIndex}>{chainIndex}</MenuItem>
+            <MenuItem value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
           ))}
         </Select>
       </FormControl>
     </Box>
-  {chains.map((chain, chainIndex) => (
+  {chainsState.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain =>(
     
-    <div key={chainIndex} className="mb-4">
+    <div key={chain.name.slice(-1)} className="mb-4">
       <span className="text-blue-600">{chain.name}: </span>
       {chain.nucleotides.map((nucleotide, index) => (
         <span
@@ -266,7 +297,8 @@ const FornacComponent = ({
         </span>
       ))}
     </div>
-  ))}
+  )) 
+}
 </div>
 
       <div
