@@ -20,7 +20,7 @@ async function formatOutput(output: string) {
 export async function runConverter(id: string, filename: string) {
     const filenameNoExt = filename.split('.')[0];
     console.log(`converting ${filename} to pdb`);
-    const maxit = spawnSync('maxit', [`-input ${JOBS_DIR}/${id}/${filename}`, `-output ${JOBS_DIR}/${id}/${filenameNoExt}.pdb`, '-o 2']);
+    const maxit = spawnSync('maxit', [`-input`, `${JOBS_DIR}/${id}/${filename}`, `-output`, `${JOBS_DIR}/${id}/${filenameNoExt}.pdb`, '-o', '2']);
     if (maxit.error) {
         console.error('Error running maxit: ', maxit.error);
         return;

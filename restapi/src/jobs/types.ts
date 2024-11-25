@@ -42,3 +42,27 @@ export interface PDBFile {
     residues: Residue[];
     chains: Map<string, Chain>;
 }
+
+export interface splitModelsResponse {
+    numberOfModels: number;
+}
+
+export interface Annotation {
+    name: string | undefined;
+    sequnece: string | undefined;
+    dotbracket: string | undefined;
+}
+
+export interface JobResponse {
+    id: string;
+    original_filename: string;
+    name: string;
+    status: string;
+    model_number: number;
+    created_at: string;
+    updated_at: string;
+    annotation: Annotation[];
+    numeration: { [key: string]: [number, string] };
+    pdb_file: PDBFile;
+    pdb_file_blob: Blob;
+}

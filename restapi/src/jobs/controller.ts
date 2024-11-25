@@ -5,16 +5,8 @@ import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
 import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, uploadJSONFile, uploadResultFile, validateFile } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
+import type { Annotation, JobResponse, splitModelsResponse } from "./types.js";
 
-interface splitModelsResponse {
-    numberOfModels: number;
-}
-
-interface Annotation {
-    name: string | undefined;
-    sequnece: string | undefined;
-    dotbracket: string | undefined;
-}
 
 export async function getJobs(req: Request, res: Response) {
     db.query(getJobsQuery, (err, result) => {
@@ -85,6 +77,7 @@ export async function createJob(req: Request, res: Response) {
     var pdbCode = req.body.pdbCode;
     const jobname = req.body.jobName as string || "Untitled job";
     const radioButton = req.body.radioButton as string || "None";
+    const status = 'Created';
 
     var id: UUID;
     var newFilename: string;
@@ -156,6 +149,15 @@ export async function createJob(req: Request, res: Response) {
         finalFilename = newFilename;
     }
 
+    // check if pdb file exists after conversion
+    const pdbFile = await fetchPdbFileAsJSON(id);
+    if (!pdbFile) {
+        console.error('PDB file not found after conversion.');
+        deleteJobDirectory(id);
+        res.status(500).send({ error: 'Conversion error.' });
+        return;
+    }
+
     // split file into models
     var numberOfModels = 1;
     const splitResponse = await fetch(`http://tools:3002/split?id=${id}`, {
@@ -173,7 +175,8 @@ export async function createJob(req: Request, res: Response) {
         return;
     }
 
-    // run clean up script on  all the models
+    // TODO: run clean up script on  all the models
+
 
     // annotate all the models
     const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&numberOfModels=${numberOfModels}`, {
@@ -196,7 +199,7 @@ export async function createJob(req: Request, res: Response) {
             return;
         }
 
-        // send fields from result with annotate results
+        // send fields from result with annotatnion and numeration for the first model
         res.status(201).json({
             ...result.rows[0],
             annotation: annotateResult[0],
