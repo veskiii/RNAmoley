@@ -282,6 +282,7 @@ export async function analyzeFragment(req: Request, res: Response) {
     }
 
     metadata.status = 'running';
+    metadata.last_used_model = parseInt(modelNumber);
     saveMetadata(id, metadata);
 
     db.query(getJobByIdQuery, [id], async (err, result) => {
@@ -297,7 +298,8 @@ export async function analyzeFragment(req: Request, res: Response) {
 
         const output = await analyzeStructureFragment(id, modelNumber, residues);
         if (!output) {
-            saveMetadata(id, { ...metadata, status: 'failed' });
+            metadata.status = 'failed';
+            saveMetadata(id, metadata);
             res.status(500).send({ error: 'Structure analysis error.' });
             return;
         }
@@ -314,6 +316,7 @@ export async function analyzeFragment(req: Request, res: Response) {
         // save the result as json file
         await saveResults(id, analysisResult);
         metadata.status = 'completed';
+        metadata.last_used_model = parseInt(modelNumber);
         saveMetadata(id, metadata);
 
         //load annotation json file
