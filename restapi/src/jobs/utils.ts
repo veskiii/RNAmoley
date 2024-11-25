@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 // @ts-ignore
 import parsePdb from 'parse-pdb';
 import type { UUID } from 'crypto';
-import type { PDBFile } from "./types.js";
+import type { PDBFile, Metadata, metrics, Analysis_results } from "./types.js";
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
@@ -57,13 +57,39 @@ export async function moveToJobDirectroy(filename: string, jobID: UUID) {
 }
 
 // Saves a JSON file to the models directory
-export async function uploadJSONFile(data: any, jobID: string, newName: string) {
+export async function saveJSONFileModels(data: any, jobID: string, newName: string) {
     await fs.writeFile(`${JOBS_DIR}/${jobID}/models/${newName}`, JSON.stringify(data));
 }
 
 // Saves a JSON file to the job's root directory
-export async function uploadResultFile(data: any, jobID: string, newName: string) {
+export async function saveJSONFileRoot(data: any, jobID: string, newName: string) {
     await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, JSON.stringify(data));
+}
+
+export async function saveMetadata(jobID: UUID, metadata: Metadata) {
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/metadata.json`, JSON.stringify(metadata), { flag: 'w' });
+}
+
+export async function readMetadata(jobID: UUID): Promise<Metadata> {
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/metadata.json`);
+    return JSON.parse(data.toString());
+}
+
+export async function saveResults(jobID: UUID, results: Analysis_results) {
+    await fs.writeFile(`${JOBS_DIR}/${jobID}/results.json`, JSON.stringify(results));
+}
+
+export async function readResults(jobID: UUID): Promise<Analysis_results | null> {
+    try {
+        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/results.json`);
+        return JSON.parse(data.toString());
+    } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            return null;
+        } else {
+            throw error;
+        }
+    }
 }
 
 // not used anymore
@@ -130,6 +156,12 @@ export async function fetchPdbFileAsJSON(jobID: UUID, modelNumber?: string): Pro
     }
 }
 
+export async function fetchModelFileAsBlob(jobID: UUID, modelNumber: string) {
+    const filename = `${modelNumber}.pdb`;
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`);
+    return new Blob([data], { type: 'text/plain' });
+}
+
 export async function saveOriginalNumeration(jobID: UUID, numberOfModels: number) {
     const numeration = [];
     for (let i = 1; i <= numberOfModels; i++) {
@@ -152,13 +184,13 @@ export async function saveOriginalNumeration(jobID: UUID, numberOfModels: number
         });
 
         numeration.push(newNumeration);
-        uploadJSONFile(Object.fromEntries(newNumeration), jobID, `${i}_numeration.json`);
+        saveJSONFileModels(Object.fromEntries(newNumeration), jobID, `${i}_numeration.json`);
     }
 
     return numeration;
 }
 
-export async function analyzeStructureFragment(jobID: UUID, modelNumber: string, residueIds: number[]) {
+export async function analyzeStructureFragment(jobID: UUID, modelNumber: string, residueIds: number[]): Promise<metrics> {
     const pdbFile = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${modelNumber}.pdb`, 'utf8');
     const textByLine = pdbFile.split("\n");
     var newPdbFile = "";
@@ -176,6 +208,6 @@ export async function analyzeStructureFragment(jobID: UUID, modelNumber: string,
 
     // run clashscore
     const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=/${jobID}/${jobID}_selected.pdb`);
-    const data = await res.json();
+    const data: metrics = await res.json() as metrics;
     return data;
 }

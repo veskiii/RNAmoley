@@ -1,5 +1,5 @@
 import express from 'express';
-import { runAnnotator, runConverter, splitModels } from './wrappers.js';
+import { correctModels, runAnnotator, runConverter, splitModels } from './wrappers.js';
 
 const app = express();
 const port = 3002;
@@ -61,6 +61,27 @@ app.post('/split', (req, res) => {
     }).catch((error) => {
         res.status
     })
+});
+
+app.post('/correct', (req, res) => {
+    const id = req.query.id as string;
+    const numberOfModels = req.query.numberOfModels as string;
+
+    if (!id) {
+        res.status(400).send({ error: 'Correct error: id is required' });
+        return;
+    }
+
+    if (!numberOfModels) {
+        res.status(400).send({ error: 'Correct error: numberOfModels is required' });
+        return;
+    }
+
+    correctModels(id, parseInt(numberOfModels)).then((output) => {
+        res.status(200).send(output);
+    }).catch((error) => {
+        res.status(500).send(error);
+    });
 });
 
 app.listen(port, () => {

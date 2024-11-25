@@ -1,5 +1,5 @@
-import numpy as np
-from Bio.PDB import PDBParser
+#!/usr/bin/env python3
+
 import sys
 import os
 from pathlib import Path
@@ -16,7 +16,7 @@ def correction(file_name):
     f = open(os.path.abspath(sys.argv[1]), "r")
     lines = f.readlines()
     f.close()
-    f = open(sys.argv[2] + '/' + file_name, "w")
+    f = open(os.path.abspath(sys.argv[2]) + '/' + file_name, "w")
     f.write("MODEL        " + file_name.split(".")[-2] + "\n")
     for line in lines:
         if line[0:4] == "ATOM" or line[0:3] == "TER":
@@ -39,4 +39,3 @@ def correction(file_name):
     f.write("END")
 
 correction(file_name)
-        

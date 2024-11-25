@@ -50,6 +50,21 @@ export async function splitModels(id: string) {
     return response;
 }
 
+export async function correctModels(id: string, numberOfModels: number) {
+    console.log(`Correcting ${id} models...`);
+
+    for (let i = 1; i <= numberOfModels; i++) {
+        console.log(`Correcting model ${i}...`);
+        const correct = spawnSync('Correction.py', [`${JOBS_DIR}/${id}/models/${i}.pdb`, `${JOBS_DIR}/${id}/models/${i}_corrected.pdb`]);
+        if (correct.error) {
+            console.error('Error running correct: ', correct.error);
+            return { error: correct.error };
+        }
+    }
+
+    return { success: true };
+}
+
 export async function runAnnotator(id: string, numberOfModels: number) {
     console.log(`Running annotator on ${id}...`);
     const results = [];

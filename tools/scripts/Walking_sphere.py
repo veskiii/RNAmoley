@@ -2,7 +2,7 @@
 
 import numpy as np
 from Bio.PDB import PDBParser
-import re
+# import re
 import sys
 import multiprocessing as mp
 import os
