@@ -6,3 +6,7 @@ tools/.env
 tools/node_modules
 restapi/dist
 tools/dist
+.vs
+tools/scripts/PDBParser/Walking_sphere
+tools/scripts/Correction/Corrected
+tools/scripts/Correction/To_correct
