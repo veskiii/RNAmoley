@@ -70,8 +70,6 @@ export async function getJobById(req: Request, res: Response) {
         }
 
         const results = await readResults(id);
-        console.log(results);
-
 
         const metadata = await readMetadata(id);
         if (!metadata) {
@@ -270,30 +268,94 @@ export async function analyzeFragment(req: Request, res: Response) {
     const residues: number[] = req.body.residues;
     const modelNumber = req.body.modelNumber || '1';
 
-    console.log(id, residues);
+    const metadata = await readMetadata(id);
 
     if (!id || !residues) {
+        saveMetadata(id, { ...metadata, status: 'failed' });
         res.status(400).send({ error: 'ID and residue list are required.' });
         return;
     }
 
-    const output = await analyzeStructureFragment(id, modelNumber, residues);
-    if (!output) {
-        res.status(500).send({ error: 'Structure analysis error.' });
+    if (id.length !== 36) {
+        res.status(422).send({ error: 'Invalid job ID.' });
         return;
     }
 
-    const outputData: Analysis_results["data"] = residues.map((residue_number) => {
-        return [residue_number, output];
+    metadata.status = 'running';
+    saveMetadata(id, metadata);
+
+    db.query(getJobByIdQuery, [id], async (err, result) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ error: 'Database error.' });
+            return;
+        }
+        if (result.rows.length === 0) {
+            res.status(404).send({ error: 'Job not found.' });
+            return;
+        }
+
+        const output = await analyzeStructureFragment(id, modelNumber, residues);
+        if (!output) {
+            saveMetadata(id, { ...metadata, status: 'failed' });
+            res.status(500).send({ error: 'Structure analysis error.' });
+            return;
+        }
+
+        const outputData: Analysis_results["data"] = residues.map((residue_number) => {
+            return [residue_number, output];
+        });
+
+        const analysisResult: Analysis_results = {
+            mode: 'fragment',
+            data: outputData
+        };
+
+        // save the result as json file
+        await saveResults(id, analysisResult);
+        metadata.status = 'completed';
+        saveMetadata(id, metadata);
+
+        //load annotation json file
+        const annotation = await fetchJSONFile(id, `${modelNumber}_annotation.json`, modelNumber);
+        if (!annotation) {
+            res.status(500).send({ error: 'Annotation file not found.' });
+            return;
+        }
+
+        const numeration = await fetchJSONFile(id, `${modelNumber}_numeration.json`, modelNumber);
+        if (!numeration) {
+            res.status(500).send({ error: 'Numeration file not found.' });
+            return;
+        }
+
+        const pdbFile = await fetchPdbFileAsJSON(id, modelNumber);
+        if (!pdbFile) {
+            res.status(500).send({ error: 'PDB file not found.' });
+            return;
+        }
+
+        const blob = await fetchModelFileAsBlob(id, modelNumber);
+        if (!blob) {
+            res.status(500).send({ error: 'Blob file not found.' });
+            return;
+        }
+
+        const jobResponse: Job = {
+            id: result.rows[0].id,
+            original_filename: result.rows[0].original_filename,
+            name: result.rows[0].name,
+            metadata: metadata,
+            model_number: parseInt(modelNumber),
+            created_at: result.rows[0].created_at,
+            updated_at: result.rows[0].updated_at,
+            annotation: annotation,
+            numeration: numeration,
+            pdb_file: pdbFile,
+            pdb_file_blob: blob,
+            results: analysisResult
+        };
+
+        res.status(200).json(jobResponse);
     });
-
-    const result: Analysis_results = {
-        mode: 'fragment',
-        data: outputData
-    };
-
-    // save the result as json file
-    await saveResults(id, result);
-
-    res.status(200).json(result);
 }
