@@ -4,20 +4,18 @@ import sys
 import os
 from pathlib import Path
 
-file_name = os.path.abspath(sys.argv[1]).split('\\')[-1]
-
-path_to_folder = Path(sys.argv[2])
+path_to_folder = Path(os.path.dirname(sys.argv[2]))
 if not path_to_folder.exists():
     path_to_folder.mkdir()
 
-def correction(file_name):
+def correction():
     count = 1
     tmp_count = 0
     f = open(os.path.abspath(sys.argv[1]), "r")
     lines = f.readlines()
     f.close()
-    f = open(os.path.abspath(sys.argv[2]) + '/' + file_name, "w")
-    f.write("MODEL        " + file_name.split(".")[-2] + "\n")
+    f = open(os.path.abspath(sys.argv[2]), "w")
+    #f.write("MODEL        " + file_name.split(".")[-2] + "\n")
     for line in lines:
         if line[0:4] == "ATOM" or line[0:3] == "TER":
             if line[16:20].strip() == "C" or line[16:20].strip() == "A" or line[16:20].strip() == "G" or line[16:20].strip() == "T" or line[16:20].strip() == "U":
@@ -38,5 +36,5 @@ def correction(file_name):
                 f.write(new_line)
     f.write("END")
 
-correction(file_name)
+correction()
         
