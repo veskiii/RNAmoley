@@ -14,9 +14,12 @@ def correction(file_name):
     count = 1
     tmp_count = 0
     f = open(os.path.abspath(sys.argv[1]), "r")
-    f_write = open(sys.argv[2] + '/' + file_name, "w")
-    for line in f:
-        if line[0:4] == "ATOM":
+    lines = f.readlines()
+    f.close()
+    f = open(sys.argv[2] + '/' + file_name, "w")
+    f.write("MODEL        " + file_name.split(".")[-2] + "\n")
+    for line in lines:
+        if line[0:4] == "ATOM" or line[0:3] == "TER":
             if line[16:20].strip() == "C" or line[16:20].strip() == "A" or line[16:20].strip() == "G" or line[16:20].strip() == "T" or line[16:20].strip() == "U":
                 if tmp_count == 0:
                     tmp_count = int(line[22:26].strip())
@@ -32,7 +35,8 @@ def correction(file_name):
                 else:
                     number = str(count)
                 new_line = line[0:22] + number + line[26:]
-                f_write.write(new_line)
+                f.write(new_line)
+    f.write("END")
 
 correction(file_name)
         
