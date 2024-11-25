@@ -7,6 +7,7 @@ const router = Router();
 router.get('/', getJobs);
 router.post('/', upload.single('rnaFile'), createJob);
 router.get('/:id', getJobById);
+router.get('/:id/:modelNumber', getJobById);
 router.post('/analyzeFragment', analyzeFragment);
 
 export { router };

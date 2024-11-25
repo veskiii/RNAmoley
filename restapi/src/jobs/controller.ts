@@ -6,6 +6,7 @@ import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDire
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 import type { Analysis_results, Annotation, Job, Metadata, splitModelsResponse } from "./types.js";
+import { parse } from "path";
 
 
 export async function getJobs(req: Request, res: Response) {
@@ -30,6 +31,22 @@ export async function getJobById(req: Request, res: Response) {
 
     if (id.length !== 36) {
         res.status(422).send({ error: 'Invalid job ID.' });
+        return;
+    }
+
+    if (!Number.isInteger(parseInt(modelNumber))) {
+        res.status(422).send({ error: 'Invalid model number.' });
+        return;
+    }
+
+    const metadata = await readMetadata(id);
+    if (!metadata) {
+        res.status(500).send({ error: 'Metadata file not found.' });
+        return;
+    }
+
+    if (parseInt(modelNumber) > metadata.model_count || parseInt(modelNumber) < 1) {
+        res.status(404).send({ error: 'Model not found.' });
         return;
     }
 
@@ -70,12 +87,6 @@ export async function getJobById(req: Request, res: Response) {
         }
 
         const results = await readResults(id);
-
-        const metadata = await readMetadata(id);
-        if (!metadata) {
-            res.status(500).send({ error: 'Metadata file not found.' });
-            return;
-        }
 
         const jobResponse: Job = {
             id: result.rows[0].id,
