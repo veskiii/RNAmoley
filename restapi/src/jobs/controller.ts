@@ -2,11 +2,10 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, saveJSONFileModels, saveJSONFileRoot, validateFile, saveMetadata, fetchModelFileAsBlob, readMetadata, readResults, saveResults } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, saveJSONFileModels, saveJSONFileRoot, validateFile, saveMetadata, fetchModelFileAsString, readMetadata, readResults, saveResults } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 import type { Analysis_results, Annotation, Job, Metadata, splitModelsResponse } from "./types.js";
-import { parse } from "path";
 
 
 export async function getJobs(req: Request, res: Response) {
@@ -80,8 +79,8 @@ export async function getJobById(req: Request, res: Response) {
             return;
         }
 
-        const blob = await fetchModelFileAsBlob(id, modelNumber);
-        if (!blob) {
+        const file_string = await fetchModelFileAsString(id, modelNumber);
+        if (!file_string) {
             res.status(500).send({ error: 'Blob file not found.' });
             return;
         }
@@ -99,7 +98,7 @@ export async function getJobById(req: Request, res: Response) {
             annotation: annotation,
             numeration: numeration,
             pdb_file: pdbFile,
-            pdb_file_blob: blob,
+            pdb_file_string: file_string,
             results: results
         };
 
@@ -250,7 +249,7 @@ export async function createJob(req: Request, res: Response) {
         }
 
         // get the first model as blob
-        const blob = await fetchModelFileAsBlob(id, '1');
+        const blob = await fetchModelFileAsString(id, '1');
 
         // get the first model as json
         const pdbFile = await fetchPdbFileAsJSON(id, '1');
@@ -267,7 +266,7 @@ export async function createJob(req: Request, res: Response) {
             annotation: annotateResult[0] ? annotateResult[0] : [],
             numeration: newNumeration[0] ? Object.fromEntries(newNumeration[0]) : {},
             pdb_file: pdbFile ? pdbFile : { atoms: [], seqRes: { serNum: 0, chainID: '', numRes: 0, resNames: [] }, residues: [], chains: new Map() },
-            pdb_file_blob: blob
+            pdb_file_string: blob
         }
 
         res.status(201).json(jobResponse);
@@ -349,9 +348,9 @@ export async function analyzeFragment(req: Request, res: Response) {
             return;
         }
 
-        const blob = await fetchModelFileAsBlob(id, modelNumber);
-        if (!blob) {
-            res.status(500).send({ error: 'Blob file not found.' });
+        const file_string = await fetchModelFileAsString(id, modelNumber);
+        if (!file_string) {
+            res.status(500).send({ error: 'Could not load model file.' });
             return;
         }
 
@@ -366,7 +365,7 @@ export async function analyzeFragment(req: Request, res: Response) {
             annotation: annotation,
             numeration: numeration,
             pdb_file: pdbFile,
-            pdb_file_blob: blob,
+            pdb_file_string: file_string,
             results: analysisResult
         };
 

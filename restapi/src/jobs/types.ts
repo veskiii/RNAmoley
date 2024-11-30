@@ -113,6 +113,6 @@ export interface Job {
     annotation: Annotation[];
     numeration: { [key: string]: [number, string] };
     pdb_file: PDBFile;
-    pdb_file_blob: Blob;
+    pdb_file_string: string;
     results?: Analysis_results | null;
 }
