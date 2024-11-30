@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
       const { setId } = context;
       setId(id);
       console.log("Setted jobID:", id);
-      navigate("/Panel");
+      navigate("/panel");
     }
   }
 

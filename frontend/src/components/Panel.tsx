@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Loading from "./loading";
 import DownloadLink from "./downloadLink";
 import ThreeDView from "./ThreeDView";
@@ -13,7 +13,7 @@ import FornacComponent from "./fornaComponent";
 //  TODO : change for backend data
 //Now testing on local json server
 
-interface Atom {
+export interface Atom {
   serial: number;
   name: string;
   altLoc: string;
@@ -30,12 +30,19 @@ interface Atom {
   charge: string;
 }
 
-interface Job {
+export interface Annotation {
+  name: string;
+  sequnece: string;
+  dotbracket: string;
+}
+
+export interface Job {
   id: number;
   originalfilename: string;
   name: string;
   createdat: Date;
   updatedat: Date;
+  annotation: Annotation[];
   sequnece: string;
   dotbracket: string;
   data: {
@@ -66,6 +73,7 @@ const Panel: React.FC = () => {
   const width = document.getElementById("container")?.clientWidth || 1300;
   const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
+  const navigate = useNavigate();
   const context = useContext(NameContext);
   if (context) {
     const { jobID } = context;
@@ -93,6 +101,10 @@ const Panel: React.FC = () => {
       }
       return is2Dview;
     });
+  }
+
+  function handleNavigate(){
+    navigate(`/summary/${jobID}`);
   }
 
   const handleLabelIntervalChange = (e: any) => {
@@ -162,7 +174,7 @@ const Panel: React.FC = () => {
     }
     fetchData();
   }, [jobID]);
-
+  
   if (!myData) {
     return <Loading />;
   }
@@ -256,6 +268,15 @@ const Panel: React.FC = () => {
         </div>
         <div className="flex flex-col h-[20%] ml-4 mt-3">
           <DownloadLink />
+          <button
+            id="saveButton"
+            onClick={handleNavigate}
+            className={
+              "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+            }
+          >
+            Analyze
+          </button>
         </div>
       </div>
       {/* 
@@ -311,8 +332,8 @@ const Panel: React.FC = () => {
 
               {is2Dview && (
                 <FornacComponent
-                  structure={myData.dotbracket}
-                  sequence={myData.sequnece}
+                  structure={myData.annotation[0].dotbracket}
+                  sequence={myData.annotation[0].sequnece}
                   labelInterval={labelInterval}
                   numbering={numbering}
                   nodeOutline={nodeOutline}
@@ -373,7 +394,7 @@ const Panel: React.FC = () => {
             className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl"
           >
             <div className="whitespace-nowrap w-max cursor-pointer ml-2">
-              {myData.sequnece.split("").map((nt, index) => (
+              {myData.annotation[0].sequnece.split("").map((nt, index) => (
                 <span
                   className={clsx(
                     selectedNts.includes(index) ? "text-red-500" : ""
