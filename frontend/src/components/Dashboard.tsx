@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
       const { setId } = context;
       setId(id);
       console.log("Setted jobID:", id);
-      navigate("/Panel");
+      navigate("/Panel", {state:{rnaFile, pdbCode, radiobutton}});
     }
   }
 
@@ -52,9 +52,7 @@ const Dashboard: React.FC = () => {
       console.log(key, value);
     });
 
-    //Sending request to backend
-    //http://localhost:4200/RNAMoley
-    const API_URL = "http://localhost:3000/api/v1/jobs"; //temp api url
+    const API_URL = "http://localhost:3000/api/v1/jobs"; 
     try {
       const response = await fetch(`${API_URL}`, {
         method: "POST",
@@ -177,6 +175,7 @@ const Dashboard: React.FC = () => {
               selectedValue={radiobutton}
               onValueChange={setRadiobutton}
             />
+            
 
             <button
               type="submit"

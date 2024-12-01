@@ -20,14 +20,27 @@ import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/st
 
 const Molstar = props => {
 
-  const { useInterface, pdbId, url, file, dimensions, className, showControls, showAxes, selectedNts, setSelectedNts, initialized, setInitialized } = props;//
+  const { useInterface, pdbId, url, file, dimensions, className, showControls, showAxes, selectedNts, setSelectedNts, initialized, setInitialized, chains, setChains } = props;
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
   // const [initialized, setInitialized] = useState(false);
   // const [selectedNts, setSelectedNts] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [chainsState, setChainsState] = useState(chains);
   
   useEffect(() => {
+    console.log("Chains data in Molstar:", chains);
+    chains.map(chain =>{
+      console.log(chain.nucleotides);
+    })
+  }, [chains]);
+
+  useEffect(() => {
+    if (plugin.current) {
+      console.log("Plugin already initialized");
+      return;
+    }
     (async () => {
       if (useInterface) {
         const spec = DefaultPluginUISpec();
@@ -60,7 +73,12 @@ const Molstar = props => {
       await loadStructure(pdbId, url, file, plugin.current);
       setInitialized(true);
     })();
-    return () => plugin.current = null;
+    // return () => plugin.current = null;
+    return () => {
+      plugin.current?.dispose();
+      plugin.current = null;
+      setInitialized(false);
+    };
   }, [])
 
 
@@ -86,11 +104,86 @@ const Molstar = props => {
     }
   }, [showAxes]) 
 
+
+
+
+
+
+
+// useEffect(() => {
+//   // Map through chains and nucleotides to create updated chains with the new selection state
+//   const updatedChains = chains.map((chain) => {
+//     const updatedNucleotides = chain.nucleotides.map((nucleotide) => {
+//       const isSelected = selected.includes(nucleotide.original_index);
+//       // Only update if the selection status is different
+//       if (nucleotide.selected !== isSelected) {
+//         return { ...nucleotide, selected: isSelected };
+//       }
+//       return nucleotide;
+//     });
+
+//     // Return the updated chain with updated nucleotides
+//     return {
+//       ...chain,
+//       nucleotides: updatedNucleotides,
+//     };
+//   });
+
+//   // Check if there's any change between updatedChains and the current chains state
+//   const chainsHaveChanged = !updatedChains.every((chain, index) =>
+//     chain.nucleotides.every((nucleotide, i) =>
+//       nucleotide.selected === chains[index].nucleotides[i].selected
+//     )
+//   );
+
+//   // If there were changes, update the chains state
+//   if (chainsHaveChanged) {
+//     setChains(updatedChains);
+//   }
+// }, [selected, chains, setChains]); // Dependency array ensures this effect runs when selected or chains change
+
+useEffect(() => {
+  if (!plugin.current) return;
+
+  const atomGroups = chains.flatMap(chain =>
+    chain.nucleotides.filter(nucleotide => nucleotide.selected === true).map(nucleotide =>
+      MS.struct.generator.atomGroups({
+        "residue-test": MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.auth_seq_id(),
+          nucleotide.original_index,
+        ]),
+      })
+    )
+  );
+
+  const selectionQuery = StructureSelectionQuery(
+    "selected_nucleotides",
+    MS.struct.combinator.merge(atomGroups)
+  );
+
+  plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
+
+  (async () => {
+    const loci = await plugin.current.managers.structure.selection.fromSelectionQuery(
+        "set",
+        selectionQuery
+    );
+    if (loci) {
+        plugin.current.managers.camera.focusLoci(loci);
+        plugin.current.managers.interactivity.lociSelects.select({ loci });
+    } else {
+        console.warn("No loci found for the selection query");
+    }
+})();
+}, [ plugin.current]);
+
+
   useEffect(() => {
+    console.log("PLUGIN: ", plugin.current);
     
     if (initialized && plugin.current && plugin.current.managers.structure){
 
-      const subscription = plugin.current.behaviors?.interaction?.click.subscribe( (event) => {
+      const subscription = plugin.current.behaviors?.interaction?.click.subscribe(async (event) => {
         const selections = Array.from(
           plugin.current.managers.structure.selection.entries.values()
         );
@@ -105,17 +198,51 @@ const Molstar = props => {
           console.log("AAAAAAAAAa");
           if (!structure) continue;
           console.log("BBBBBBBBBb");
+          
           Structure.eachAtomicHierarchyElement(structure, {
             residue: (loc) => {
               const position = StructureProperties.residue.label_seq_id(loc);
-              console.log(`Kliknięto pozycja: ${position}`);
-              localSelected.push({  position });
+              const auth_position = StructureProperties.residue.auth_seq_id(loc);
+              console.log(`Kliknięto pozycja: ${position}`, `auth_pos: ${auth_position}`);
+              
+              // chains.forEach((chain, chainIndex) =>{
+                
+              //   chain.nucleotides.forEach((nucleotide, index) => {
+              //     console.log(chain);
+                  
+              //     //TODO: zmien na wyszukiwanie po oryginalny id
+              //     //nie dziala - co drugi nukleotyd ma dodatkowo zmieniany stan????
+                 
+              //       console.log(nucleotide.original_index , auth_position);
+              //       if(nucleotide.original_index === auth_position){
+              //         const newChains = [...chains];
+              //         if(!nucleotide.selected)
+              //           newChains[chainIndex].nucleotides[index].selected = true;
+              //         else
+              //           newChains[chainIndex].nucleotides[index].selected = false;
+              //         setChains(newChains);
+              //         console.log("CO ZMIENIAM: ", chain.nucleotides[index], "original index: ", nucleotide.original_index, "auth_pos: ", auth_position );
+              //         return;
+              //       }
+                 
+                  
+              //     // newChains[chainIndex].nucleotides[position].selected = !newChains[chainIndex].nucleotides[position].selected;
+                  
+              //     // console.log(newChains);
+                              
+              // });
+              // }) 
+
+              localSelected.push({ auth_position });
+
+              // localSelected.push({  position });
             },
           });
         }
-        console.log("wybrane obiekty: ",localSelected);
-        setSelectedNts(localSelected);
-        console.log(selectedNts);
+        // console.log("wybrane obiekty: ",localSelected);
+        // setSelectedNts(prevSelected => [...prevSelected, ...localSelected]);
+        // console.log(selectedNts);
+        setSelected(localSelected);
       })
 
       return () => {
@@ -124,11 +251,79 @@ const Molstar = props => {
   
     }
     
-  }, [setSelectedNts, initialized]);
+  }, [setSelected, initialized]);
 
-  useEffect(() => {
-    console.log("Updated selectedNts:", selectedNts);
-  }, [selectedNts]);
+
+// //do selekcji:
+// useEffect(() => {
+//   chainsState.forEach((chain, chainIndex) =>{
+                
+//     chain.nucleotides.forEach((nucleotide, index) => {
+//       console.log(chain);
+      
+//       //TODO: zmien na wyszukiwanie po oryginalny id
+//       //nie dziala - co drugi nukleotyd ma dodatkowo zmieniany stan????
+//       selected.forEach(selected_index =>{
+//         console.log(nucleotide.original_index , selected_index);
+//         if(nucleotide.original_index === selected_index){
+//           const newChains = [...chainsState];
+//           if(!nucleotide.selected)
+//             newChains[chainIndex].nucleotides[index].selected = true;
+//           else
+//             newChains[chainIndex].nucleotides[index].selected = false;
+//           setChains(newChains);
+//           console.log("CO ZMIENIAM: ", chain.nucleotides[index], "original index: ", nucleotide.original_index, "auth_pos: ", selected_index );
+//           return;
+//         }
+//       })
+      
+//       // newChains[chainIndex].nucleotides[position].selected = !newChains[chainIndex].nucleotides[position].selected;
+      
+//       // console.log(newChains);
+                  
+//   });
+//   }) 
+// },[ chainsState, selected, setChains])
+
+
+
+useEffect(() => {
+  setChainsState(chains); // Synchronizuj lokalny stan
+}, [chains]);
+
+  // useEffect(() => {
+  //   console.log("Updated selected:", selected);
+  //   console.log("Updated chains in Mol*:", chains);
+  
+  //   // Create a map for faster lookup of selected indices
+  //   const selectedIndices = new Set(selected.map((item) => item.auth_position));
+  
+  //   // Update chains immutably
+  //   const updatedChains = chains.map((chain) => {
+  //     const updatedNucleotides = chain.nucleotides.map((nucleotide) => ({
+  //       ...nucleotide, // Spread existing nucleotide properties
+  //       selected: selectedIndices.has(nucleotide.original_index),
+  //     }));
+  
+  //     return { ...chain, nucleotides: updatedNucleotides };
+  //   });
+  
+  //   setChains(updatedChains);
+  
+  //   // updated chains
+  //   updatedChains.forEach((chain, chainIndex) => {
+  //     chain.nucleotides.forEach((nucleotide, index) => {
+  //       console.log(
+  //         `Nucleotide at index ${index} in chain ${chainIndex} is ${
+  //           nucleotide.selected ? "selected" : "not selected"
+  //         }: `,
+  //         nucleotide
+  //       );
+  //     });
+  //   });
+  // }, [setChains, selected]);
+  
+  
   
   useEffect(() => {
     console.log("pobieranie tablicy1111:", selectedNts);
@@ -154,23 +349,21 @@ const Molstar = props => {
     // Apply the selection in Mol*
     plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
 
-    // Optional: Focus the camera on the selected loci for better visibility
-    const loci = plugin.current.managers.structure.selection.toLociWithSourceUnits(
-      selectionQuery
-    );
-    plugin.current.managers.camera.focusLoci(loci);
-
   }, [plugin, selectedNts]);
 
-  const loadStructure = async (pdbId, url, file, plugin) => {
+  const loadStructure = async (pdbId, url, file=null, plugin) => {
+    console.log("FETCHUJE:", pdbId);
     if (plugin) {
       plugin.clear();
       if (file) {
+        console.log(file)
+        console.log("FILE TYPE:",file.type);
         const data = await plugin.builders.data.rawData({
-          data: file.filestring
+          data: file //await file.text()
         });
-        const traj = await plugin.builders.structure.parseTrajectory(data, file.type);
+        const traj = await plugin.builders.structure.parseTrajectory(data, "pdb");
         await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
+
       } else {
         const structureUrl = url ? url : pdbId ? `https://files.rcsb.org/view/${pdbId}.cif` : null;
         if (!structureUrl) return;
@@ -217,15 +410,48 @@ Molstar.propTypes = {
   useInterface: PropTypes.bool,
   pdbId: PropTypes.string,
   url: PropTypes.string,
-  file: PropTypes.object,
+  file: PropTypes.string,
   dimensions: PropTypes.array,
   showControls: PropTypes.bool,
   showAxes: PropTypes.bool,
   className: PropTypes.string,
+  chains: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      sequence: PropTypes.string.isRequired,
+      dotBracket: PropTypes.string.isRequired,
+      nucleotides: PropTypes.arrayOf(
+        PropTypes.shape({
+          index: PropTypes.number.isRequired,
+          original_index: PropTypes.number.isRequired,
+          base: PropTypes.string.isRequired,
+          structure: PropTypes.string.isRequired,
+          selected: PropTypes.bool.isRequired,
+        })
+      ).isRequired,
+    })
+  ).isRequired,
+  setChains: PropTypes.func,
   selectedNts: PropTypes.arrayOf(PropTypes.number).isRequired,
   setSelectedNts: PropTypes.func.isRequired,
   initialized: PropTypes.bool,
   setInitialized: PropTypes.func,
 };
+
+
+// Molstar.propTypes = {
+//   useInterface: PropTypes.bool,
+//   pdbId: PropTypes.string,
+//   url: PropTypes.string,
+//   file: PropTypes.object,
+//   dimensions: PropTypes.array,
+//   showControls: PropTypes.bool,
+//   showAxes: PropTypes.bool,
+//   className: PropTypes.string,
+//   selectedNts: PropTypes.arrayOf(PropTypes.number).isRequired,
+//   setSelectedNts: PropTypes.func.isRequired,
+//   initialized: PropTypes.bool,
+//   setInitialized: PropTypes.func,
+// };
 
 export default Molstar;
