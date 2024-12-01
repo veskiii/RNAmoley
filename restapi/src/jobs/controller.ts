@@ -2,15 +2,11 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, uploadFile, uploadFileFromPDBCode, uploadJSONFile, validateFile } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, saveJSONFileModels, saveJSONFileRoot, validateFile, saveMetadata, fetchModelFileAsString, readMetadata, readResults, saveResults } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
+import type { Analysis_results, Annotation, Job, Metadata, splitModelsResponse } from "./types.js";
 
-interface Annotation {
-    name: string | undefined;
-    sequnece: string | undefined;
-    dotbracket: string | undefined;
-}
 
 export async function getJobs(req: Request, res: Response) {
     db.query(getJobsQuery, (err, result) => {
@@ -25,6 +21,7 @@ export async function getJobs(req: Request, res: Response) {
 
 export async function getJobById(req: Request, res: Response) {
     const id = req.params.id as UUID;
+    const modelNumber = req.params.modelNumber as string || '1';
 
     if (!id) {
         res.status(400).send({ error: 'Job ID is required.' });
@@ -33,6 +30,22 @@ export async function getJobById(req: Request, res: Response) {
 
     if (id.length !== 36) {
         res.status(422).send({ error: 'Invalid job ID.' });
+        return;
+    }
+
+    if (!Number.isInteger(parseInt(modelNumber))) {
+        res.status(422).send({ error: 'Invalid model number.' });
+        return;
+    }
+
+    const metadata = await readMetadata(id);
+    if (!metadata) {
+        res.status(500).send({ error: 'Metadata file not found.' });
+        return;
+    }
+
+    if (parseInt(modelNumber) > metadata.model_count || parseInt(modelNumber) < 1) {
+        res.status(404).send({ error: 'Model not found.' });
         return;
     }
 
@@ -48,30 +61,48 @@ export async function getJobById(req: Request, res: Response) {
         }
         // res.status(200).json(result.rows[0]);
         //load annotation json file
-        const annotation = await fetchJSONFile(id, `annotation.json`);
+        const annotation = await fetchJSONFile(id, `${modelNumber}_annotation.json`, modelNumber);
         if (!annotation) {
             res.status(500).send({ error: 'Annotation file not found.' });
             return;
         }
 
-        const numeration = await fetchJSONFile(id, `numeration.json`);
+        const numeration = await fetchJSONFile(id, `${modelNumber}_numeration.json`, modelNumber);
         if (!numeration) {
             res.status(500).send({ error: 'Numeration file not found.' });
             return;
         }
 
-        const pdbFile = await fetchPdbFileAsJSON(id);
+        const pdbFile = await fetchPdbFileAsJSON(id, modelNumber);
         if (!pdbFile) {
             res.status(500).send({ error: 'PDB file not found.' });
             return;
         }
 
-        res.status(200).json({
-            ...result.rows[0],
+        const file_string = await fetchModelFileAsString(id, modelNumber);
+        if (!file_string) {
+            res.status(500).send({ error: 'Blob file not found.' });
+            return;
+        }
+
+        const results = await readResults(id);
+
+        const jobResponse: Job = {
+            id: result.rows[0].id,
+            original_filename: result.rows[0].original_filename,
+            name: result.rows[0].name,
+            metadata: metadata,
+            model_number: parseInt(modelNumber),
+            created_at: result.rows[0].created_at,
+            updated_at: result.rows[0].updated_at,
             annotation: annotation,
             numeration: numeration,
-            data: pdbFile
-        });
+            pdb_file: pdbFile,
+            pdb_file_string: file_string,
+            results: results
+        };
+
+        res.status(200).json(jobResponse);
     });
 }
 
@@ -151,35 +182,46 @@ export async function createJob(req: Request, res: Response) {
         finalFilename = newFilename;
     }
 
-    // save the original numeration of the pdb file
-    const fileData = fetchPdbFileAsJSON(id);
-    if (!fileData) {
-        res.status(500).send({ error: 'File data not found.' });
+    // check if pdb file exists after conversion
+    const pdbFile = await fetchPdbFileAsJSON(id);
+    if (!pdbFile) {
+        console.error('PDB file not found after conversion.');
+        deleteJobDirectory(id);
+        res.status(500).send({ error: 'Conversion error.' });
         return;
     }
 
-    const newNumeration = new Map<string, [number, string]>();
-    fileData.then((data) => {
-        // from the original numeration, create a json file with a map "newNumeration" -> ("originalNumeration", "chainID")
-        var originalNumeration: Array<number> = [];
-        var number = 1;
+    // split file into models
+    var numberOfModels = 1;
+    const splitResponse = await fetch(`http://tools:3002/split?id=${id}`, {
+        method: 'POST'
+    });
+    numberOfModels = (await splitResponse.json() as splitModelsResponse).numberOfModels;
 
-        data.atoms.forEach((atom) => {
-            if (atom.resSeq != originalNumeration.at(-1)) {
-                originalNumeration.push(atom.resSeq);
-                newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
-                number++;
-            }
-        });
+    // save the original numeration of all the models
+    const newNumeration = await saveOriginalNumeration(id, numberOfModels);
 
-        console.log(newNumeration);
-        uploadJSONFile(Object.fromEntries(newNumeration), id, 'numeration.json');
+    if (!newNumeration) {
+        console.error('Numeration error');
+        deleteJobDirectory(id);
+        res.status(500).send({ error: 'Numeration error' });
+        return;
+    }
+
+    // TODO: run clean up script on  all the models
+    const correctResponse = await fetch(`http://tools:3002/correct?id=${id}&numberOfModels=${numberOfModels}`, {
+        method: 'POST'
     });
 
-    // @TODO: run clean up script on pdb file
+    if (!correctResponse.ok) {
+        console.error('Correction error');
+        deleteJobDirectory(id);
+        res.status(500).send({ error: 'An error occurred while cleaning up the files.' });
+        return;
+    }
 
-    // annotate file
-    const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&filename=${finalFilename}`, {
+    // annotate all the models
+    const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&numberOfModels=${numberOfModels}`, {
         method: 'POST'
     });
 
@@ -189,9 +231,16 @@ export async function createJob(req: Request, res: Response) {
         res.status(500).send({ error: 'Annotation error' });
         return;
     }
+    const annotateResult: Annotation[][] = await annotateResponse.json() as Annotation[][];
 
-    const annotateResult: Annotation[] = await annotateResponse.json() as Annotation[];
-    db.query(createJobQuery, [id, originalFilename, jobname], (err, result) => {
+    // TODO: create a metadata file for the job
+    const meta: Metadata = {
+        status: 'created',
+        model_count: numberOfModels
+    }
+    saveMetadata(id, meta);
+
+    db.query(createJobQuery, [id, originalFilename, jobname], async (err, result) => {
         if (err) {
             console.error(err);
             deleteJobDirectory(id);
@@ -199,72 +248,127 @@ export async function createJob(req: Request, res: Response) {
             return;
         }
 
-        // send fields form result with annotate results
-        res.status(201).json({
-            ...result.rows[0],
-            annotation: annotateResult,
-            numeration: Object.fromEntries(newNumeration)
-        });
+        // get the first model as blob
+        const blob = await fetchModelFileAsString(id, '1');
+
+        // get the first model as json
+        const pdbFile = await fetchPdbFileAsJSON(id, '1');
+
+        // send fields from result with annotatnion and numeration for the first model
+        const jobResponse: Job = {
+            id: result.rows[0].id,
+            original_filename: result.rows[0].original_filename,
+            name: result.rows[0].name,
+            metadata: meta,
+            model_number: 1,
+            created_at: result.rows[0].created_at,
+            updated_at: result.rows[0].updated_at,
+            annotation: annotateResult[0] ? annotateResult[0] : [],
+            numeration: newNumeration[0] ? Object.fromEntries(newNumeration[0]) : {},
+            pdb_file: pdbFile ? pdbFile : { atoms: [], seqRes: { serNum: 0, chainID: '', numRes: 0, resNames: [] }, residues: [], chains: new Map() },
+            pdb_file_string: blob
+        }
+
+        res.status(201).json(jobResponse);
     });
 }
 
 export async function analyzeFragment(req: Request, res: Response) {
     const id: UUID = req.body.id;
     const residues: number[] = req.body.residues;
+    const modelNumber = req.body.modelNumber || '1';
 
-    console.log(id, residues);
+    const metadata = await readMetadata(id);
 
     if (!id || !residues) {
+        saveMetadata(id, { ...metadata, status: 'failed' });
         res.status(400).send({ error: 'ID and residue list are required.' });
         return;
     }
 
-    const result = await analyzeStructureFragment(id, residues);
-    if (!result) {
-        res.status(500).send({ error: 'Structure analysis error.' });
-        return;
-    }
-
-    // save the result as json file
-    const filename = `result.json`;
-    await uploadJSONFile(result, id, filename);
-
-    res.status(200).json(result);
-}
-
-export async function getJobResult(req: Request, res: Response) {
-    // check if id is provided
-    const id = req.params.id as UUID;
-    if (!id) {
-        res.status(400).send({ error: 'Job ID is required.' });
-        return;
-    }
-
-    // check if id is valid
     if (id.length !== 36) {
         res.status(422).send({ error: 'Invalid job ID.' });
         return;
     }
 
-    // check if job exists
+    metadata.status = 'running';
+    metadata.last_used_model = parseInt(modelNumber);
+    saveMetadata(id, metadata);
+
     db.query(getJobByIdQuery, [id], async (err, result) => {
         if (err) {
             console.error(err);
-            res.status(500).send({ error: 'An error occurred.' });
+            res.status(500).send({ error: 'Database error.' });
             return;
         }
         if (result.rows.length === 0) {
-            res.status(404).send({ error: 'Job not foun.' });
+            res.status(404).send({ error: 'Job not found.' });
             return;
         }
 
-        // check if result file exists
-        const resultFile = await fetchJSONFile(id, `result.json`);
-        if (!resultFile) {
-            res.status(500).send({ error: 'Result file not found' });
+        const output = await analyzeStructureFragment(id, modelNumber, residues);
+        if (!output) {
+            metadata.status = 'failed';
+            saveMetadata(id, metadata);
+            res.status(500).send({ error: 'Structure analysis error.' });
             return;
         }
 
-        res.status(200).json(resultFile);
+        const outputData: Analysis_results["data"] = residues.map((residue_number) => {
+            return [residue_number, output];
+        });
+
+        const analysisResult: Analysis_results = {
+            mode: 'fragment',
+            data: outputData
+        };
+
+        // save the result as json file
+        await saveResults(id, analysisResult);
+        metadata.status = 'completed';
+        metadata.last_used_model = parseInt(modelNumber);
+        saveMetadata(id, metadata);
+
+        //load annotation json file
+        const annotation = await fetchJSONFile(id, `${modelNumber}_annotation.json`, modelNumber);
+        if (!annotation) {
+            res.status(500).send({ error: 'Annotation file not found.' });
+            return;
+        }
+
+        const numeration = await fetchJSONFile(id, `${modelNumber}_numeration.json`, modelNumber);
+        if (!numeration) {
+            res.status(500).send({ error: 'Numeration file not found.' });
+            return;
+        }
+
+        const pdbFile = await fetchPdbFileAsJSON(id, modelNumber);
+        if (!pdbFile) {
+            res.status(500).send({ error: 'PDB file not found.' });
+            return;
+        }
+
+        const file_string = await fetchModelFileAsString(id, modelNumber);
+        if (!file_string) {
+            res.status(500).send({ error: 'Could not load model file.' });
+            return;
+        }
+
+        const jobResponse: Job = {
+            id: result.rows[0].id,
+            original_filename: result.rows[0].original_filename,
+            name: result.rows[0].name,
+            metadata: metadata,
+            model_number: parseInt(modelNumber),
+            created_at: result.rows[0].created_at,
+            updated_at: result.rows[0].updated_at,
+            annotation: annotation,
+            numeration: numeration,
+            pdb_file: pdbFile,
+            pdb_file_string: file_string,
+            results: analysisResult
+        };
+
+        res.status(200).json(jobResponse);
     });
 }
