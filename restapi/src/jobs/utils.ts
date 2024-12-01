@@ -158,8 +158,16 @@ export async function fetchPdbFileAsJSON(jobID: UUID, modelNumber?: string): Pro
 
 export async function fetchModelFileAsString(jobID: UUID, modelNumber: string) {
     const filename = `${modelNumber}.pdb`;
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`);
-    return data.toString();
+    try {
+        const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`);
+        return data.toString();
+    } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            return '';
+        } else {
+            throw error;
+        }
+    }
 }
 
 export async function saveOriginalNumeration(jobID: UUID, numberOfModels: number) {
