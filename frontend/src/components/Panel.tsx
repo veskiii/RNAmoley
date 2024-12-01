@@ -49,6 +49,7 @@ interface Job {
   data: {
     atoms: Atom[];
   };
+  pdb_file_string: string;
 }
 
 
@@ -442,7 +443,7 @@ const Panel: React.FC = () => {
                 <Molstar
                   useInterface={true}
                   // pdbId={pdbCode}
-                  file={pdbString}
+                  file={myData.pdb_file_string}
                   chains = {chainsState}
                   setChains = {setChainsState}
                   selectedNts={selectedNts}
