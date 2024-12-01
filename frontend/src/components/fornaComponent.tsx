@@ -107,40 +107,6 @@ const FornacComponent = ({
       }
     });
 
-
-    // if(hybridized_chains.length === 2){
-
-    //   //Nie działa łączenie listy nukleotydów
-    //   var merged_sequence = hybridized_chains[0].sequence + hybridized_chains[1].sequence;
-    //   var merged_structure = hybridized_chains[0].dotBracket + hybridized_chains[1].dotBracket;
-    //   console.log(hybridized_chains[0].nucleotides)
-    //   console.log(hybridized_chains[1].nucleotides)
-    //   const merged_nucleotides = hybridized_chains[0].nucleotides.concat(hybridized_chains[1].nucleotides.map((nucleotide) => ({
-    //     ...nucleotide,
-    //     index: nucleotide.index,
-    //     original_index: nucleotide.original_index,
-    //     selected: nucleotide.selected,
-    //   })));
-    //   console.log("CONCAT:",merged_nucleotides);
-
-      
-    //   var name = hybridized_chains[0].name + "_" +hybridized_chains[1].name;
-
-    //   const merged_chain: Chain = {
-    //     name: name,
-    //     sequence: merged_sequence,
-    //     dotBracket: merged_structure,
-    //     nucleotides: merged_nucleotides
-    //   }
-    //   merged_chains.push(merged_chain);
-
-    //   console.log("Zhybrydyzowane łańcuchy: ",merged_chain.name, merged_chain.sequence, merged_chain.dotBracket, merged_chain.nucleotides);
-  
-    // }else if(hybridized_chains.length > 2){
-    //   //Throw new error;
-    //   console.log("Wiecej niż 2 sekwencje zhybrydyzowane!");
-    // }
-
     try {
 
       chains.forEach((chain) =>{
@@ -221,27 +187,6 @@ const FornacComponent = ({
       });
     }) 
 
-    // //Analogiczna funkcja, która zmienia parametr selected na podstawie kliknięcia na grafie
-    // chainsState.forEach((chain, chainIndex) =>{
-    //   chain.nucleotides.forEach((nucleotide, index) => {
-
-    //     //@ts-ignore
-    //     const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
-
-    //     // TODO: dodaj obsługę gdy przeciagnięcie
-    //     g.on("mouseup", ()=>{
-    //       const newChains = [...chainsState];
-    //       newChains[chainIndex].nucleotides[index].selected = (g.attr("class") === "gnode") ? false : true;
-    //       setChainsState(newChains);
-          
-    //       console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
-
-    //     })
-        
-        
-    //   });
-    // }) 
-
     container.displayNumbering(numbering);
 
     container.displayNodeOutline(nodeOutline);
@@ -255,7 +200,6 @@ const FornacComponent = ({
     setAnimation ? container.startAnimation() : container.stopAnimation();
 
     return () => {
-      // document.removeEventListener("click", handleClick);
     };
   }, [
     sequences,
@@ -304,17 +248,7 @@ const FornacComponent = ({
 
           });
         }) 
-    
 
-      // setChainsState(prevChains =>
-      //   prevChains.map(chain => ({
-      //     ...chain,
-      //     nucleotides: chain.nucleotides.map(nucleotide => ({
-      //       ...nucleotide,
-      //       selected: selectedIndices.has(nucleotide.index),
-      //     })),
-      //   }))
-      // );
     };
   
     const observer = new MutationObserver(updateSelectedNucleotides);
