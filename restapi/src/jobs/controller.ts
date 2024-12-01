@@ -44,10 +44,10 @@ export async function getJobById(req: Request, res: Response) {
         return;
     }
 
-    // if (parseInt(modelNumber) > metadata.model_count || parseInt(modelNumber) < 1) {
-    //     res.status(404).send({ error: 'Model not found.' });
-    //     return;
-    // }
+    if (parseInt(modelNumber) > metadata.model_count || parseInt(modelNumber) < 1) {
+        res.status(404).send({ error: 'Model not found.' });
+        return;
+    }
 
     db.query(getJobByIdQuery, [id], async (err, result) => {
         if (err) {

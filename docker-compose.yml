@@ -14,11 +14,12 @@ services:
       retries: 5
     environment:
       - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+      # - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - db_data:/var/lib/postgresql/data
-    secrets:
-      - db-password
+    # secrets:
+    #   - db-password
 
   adminer:
     image: adminer
@@ -68,6 +69,7 @@ volumes:
     driver: local
   user_data:
     driver: local
-secrets:
-  db-password:
-    file: db/password.txt
+
+# secrets:
+#   db-password:
+#     file: db/password.txt
