@@ -44,10 +44,10 @@ export async function getJobById(req: Request, res: Response) {
         return;
     }
 
-    if (parseInt(modelNumber) > metadata.model_count || parseInt(modelNumber) < 1) {
-        res.status(404).send({ error: 'Model not found.' });
-        return;
-    }
+    // if (parseInt(modelNumber) > metadata.model_count || parseInt(modelNumber) < 1) {
+    //     res.status(404).send({ error: 'Model not found.' });
+    //     return;
+    // }
 
     db.query(getJobByIdQuery, [id], async (err, result) => {
         if (err) {
@@ -166,7 +166,7 @@ export async function createJob(req: Request, res: Response) {
 
     const metadata: Metadata = {
         status: "running",
-        model_count: 0,
+        model_count: 1,
     };
 
     saveMetadata(id, metadata);
