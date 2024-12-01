@@ -164,6 +164,13 @@ export async function createJob(req: Request, res: Response) {
     // move file to job directory
     await moveToJobDirectroy(newFilename, id);
 
+    const metadata: Metadata = {
+        status: "running",
+        model_count: 0,
+    };
+
+    saveMetadata(id, metadata);
+
     // if not pdb, convert to pdb
     if (originalExtension != "pdb") {
         const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
@@ -233,12 +240,9 @@ export async function createJob(req: Request, res: Response) {
     }
     const annotateResult: Annotation[][] = await annotateResponse.json() as Annotation[][];
 
-    // TODO: create a metadata file for the job
-    const meta: Metadata = {
-        status: 'created',
-        model_count: numberOfModels
-    }
-    saveMetadata(id, meta);
+    // create a metadata file for the job
+    metadata.model_count = numberOfModels;
+    metadata.status = 'completed';
 
     db.query(createJobQuery, [id, originalFilename, jobname], async (err, result) => {
         if (err) {
@@ -259,7 +263,7 @@ export async function createJob(req: Request, res: Response) {
             id: result.rows[0].id,
             original_filename: result.rows[0].original_filename,
             name: result.rows[0].name,
-            metadata: meta,
+            metadata: metadata,
             model_number: 1,
             created_at: result.rows[0].created_at,
             updated_at: result.rows[0].updated_at,
@@ -268,7 +272,7 @@ export async function createJob(req: Request, res: Response) {
             pdb_file: pdbFile ? pdbFile : { atoms: [], seqRes: { serNum: 0, chainID: '', numRes: 0, resNames: [] }, residues: [], chains: new Map() },
             pdb_file_string: blob
         }
-
+        saveMetadata(id, metadata);
         res.status(201).json(jobResponse);
     });
 }
