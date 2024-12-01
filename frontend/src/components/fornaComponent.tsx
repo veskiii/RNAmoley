@@ -57,6 +57,17 @@ const FornacComponent = ({
   // const [labelInterval, setLabelInterval] = useState(1);
   const [chainsState, setChainsState] = useState<Chain[]>(chains);
   const [selectedChain, setSelectedChain] = useState<string>(chains[0]?.name.slice(-1));
+  const [inputValueStart, setInputValueStart] = useState('');
+  const [inputValueEnd, setInputValueEnd] = useState('');
+
+  const handleInputChangeStart = (event: SelectChangeEvent) => {
+    setInputValueStart(event.target.value);
+  };
+
+  const handleInputChangeEnd = (event: SelectChangeEvent) => {
+    setInputValueEnd(event.target.value);
+  };
+
 
   const handleChange = (event: SelectChangeEvent) => {
     setSelectedChain(event.target.value as string);
@@ -91,7 +102,7 @@ const FornacComponent = ({
       if(isHybridized(chain.dotBracket) && hybridized_chains.length < 3){
         hybridized_chains.push(chain);
         // console.log(hybridized_chains, index);
-      }else{
+      }else if(hybridized_chains.length > 2){
         console.log("Mogą być tylko 2 łańcuchy zhybrydyzowane");
       }
     });
@@ -210,26 +221,26 @@ const FornacComponent = ({
       });
     }) 
 
-    //Analogiczna funkcja, która zmienia parametr selected na podstawie kliknięcia na grafie
-    chainsState.forEach((chain, chainIndex) =>{
-      chain.nucleotides.forEach((nucleotide, index) => {
+    // //Analogiczna funkcja, która zmienia parametr selected na podstawie kliknięcia na grafie
+    // chainsState.forEach((chain, chainIndex) =>{
+    //   chain.nucleotides.forEach((nucleotide, index) => {
 
-        //@ts-ignore
-        const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
+    //     //@ts-ignore
+    //     const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
 
-        // TODO: dodaj obsługę gdy przeciagnięcie
-        g.on("click", ()=>{
-          const newChains = [...chainsState];
-          newChains[chainIndex].nucleotides[index].selected = (g.attr("class") === "gnode") ? false : true;
-          setChainsState(newChains);
+    //     // TODO: dodaj obsługę gdy przeciagnięcie
+    //     g.on("mouseup", ()=>{
+    //       const newChains = [...chainsState];
+    //       newChains[chainIndex].nucleotides[index].selected = (g.attr("class") === "gnode") ? false : true;
+    //       setChainsState(newChains);
           
-          console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
+    //       console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
 
-        })
+    //     })
         
         
-      });
-    }) 
+    //   });
+    // }) 
 
     container.displayNumbering(numbering);
 
@@ -260,20 +271,101 @@ const FornacComponent = ({
   ]);
 
 
+  useEffect(() =>{
+    chainsState.map(chain =>{
+      console.log(chain);
+    })
+    setChainsState(chainsState);
+
+  }, [chainsState, setChainsState])
+
+
+  useEffect(() => {
+    const updateSelectedNucleotides = () => {
+      const selectedNodes = document.querySelectorAll("g.gnode.fornac-selectedNode");
+      const selectedIndices = new Set<number>();
+      selectedNodes.forEach(node => {
+        const nodeNumAttr = node.getAttribute("num");
+        if (nodeNumAttr) {
+          const numIndex = parseInt(nodeNumAttr.slice(1));
+          selectedIndices.add(numIndex);
+        }
+      });
+  
+
+      chainsState.forEach((chain, chainIndex) =>{
+          chain.nucleotides.forEach((nucleotide, index) => {
+
+              const newChains = [...chainsState];
+              newChains[chainIndex].nucleotides[index].selected = selectedIndices.has(nucleotide.index);
+              setChainsState(newChains);
+              
+              console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
+
+          });
+        }) 
+    
+
+      // setChainsState(prevChains =>
+      //   prevChains.map(chain => ({
+      //     ...chain,
+      //     nucleotides: chain.nucleotides.map(nucleotide => ({
+      //       ...nucleotide,
+      //       selected: selectedIndices.has(nucleotide.index),
+      //     })),
+      //   }))
+      // );
+    };
+  
+    const observer = new MutationObserver(updateSelectedNucleotides);
+  
+    const observeTargets = () => {
+      const targetNodes = document.querySelectorAll("g.gnode");
+      targetNodes.forEach(targetNode => {
+        observer.observe(targetNode, {
+          attributes: true,
+          attributeFilter: ["class"],
+        });
+      });
+    };
+  
+    observeTargets(); // Obserwuj istniejące elementy
+    updateSelectedNucleotides(); // Aktualizacja na starcie
+  
+    const globalObserver = new MutationObserver(() => {
+      observer.disconnect(); // Odłącz stary observer
+      observeTargets(); // Obserwuj nowe elementy
+    });
+  
+    globalObserver.observe(document.body, { childList: true, subtree: true });
+  
+    return () => {
+      observer.disconnect();
+      globalObserver.disconnect();
+    };
+  }, [setChainsState]);
+  
+  const handleSubmit = () =>{
+    console.log(inputValueStart, inputValueEnd);
+  }
+
+  
+
   return (
     <div className="absolute bottom-0 h-[90%] flex-grow w-full bg-transparent">
 <div
   className={`text-xl font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
 >
-<Box sx={{ maxWidth: 120 }}>
+<Box sx={{ maxWidth: 120}}>
       <FormControl fullWidth>
-        <InputLabel id="demo-simple-select-label">Chain</InputLabel>
+        <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
         <Select
           labelId="demo-simple-select-label"
           id="demo-simple-select"
           value={selectedChain}
           label="Chain"
           onChange={handleChange}
+          className="p-0"
         >
           {chains.map((chain, chainIndex) => (
             <MenuItem value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
@@ -299,6 +391,17 @@ const FornacComponent = ({
     </div>
   )) 
 }
+{/* <div> 
+
+  <label htmlFor="range_start">From</label>
+  <input id="range_start" type="text" value={inputValueStart} onChange={handleInputChangeStart} ></input>
+
+  <label htmlFor="range_end">To</label>
+  <input id="range_end" type="text" value={inputValueEnd} onChange={handleInputChangeEnd} ></input>
+
+  <button id="select_button" onClick={handleSubmit}>Select</button>
+
+</div> */}
 </div>
 
       <div
