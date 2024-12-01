@@ -9,6 +9,7 @@ import "../App.css";
 import { NameContext } from "../App";
 import Molstar from "./mol";
 import FornacComponent from "./fornaComponent";
+import { useLocation } from "react-router-dom";
 
 //  TODO : change for backend data
 //Now testing on local json server
@@ -30,6 +31,26 @@ export interface Atom {
   charge: string;
 }
 
+interface Annotation{
+  name: string;
+  sequnece: string;
+  dotbracket: string;
+}
+
+interface Numeration {
+  [key: string] : [number, string];
+}
+
+interface Annotation{
+  name: string;
+  sequnece: string;
+  dotbracket: string;
+}
+
+interface Numeration {
+  [key: string] : [number, string];
+}
+
 export interface Annotation {
   name: string;
   sequnece: string;
@@ -40,15 +61,78 @@ export interface Job {
   id: number;
   originalfilename: string;
   name: string;
-  createdat: Date;
-  updatedat: Date;
+  createdat: string;
+  updatedat: string;
   annotation: Annotation[];
-  sequnece: string;
-  dotbracket: string;
+  numeration: Numeration;
   data: {
     atoms: Atom[];
   };
 }
+
+
+interface Nucleotide {
+  index: number; 
+  original_index: number; 
+  base: string; 
+  structure: string; 
+  selected: boolean;
+}
+
+interface Chain {
+  name: string; 
+  nucleotides: Nucleotide[]; 
+  sequence: string; 
+  dotBracket: string; 
+}
+
+function transformJobToChains(job: Job): Chain[] {
+  const chains: Chain[] = [];
+
+  // for (const key in job.numeration) {
+  //   if (job.numeration.hasOwnProperty(key)) {
+  //     const [num, letter] = job.numeration[key];
+  //     console.log(`Key: ${key}, Number: ${num}, Letter: ${letter}`);
+  //   }
+  // }
+  
+  let startIndex = Math.min(...Object.values(job.numeration).map(entry => entry[0]));
+
+  // Iterate over each annotation to create a Chain object
+  job.annotation.forEach((annotation) => {
+    console.log("START INDEX = ", startIndex);
+      const chain: Chain = {
+          name: annotation.name,
+          sequence: annotation.sequnece,
+          dotBracket: annotation.dotbracket,
+          nucleotides: [] 
+      };
+
+      // Iterate over the sequence and dotBracket to build Nucleotides
+      console.log(annotation.name, annotation.sequnece, annotation.sequnece.length);
+      for (let i = 0; i < annotation.sequnece.length; i++) {
+          const numerationKey = Object.keys(job.numeration).find(key => job.numeration[key][0] === startIndex + i && job.numeration[key][1] === annotation.name.slice(-1));
+          // console.log(numerationKey, )
+          if (numerationKey) {
+              const nucleotide: Nucleotide = {
+                  index: parseInt(numerationKey),
+                  original_index: job.numeration[numerationKey][0],
+                  base: annotation.sequnece[i],
+                  structure: annotation.dotbracket[i],
+                  selected: false,
+              };
+              chain.nucleotides.push(nucleotide);
+          }
+      }
+      startIndex += annotation.sequnece.length;
+
+      chains.push(chain);
+      console.log("CHAIN Z PANELU:", chain.name, chain.sequence, chain.nucleotides);
+  });
+
+  return chains;
+}
+
 
 async function fetchMyData(jobID: string | undefined): Promise<Job> {
   //http://localhost:4200/jobs
@@ -74,6 +158,18 @@ const Panel: React.FC = () => {
   const height = document.getElementById("container")?.clientHeight || 700;
   let color = "black";
   const navigate = useNavigate();
+
+  const [chainsState, setChainsState] = useState<Chain[]>([]);
+
+  const location = useLocation();
+  const rnaFile = location.state?.rnaFile;
+  var pdbCode = location.state?.pdbCode;
+  const pdbCodeRadioButton = location.state?.radiobutton;
+
+  if(!pdbCode){
+    pdbCode = pdbCodeRadioButton;
+  }
+
   const context = useContext(NameContext);
   if (context) {
     const { jobID } = context;
@@ -164,6 +260,8 @@ const Panel: React.FC = () => {
         // throw Error("Testing throw error");
         const data = await fetchMyData(jobID);
         setMyData(data);
+        const chains = transformJobToChains(data);
+        setChainsState(chains);
         console.log("data:", data);
       } catch (error) {
         if (error instanceof Error) {
@@ -332,8 +430,9 @@ const Panel: React.FC = () => {
 
               {is2Dview && (
                 <FornacComponent
-                  structure={myData.annotation[0].dotbracket}
-                  sequence={myData.annotation[0].sequnece}
+                  structures={myData.annotation.map((a) => a.dotbracket)}
+                  sequences={myData.annotation.map((a) => a.sequnece)}
+                  chains = {chainsState}
                   labelInterval={labelInterval}
                   numbering={numbering}
                   nodeOutline={nodeOutline}
@@ -369,7 +468,8 @@ const Panel: React.FC = () => {
                 // />
                 <Molstar
                   useInterface={true}
-                  pdbId={"7kuc"}
+                  pdbId={pdbCode}
+                  file={rnaFile}
                   selectedNts={selectedNts}
                   setSelectedNts={setSelectedNts}
                   initialized={initialized}
@@ -393,8 +493,8 @@ const Panel: React.FC = () => {
             id="bottom-seq"
             className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl"
           >
-            <div className="whitespace-nowrap w-max cursor-pointer ml-2">
-              {myData.annotation[0].sequnece.split("").map((nt, index) => (
+            {/* <div className="whitespace-nowrap w-max cursor-pointer ml-2">
+              {myData.sequnece.split("").map((nt, index) => (
                 <span
                   className={clsx(
                     selectedNts.includes(index) ? "text-red-500" : ""
@@ -405,7 +505,7 @@ const Panel: React.FC = () => {
                   {nt}
                 </span>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

@@ -90,7 +90,7 @@ const Molstar = props => {
     
     if (initialized && plugin.current && plugin.current.managers.structure){
 
-      const subscription = plugin.current.behaviors?.interaction?.click.subscribe( (event) => {
+      const subscription = plugin.current.behaviors?.interaction?.click.subscribe(async (event) => {
         const selections = Array.from(
           plugin.current.managers.structure.selection.entries.values()
         );
@@ -114,7 +114,7 @@ const Molstar = props => {
           });
         }
         console.log("wybrane obiekty: ",localSelected);
-        setSelectedNts(localSelected);
+        setSelectedNts(prevSelected => [...prevSelected, ...localSelected]);
         console.log(selectedNts);
       })
 
@@ -154,22 +154,19 @@ const Molstar = props => {
     // Apply the selection in Mol*
     plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
 
-    // Optional: Focus the camera on the selected loci for better visibility
-    const loci = plugin.current.managers.structure.selection.toLociWithSourceUnits(
-      selectionQuery
-    );
-    plugin.current.managers.camera.focusLoci(loci);
-
   }, [plugin, selectedNts]);
 
   const loadStructure = async (pdbId, url, file, plugin) => {
+    console.log("FETCHUJE:", pdbId);
     if (plugin) {
       plugin.clear();
       if (file) {
+        console.log(file)
+        console.log("FILE TYPE:",file.type);
         const data = await plugin.builders.data.rawData({
-          data: file.filestring
+          data: await file.text()
         });
-        const traj = await plugin.builders.structure.parseTrajectory(data, file.type);
+        const traj = await plugin.builders.structure.parseTrajectory(data, "pdb");
         await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
       } else {
         const structureUrl = url ? url : pdbId ? `https://files.rcsb.org/view/${pdbId}.cif` : null;
