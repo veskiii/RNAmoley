@@ -14,7 +14,7 @@ import { useLocation } from "react-router-dom";
 //  TODO : change for backend data
 //Now testing on local json server
 
-export interface Atom {
+interface Atom {
   serial: number;
   name: string;
   altLoc: string;
@@ -41,22 +41,6 @@ interface Numeration {
   [key: string] : [number, string];
 }
 
-interface Annotation{
-  name: string;
-  sequnece: string;
-  dotbracket: string;
-}
-
-interface Numeration {
-  [key: string] : [number, string];
-}
-
-export interface Annotation {
-  name: string;
-  sequnece: string;
-  dotbracket: string;
-}
-
 export interface Job {
   id: number;
   originalfilename: string;
@@ -71,7 +55,7 @@ export interface Job {
 }
 
 
-interface Nucleotide {
+export interface Nucleotide {
   index: number; 
   original_index: number; 
   base: string; 
@@ -79,7 +63,7 @@ interface Nucleotide {
   selected: boolean;
 }
 
-interface Chain {
+export interface Chain {
   name: string; 
   nucleotides: Nucleotide[]; 
   sequence: string; 

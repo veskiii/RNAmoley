@@ -5,9 +5,51 @@ import "../App.css";
 import Molstar from "./mol";
 import FornacComponent from "./fornaComponent";
 import { Job } from "./Panel";
+import { Chain } from "./Panel";
+import { Nucleotide } from "./Panel";
 import DownloadLink from "./downloadLink";
 import ErrorPage, { ErrorPageProps } from "./ErrorPage";
 import JobProcessing from "./JobProcessing";
+
+function transformJobToChains(job: Job): Chain[] {
+  const chains: Chain[] = [];
+
+  let startIndex = Math.min(...Object.values(job.numeration).map(entry => entry[0]));
+
+  // Iterate over each annotation to create a Chain object
+  job.annotation.forEach((annotation) => {
+    console.log("START INDEX = ", startIndex);
+      const chain: Chain = {
+          name: annotation.name,
+          sequence: annotation.sequnece,
+          dotBracket: annotation.dotbracket,
+          nucleotides: [] 
+      };
+
+      // Iterate over the sequence and dotBracket to build Nucleotides
+      console.log(annotation.name, annotation.sequnece, annotation.sequnece.length);
+      for (let i = 0; i < annotation.sequnece.length; i++) {
+          const numerationKey = Object.keys(job.numeration).find(key => job.numeration[key][0] === startIndex + i && job.numeration[key][1] === annotation.name.slice(-1));
+          // console.log(numerationKey, )
+          if (numerationKey) {
+              const nucleotide: Nucleotide = {
+                  index: parseInt(numerationKey),
+                  original_index: job.numeration[numerationKey][0],
+                  base: annotation.sequnece[i],
+                  structure: annotation.dotbracket[i],
+                  selected: false,
+              };
+              chain.nucleotides.push(nucleotide);
+          }
+      }
+      startIndex += annotation.sequnece.length;
+
+      chains.push(chain);
+      console.log("CHAIN Z PANELU:", chain.name, chain.sequence, chain.nucleotides);
+  });
+
+  return chains;
+}
 
 async function fetchMyData(jobID: string | undefined) {
   console.log(`Sending request to /api/v1/jobs/${jobID}`)
@@ -32,6 +74,7 @@ const Summary: React.FC = () => {
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [chainsState, setChainsState] = useState<Chain[]>([]);
 
   function toggle() {
     setIs2Dview((is2Dview) => {
@@ -72,6 +115,8 @@ const Summary: React.FC = () => {
           });
         } else {
           setMyData(data);
+          const chains = transformJobToChains(data);
+          setChainsState(chains);
           console.log("data:", data);
         }
         
@@ -225,8 +270,9 @@ const Summary: React.FC = () => {
 
               {is2Dview && (
                 <FornacComponent
-                  structure={myData.annotation[0].dotbracket}
-                  sequence={myData.annotation[0].sequnece}
+                  structures={myData.annotation.map((a) => a.dotbracket)}
+                  sequences={myData.annotation.map((a) => a.sequnece)}
+                  chains = {chainsState}
                   labelInterval={labelInterval}
                   numbering={numbering}
                   nodeOutline={nodeOutline}
