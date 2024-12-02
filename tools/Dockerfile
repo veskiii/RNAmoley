@@ -66,6 +66,9 @@ ENV PATH="$PATH:/root/.local/bin"
 # add scripts to path
 ENV PATH="$PATH:/usr/src/app/scripts"
 
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir numpy biopython
+
 # # Run the application as a non-root user.
 # RUN useradd -ms /bin/bash node
 # USER node
