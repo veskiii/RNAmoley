@@ -36,6 +36,7 @@ services:
     #   - 3001:3001
     volumes:
       - user_data:/user_data
+    scale: 4
 
   tools:
     image: tools
@@ -47,6 +48,7 @@ services:
     #   - 3002:3002
     volumes:
       - user_data:/usr/src/app/user_data
+    scale: 1
 
   restapi:
     image: restapi
