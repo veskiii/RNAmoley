@@ -11,6 +11,7 @@ if not path_to_folder.exists():
 def correction():
     count = 1
     tmp_count = 0
+    ter = 0
     f = open(os.path.abspath(sys.argv[1]), "r")
     lines = f.readlines()
     f.close()
@@ -18,6 +19,11 @@ def correction():
     #f.write("MODEL        " + file_name.split(".")[-2] + "\n")
     for line in lines:
         if line[0:4] == "ATOM" or line[0:3] == "TER":
+            if ter == 1:
+                count = 1
+                tmp_count = 0
+            if line[0:3] == "TER" and (line[16:20].strip() == "C" or line[16:20].strip() == "A" or line[16:20].strip() == "G" or line[16:20].strip() == "T" or line[16:20].strip() == "U"):
+                ter = 1
             if line[16:20].strip() == "C" or line[16:20].strip() == "A" or line[16:20].strip() == "G" or line[16:20].strip() == "T" or line[16:20].strip() == "U":
                 if tmp_count == 0:
                     tmp_count = int(line[22:26].strip())
