@@ -71,18 +71,9 @@ interface Chain {
 function transformJobToChains(job: Job): Chain[] {
   const chains: Chain[] = [];
 
-  // for (const key in job.numeration) {
-  //   if (job.numeration.hasOwnProperty(key)) {
-  //     const [num, letter] = job.numeration[key];
-  //     console.log(`Key: ${key}, Number: ${num}, Letter: ${letter}`);
-  //   }
-  // }
-  
-  let startIndex = Math.min(...Object.values(job.numeration).map(entry => entry[0]));
-  // let id = 1;
-  // Iterate over each annotation to create a Chain object
+  let id = 1;
   job.annotation.forEach((annotation) => {
-    console.log("START INDEX = ", startIndex);
+
       const chain: Chain = {
           name: annotation.name,
           sequence: annotation.sequnece,
@@ -90,30 +81,28 @@ function transformJobToChains(job: Job): Chain[] {
           nucleotides: [] 
       };
 
-      // Iterate over the sequence and dotBracket to build Nucleotides
-      
-      console.log(annotation.name, annotation.sequnece, annotation.sequnece.length);
       for (let i = 0; i < annotation.sequnece.length; i++) {
-        const numerationKey = Object.keys(job.numeration).find(key => job.numeration[key][0] === startIndex + i && job.numeration[key][1] === annotation.name.slice(-1));
-          // const numerationKey = Object.keys(job.numeration).find(key => job.numeration[key][1] === annotation.name.slice(-1));
-          console.log("KEY:",numerationKey)
+
+          const numerationKey = Object.keys(job.numeration).find(key => parseInt(key, 10) === id && job.numeration[key][1] === annotation.name.slice(-1));
           if (numerationKey) {
               const nucleotide: Nucleotide = {
-                  index: parseInt(numerationKey),
-                  // index: id,
+                  index: parseInt(numerationKey, 10),
                   original_index: job.numeration[numerationKey][0],
                   base: annotation.sequnece[i],
                   structure: annotation.dotbracket[i],
                   selected: false,
               };
               chain.nucleotides.push(nucleotide);
+              console.log("Dodano nukleotyd: ",nucleotide);
           }
-          // id++;
+          console.log("id:", id);
+          console.log("Dlugość sekwencji: ",annotation.sequnece.length);
+          id++;
+
       }
-      // startIndex += annotation.sequnece.length;
 
       chains.push(chain);
-      console.log("CHAIN Z PANELU:", chain.name, chain.sequence,chain.dotBracket, chain.nucleotides);
+      console.log("Dodano łańcuch:", chain.name, chain.sequence,chain.dotBracket, chain.nucleotides);
   });
 
   return chains;
