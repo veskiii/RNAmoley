@@ -35,13 +35,13 @@ const RadioButtons: React.FC<RadioButtonsProps> = ({
           <div className="radioButton">
             <input
               type="radio"
-              id="1L9Z"
-              value="1L9Z"
-              checked={selectedValue === "1L9Z"}
-              onChange={() => handleRadioChange("1L9Z")}
+              id="1EHZ"
+              value="1EHZ"
+              checked={selectedValue === "1EHZ"}
+              onChange={() => handleRadioChange("1EHZ")}
             />
-            <label htmlFor="1L9Z" className="radioLabel">
-              1L9Z
+            <label htmlFor="1EHZ" className="radioLabel">
+              1EHZ
             </label>
           </div>
 
