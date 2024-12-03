@@ -74,6 +74,16 @@ function transformJobToChains(job: Job): Chain[] {
   let id = 1;
   job.annotation.forEach((annotation) => {
 
+    if (!job.annotation || job.annotation.length === 0) {
+      console.error("Annotation is undefined or empty.");
+      return [];
+    }
+    
+    if (!job.numeration || Object.keys(job.numeration).length === 0) {
+      console.error("Numeration is undefined or empty.");
+      return [];
+    }
+
       const chain: Chain = {
           name: annotation.name,
           sequence: annotation.sequnece,
@@ -116,7 +126,7 @@ async function fetchMyData(jobID: string | undefined): Promise<Job> {
   return data;
 }
 const Panel: React.FC = () => {
-  const { jobId } = useParams();
+  // const { jobId } = useParams();
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
@@ -125,8 +135,8 @@ const Panel: React.FC = () => {
   const [nodeLabel, setNodeLabel] = useState(true);
   const [links, setLinks] = useState(true);
   const [directionArrows, setDirectionArrows] = useState(true);
-  const [animation, setAnimation] = useState(true);
-  const [is2Dview, setIs2Dview] = useState(true);
+  const [animation, setAnimation] = useState(false);
+  const [is3Dview, setIs3Dview] = useState(true);
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
   const [initialized, setInitialized] = useState(false);
   const width = document.getElementById("container")?.clientWidth || 1300;
@@ -134,6 +144,12 @@ const Panel: React.FC = () => {
   let color = "black";
   
   const [chainsState, setChainsState] = useState<Chain[]>([]);
+
+  useEffect(()=>{
+    chainsState.forEach(chain =>{
+      console.log("Chain z panelu:",chain)
+    })
+  }, [chainsState]);
 
   const location = useLocation();
   const rnaFile = location.state?.rnaFile;
@@ -153,25 +169,25 @@ const Panel: React.FC = () => {
   }
 
   function toggle() {
-    setIs2Dview((is2Dview) => {
-      is2Dview = !is2Dview;
-      console.log(is2Dview);
+    setIs3Dview((is3Dview) => {
+      is3Dview = !is3Dview;
+      console.log(is3Dview);
       let switchViewButton = document.getElementById(
         "switchViewButton"
       ) as HTMLElement;
       let viewLabel = document.getElementById("viewLabel") as HTMLElement;
-      let bottom_seq = document.getElementById("bottom-seq") as HTMLElement;
-      if (is2Dview) {
-        switchViewButton.textContent = "3D view";
-        viewLabel.textContent = "2D view";
-        bottom_seq.style.setProperty("display", "block", "important");
-      } else {
+      // let bottom_seq = document.getElementById("bottom-seq") as HTMLElement;
+      if (is3Dview) {
         switchViewButton.textContent = "2D view";
         viewLabel.textContent = "3D view";
+        // bottom_seq.style.setProperty("display", "block", "important");
+      } else {
+        switchViewButton.textContent = "3D view";
+        viewLabel.textContent = "2D view";
 
-        bottom_seq.style.setProperty("display", "none", "important");
+        // bottom_seq.style.setProperty("display", "none", "important");
       }
-      return is2Dview;
+      return is3Dview;
     });
   }
 
@@ -379,19 +395,28 @@ const Panel: React.FC = () => {
                     id="viewLabel"
                     className="text-2xl font-bold place-self-center my-1"
                   >
-                    2D view
+                    3D view
                   </label>
                   <button
                     id="switchViewButton"
                     onClick={toggle}
                     className="font-bold absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
                   >
-                    3D view
+                    2D view
                   </button>
                 </div>
               </div>
-
-              {is2Dview && (
+              {is3Dview && (
+                <Molstar
+                  useInterface={true}
+                  file={myData.pdb_file_string}
+                  chains = {chainsState}
+                  setChains = {setChainsState}
+                  initialized={initialized}
+                  setInitialized={setInitialized}
+                />
+              )}
+              {!is3Dview && (
                 <FornacComponent
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
@@ -406,41 +431,8 @@ const Panel: React.FC = () => {
                   selectedNts={selectedNts}
                   setSelectedNts={setSelectedNts}
                 />
-
-                // <TwoDView
-                //   sequence={myData.sequnece}
-                //   structure={myData.dotbracket}
-                //   SELECTED={selectedNts}
-                //   setSELECTED={setSelectedNts}
-                //   nodeLabel={nodeLabel}
-                //   directionArrows={directionArrows}
-                //   numbering={numbering}
-                //   labelInterval={labelInterval}
-                //   width={width}
-                //   height={height}
-                // />
-
-                // <RNAVisualizer />
               )}
-              {!is2Dview && (
-                // <ThreeDView
-                //   sequence={myData.sequnece}
-                //   SELECTED={selectedNts}
-                //   setSELECTED={setSelectedNts}
-                //   atoms={myData.data.atoms}
-                // />
-                <Molstar
-                  useInterface={true}
-                  // pdbId={pdbCode}
-                  file={myData.pdb_file_string}
-                  chains = {chainsState}
-                  setChains = {setChainsState}
-                  selectedNts={selectedNts}
-                  setSelectedNts={setSelectedNts}
-                  initialized={initialized}
-                  setInitialized={setInitialized}
-                />
-              )}
+
             </div>
           ) : (
             <Loading />
@@ -454,10 +446,10 @@ const Panel: React.FC = () => {
             showAxes={false}
           /> */}
 
-          <div
+          {/* <div
             id="bottom-seq"
             className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl"
-          >
+          > */}
             {/* <div className="whitespace-nowrap w-max cursor-pointer ml-2">
               {myData.sequnece.split("").map((nt, index) => (
                 <span
@@ -471,7 +463,7 @@ const Panel: React.FC = () => {
                 </span>
               ))}
             </div> */}
-          </div>
+          {/* </div> */}
         </div>
       </div>
     </div>

@@ -40,7 +40,7 @@ const Molstar = props => {
     if (plugin.current) {
       console.log("Plugin already initialized");
       return;
-    }
+    }else{
     (async () => {
       if (useInterface) {
         const spec = DefaultPluginUISpec();
@@ -72,7 +72,7 @@ const Molstar = props => {
       }
       await loadStructure(pdbId, url, file, plugin.current);
       setInitialized(true);
-    })();
+    })()};
     // return () => plugin.current = null;
     return () => {
       plugin.current?.dispose();
@@ -141,41 +141,51 @@ const Molstar = props => {
 //     setChains(updatedChains);
 //   }
 // }, [selected, chains, setChains]); // Dependency array ensures this effect runs when selected or chains change
-
+useEffect(() => {
+  setChainsState(chains);  // Zaktualizuj stan na podstawie przekazywanych danych
+  console.log("chainsState w pierwszym useEffect:", chainsState);
+}, [chains]); 
 useEffect(() => {
   if (!plugin.current) return;
+console.log("HALO!")
 
-  const atomGroups = chains.flatMap(chain =>
+  const atomGroups = chainsState.flatMap(chain =>
     chain.nucleotides.filter(nucleotide => nucleotide.selected === true).map(nucleotide =>
       MS.struct.generator.atomGroups({
         "residue-test": MS.core.rel.eq([
-          MS.struct.atomProperty.macromolecular.auth_seq_id(),
-          nucleotide.original_index,
+          MS.struct.atomProperty.macromolecular.label_seq_id(),
+          nucleotide.index,
         ]),
       })
     )
   );
+  console.log("atom groups", atomGroups);
 
   const selectionQuery = StructureSelectionQuery(
     "selected_nucleotides",
     MS.struct.combinator.merge(atomGroups)
   );
+  console.log("Selectionquery", selectionQuery);
 
   plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
 
-  (async () => {
+  const updateLoci = async () => {
     const loci = await plugin.current.managers.structure.selection.fromSelectionQuery(
-        "set",
-        selectionQuery
+      "set",
+      selectionQuery
     );
+    console.log("Loci:", loci);
     if (loci) {
-        plugin.current.managers.camera.focusLoci(loci);
-        plugin.current.managers.interactivity.lociSelects.select({ loci });
+      plugin.current.managers.camera.focusLoci(loci);
+      plugin.current.managers.interactivity.lociSelects.select({ loci });
     } else {
-        console.warn("No loci found for the selection query");
+      console.warn("No loci found for the selection query");
     }
-})();
-}, [ plugin.current]);
+  };
+  console.log(updateLoci());
+
+
+}, [ plugin.current, chainsState]);
 
 
   useEffect(() => {
@@ -289,7 +299,8 @@ useEffect(() => {
 
 useEffect(() => {
   setChainsState(chains); // Synchronizuj lokalny stan
-}, [chains]);
+  console.log("chainsState w molstarze:", chainsState);
+}, [chains, setChainsState]);
 
   // useEffect(() => {
   //   console.log("Updated selected:", selected);
@@ -325,31 +336,31 @@ useEffect(() => {
   
   
   
-  useEffect(() => {
-    console.log("pobieranie tablicy1111:", selectedNts);
-    if (!plugin.current || !selectedNts.length) return;
+  // useEffect(() => {
+  //   console.log("pobieranie tablicy1111:", selectedNts);
+  //   if (!plugin.current || !selectedNts.length) return;
 
-    console.log("pobieranie tablicy:", selectedNts);
-    // Create selection query for selected nucleotides
-    const selectionExpressions = selectedNts.map((resId) =>
-      MS.struct.generator.atomGroups({
-        "residue-test": MS.core.rel.eq([
-          MS.struct.atomProperty.macromolecular.label_seq_id(),
-          resId,
-        ]),
-      })
-    );
+  //   console.log("pobieranie tablicy:", selectedNts);
+  //   // Create selection query for selected nucleotides
+  //   const selectionExpressions = selectedNts.map((resId) =>
+  //     MS.struct.generator.atomGroups({
+  //       "residue-test": MS.core.rel.eq([
+  //         MS.struct.atomProperty.macromolecular.label_seq_id(),
+  //         resId,
+  //       ]),
+  //     })
+  //   );
 
-    // Merge expressions into a single selection query
-    const selectionQuery = StructureSelectionQuery(
-      "selected_residues",
-      MS.struct.combinator.merge(selectionExpressions)
-    );
+  //   // Merge expressions into a single selection query
+  //   const selectionQuery = StructureSelectionQuery(
+  //     "selected_residues",
+  //     MS.struct.combinator.merge(selectionExpressions)
+  //   );
 
-    // Apply the selection in Mol*
-    plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
+  //   // Apply the selection in Mol*
+  //   plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
 
-  }, [plugin, selectedNts]);
+  // }, [plugin, selectedNts]);
 
   const loadStructure = async (pdbId, url, file=null, plugin) => {
     console.log("FETCHUJE:", pdbId);
@@ -432,26 +443,8 @@ Molstar.propTypes = {
     })
   ).isRequired,
   setChains: PropTypes.func,
-  selectedNts: PropTypes.arrayOf(PropTypes.number).isRequired,
-  setSelectedNts: PropTypes.func.isRequired,
   initialized: PropTypes.bool,
   setInitialized: PropTypes.func,
 };
-
-
-// Molstar.propTypes = {
-//   useInterface: PropTypes.bool,
-//   pdbId: PropTypes.string,
-//   url: PropTypes.string,
-//   file: PropTypes.object,
-//   dimensions: PropTypes.array,
-//   showControls: PropTypes.bool,
-//   showAxes: PropTypes.bool,
-//   className: PropTypes.string,
-//   selectedNts: PropTypes.arrayOf(PropTypes.number).isRequired,
-//   setSelectedNts: PropTypes.func.isRequired,
-//   initialized: PropTypes.bool,
-//   setInitialized: PropTypes.func,
-// };
 
 export default Molstar;
