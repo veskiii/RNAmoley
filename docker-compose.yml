@@ -5,8 +5,8 @@ services:
     # set shared memory limit when using docker-compose
     shm_size: 128mb
     user: postgres
-    expose:
-      - "5432"
+    # expose:
+    #   - "5432"
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s
@@ -25,30 +25,33 @@ services:
     image: adminer
     restart: always
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     ports:
       - 8080:8080
 
   molprobity:
     image: dawidgrajek1/molprobity:latest
     restart: always
-    ports:
-      - 3001:3001
+    # ports:
+    #   - 3001:3001
     volumes:
       - user_data:/user_data
+    scale: 4
 
   tools:
+    image: tools
     build:
       context: ./tools
     environment:
       NODE_ENV: production
-    ports:
-      - 3002:3002
+    # ports:
+    #   - 3002:3002
     volumes:
       - user_data:/usr/src/app/user_data
+    scale: 1
 
   restapi:
+    image: restapi
     build:
       context: ./restapi
     restart: always
@@ -61,8 +64,7 @@ services:
     volumes:
       - user_data:/usr/src/app/public/jobs
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
 volumes:
   db_data:

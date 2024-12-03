@@ -94,12 +94,14 @@ export interface metrics {
     numSuites: string;
 }
 
+export interface nucleotideResult {
+    residue_number: number;
+    metrics: metrics;
+}
+
 export interface Analysis_results {
     mode: `fragment` | `full`;
-    data: [
-        residue_number: number,
-        metrics: metrics
-    ][];
+    data: nucleotideResult[];
 }
 
 export interface Job {
