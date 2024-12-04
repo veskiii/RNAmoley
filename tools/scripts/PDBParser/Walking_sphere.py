@@ -31,9 +31,10 @@ def Walking_sphere(count, Interval_count, Interval):
             continue
         else:
             if Interval_count == Interval:
+                residue_number = main_atom.get_full_id()
                 Interval_count = 1
                 list = []
-                f = open(os.path.abspath(path_to_folder)+'/'+str(count)+'.pdb', 'w')
+                f = open(os.path.abspath(path_to_folder)+'/'+str(main_atom.get_full_id()[3][1])+'.pdb', 'w')
                 count+=1
                 for line in file:
                     if line[0:4] != 'ATOM' and line[0:6] != 'HETATM':
