@@ -109,7 +109,7 @@ export async function walkingSphere(id: string, modelNumber: number, radius: num
     try {
         await fs.rm(`${JOBS_DIR}/${id}/sphere`, { recursive: true });
     } catch (error) {
-        console.error('Error deleting old sphere folder: ', error);
+        console.log('Sphere folder does not exist, continuing...');
     }
 
     const sphere = spawnSync('Walking_sphere.py', [
