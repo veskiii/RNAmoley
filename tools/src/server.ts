@@ -85,6 +85,8 @@ app.post('/correct', (req, res) => {
 });
 
 app.post('/sphere', (req, res) => {
+    req.setTimeout(1 * 60 * 60 * 1000); // 1h timeout   
+
     const id = req.query.id as string;
     const modelNumber = req.query.modelNumber as string;
     const radius = req.query.radius as string;

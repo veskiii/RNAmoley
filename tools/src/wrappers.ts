@@ -105,6 +105,13 @@ export async function walkingSphere(id: string, modelNumber: number, radius: num
     // #sys.argv[3] = wielkość promienia
     // #sys.argv[4] = Liczba określa co który C-alfa będzie brany pod uwagę
 
+    // delete old sphere folder if exists
+    try {
+        await fs.rm(`${JOBS_DIR}/${id}/sphere`, { recursive: true });
+    } catch (error) {
+        console.error('Error deleting old sphere folder: ', error);
+    }
+
     const sphere = spawnSync('Walking_sphere.py', [
         `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
         `${JOBS_DIR}/${id}/sphere`,

@@ -227,7 +227,6 @@ export async function createJob(req: Request, res: Response) {
         return;
     }
 
-
     // annotate all the models
     const annotateResponse = await fetch(`http://tools:3002/annotate?id=${id}&numberOfModels=${numberOfModels}`, {
         method: 'POST'
