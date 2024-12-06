@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 // @ts-ignore
 import parsePdb from 'parse-pdb';
 import type { UUID } from 'crypto';
-import type { PDBFile, Metadata, metrics, Analysis_results } from "./types.js";
+import type { PDBFile, Metadata, metrics, Analysis_results, Job, nucleotideResult } from "./types.js";
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
@@ -218,4 +218,45 @@ export async function analyzeStructureFragment(jobID: UUID, modelNumber: string,
     const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=/${jobID}/${jobID}_selected.pdb`);
     const data: metrics = await res.json() as metrics;
     return data;
+}
+
+export async function analyzeStructureWalkingSphere(jobID: UUID, modelNumber: string, radius: number, interval: number, metadata: Metadata): Promise<Analysis_results> {
+    // fetch metadata
+    metadata.status = "running";
+    await saveMetadata(jobID, metadata);
+
+    // call tools to create a directory of pdb files
+    const walkingSphere = await fetch(`http://tools:3002/sphere?id=${jobID}&modelNumber=${modelNumber}&radius=${radius}&interval=${interval}`, { method: 'POST' });
+    if (!walkingSphere.ok) {
+        metadata.status = "failed";
+        await saveMetadata(jobID, metadata);
+        throw new Error("Sphere error: " + walkingSphere.statusText);
+    }
+
+    // for each file in the directory, run clashscore
+    const result = {} as Analysis_results
+    result.mode = "full";
+    result.data = [];
+
+    const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
+    const promises = files.map(async (file) => {
+        const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=/${jobID}/sphere/${file}`);
+        if (!res.ok) {
+            throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
+        }
+        const tmpMetrics: metrics = await res.json() as metrics;
+        const nucleotideNumber = parseInt((file.split('.')[0]) ?? '');
+        return { residue_number: nucleotideNumber, metrics: tmpMetrics } as nucleotideResult;
+    });
+
+    const results = await Promise.all(promises);
+    // sort results by residue number
+    results.sort((a, b) => a.residue_number - b.residue_number);
+
+    result.data.push(...results);
+
+    metadata.status = "completed";
+    await saveMetadata(jobID, metadata);
+
+    return result;
 }

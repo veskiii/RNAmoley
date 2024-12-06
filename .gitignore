@@ -10,4 +10,4 @@ tools/dist
 tools/scripts/PDBParser/Walking_sphere
 tools/scripts/Correction/Corrected
 tools/scripts/Correction/To_correct
-tools/tests/test.json
+tests/test.json

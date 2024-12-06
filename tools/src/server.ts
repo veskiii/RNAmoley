@@ -1,5 +1,5 @@
 import express from 'express';
-import { correctModels, runAnnotator, runConverter, splitModels } from './wrappers.js';
+import { correctModels, runAnnotator, runConverter, splitModels, walkingSphere } from './wrappers.js';
 
 const app = express();
 const port = 3002;
@@ -82,6 +82,42 @@ app.post('/correct', (req, res) => {
     }).catch((error) => {
         res.status(500).send(error);
     });
+});
+
+app.post('/sphere', (req, res) => {
+    req.setTimeout(1 * 60 * 60 * 1000); // 1h timeout   
+
+    const id = req.query.id as string;
+    const modelNumber = req.query.modelNumber as string;
+    const radius = req.query.radius as string;
+    const interval = req.query.interval as string;
+
+    if (!id) {
+        res.status(400).send({ error: 'Sphere error: id is required' });
+        return;
+    }
+
+    if (!modelNumber) {
+        res.status(400).send({ error: 'Sphere error: modelNumber is required' });
+        return;
+    }
+
+    if (!radius) {
+        res.status(400).send({ error: 'Sphere error: radius is required' });
+        return;
+    }
+
+    if (!interval) {
+        res.status(400).send({ error: 'Sphere error: interval is required' });
+        return;
+    }
+
+    walkingSphere(id, parseInt(modelNumber), parseInt(radius), parseInt(interval)).then((output) => {
+        res.status(200).send(output);
+    }).catch((error) => {
+        res.status(500).send(error);
+    });
+
 });
 
 app.listen(port, () => {
