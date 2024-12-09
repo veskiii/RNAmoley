@@ -20,21 +20,21 @@ import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/st
 
 const Molstar = props => {
 
-  const { useInterface, pdbId, url, file, dimensions, className, showControls, showAxes, selectedNts, setSelectedNts, initialized, setInitialized, chains, setChains } = props;
+  const { useInterface, pdbId, url, file, dimensions, className, showControls, showAxes, selectedNts, setSelectedNts, initialized, setInitialized, chains, setChains, changeSource, setChangeSource } = props;
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
   // const [initialized, setInitialized] = useState(false);
   // const [selectedNts, setSelectedNts] = useState([]);
   const [selected, setSelected] = useState([]);
-  const [chainsState, setChainsState] = useState(chains);
+  // const [chainsState, setChainsState] = useState(chains);
   
-  useEffect(() => {
-    console.log("Chains data in Molstar:", chains);
-    chains.map(chain =>{
-      console.log(chain.nucleotides);
-    })
-  }, [chains]);
+  // useEffect(() => {
+  //   console.log("Chains data in Molstar:", chains);
+  //   chains.map(chain =>{
+  //     console.log(chain.nucleotides);
+  //   })
+  // }, [chains]);
 
   useEffect(() => {
     if (plugin.current) {
@@ -141,15 +141,16 @@ const Molstar = props => {
 //     setChains(updatedChains);
 //   }
 // }, [selected, chains, setChains]); // Dependency array ensures this effect runs when selected or chains change
-useEffect(() => {
-  setChainsState(chains);  // Zaktualizuj stan na podstawie przekazywanych danych
-  console.log("chainsState w pierwszym useEffect:", chainsState);
-}, [chains]); 
+// useEffect(() => {
+//   setChains(chains);  // Zaktualizuj stan na podstawie przekazywanych danych
+//   console.log("chainsState w pierwszym useEffect:", chains);
+// }, [chains]); 
+
 useEffect(() => {
   if (!plugin.current) return;
-console.log("HALO!")
-
-  const atomGroups = chainsState.flatMap(chain =>
+// console.log("HALO!")
+ if(changeSource === "fornac"){
+  const atomGroups = chains.flatMap(chain =>
     chain.nucleotides.filter(nucleotide => nucleotide.selected === true).map(nucleotide =>
       MS.struct.generator.atomGroups({
         "residue-test": MS.core.rel.eq([
@@ -185,82 +186,88 @@ console.log("HALO!")
   console.log(updateLoci());
 
 
-}, [ plugin.current, chainsState]);
+ }
+ setChangeSource("molstar");
+
+}, [ plugin.current, chains]);
 
 
   useEffect(() => {
-    console.log("PLUGIN: ", plugin.current);
+    if(changeSource === "molstar"){
+      console.log("PLUGIN: ", plugin.current);
     
-    if (initialized && plugin.current && plugin.current.managers.structure){
-
-      const subscription = plugin.current.behaviors?.interaction?.click.subscribe(async (event) => {
-        const selections = Array.from(
-          plugin.current.managers.structure.selection.entries.values()
-        );
-        if (selections.length === 0) {
-          console.log("Brak dostępnych selekcji!");
-          return;
-        }
-        
-        console.log("Selections:", selections); 
-        const localSelected = [];
-        for (const { structure } of selections) {
-          console.log("AAAAAAAAAa");
-          if (!structure) continue;
-          console.log("BBBBBBBBBb");
-          
-          Structure.eachAtomicHierarchyElement(structure, {
-            residue: (loc) => {
-              const position = StructureProperties.residue.label_seq_id(loc);
-              const auth_position = StructureProperties.residue.auth_seq_id(loc);
-              console.log(`Kliknięto pozycja: ${position}`, `auth_pos: ${auth_position}`);
-              
-              // chains.forEach((chain, chainIndex) =>{
-                
-              //   chain.nucleotides.forEach((nucleotide, index) => {
-              //     console.log(chain);
-                  
-              //     //TODO: zmien na wyszukiwanie po oryginalny id
-              //     //nie dziala - co drugi nukleotyd ma dodatkowo zmieniany stan????
-                 
-              //       console.log(nucleotide.original_index , auth_position);
-              //       if(nucleotide.original_index === auth_position){
-              //         const newChains = [...chains];
-              //         if(!nucleotide.selected)
-              //           newChains[chainIndex].nucleotides[index].selected = true;
-              //         else
-              //           newChains[chainIndex].nucleotides[index].selected = false;
-              //         setChains(newChains);
-              //         console.log("CO ZMIENIAM: ", chain.nucleotides[index], "original index: ", nucleotide.original_index, "auth_pos: ", auth_position );
-              //         return;
-              //       }
-                 
-                  
-              //     // newChains[chainIndex].nucleotides[position].selected = !newChains[chainIndex].nucleotides[position].selected;
-                  
-              //     // console.log(newChains);
-                              
-              // });
-              // }) 
-
-              localSelected.push({ auth_position });
-
-              // localSelected.push({  position });
-            },
-          });
-        }
-        // console.log("wybrane obiekty: ",localSelected);
-        // setSelectedNts(prevSelected => [...prevSelected, ...localSelected]);
-        // console.log(selectedNts);
-        setSelected(localSelected);
-      })
-
-      return () => {
-        subscription?.unsubscribe();
-      };
+      if (initialized && plugin.current && plugin.current.managers.structure){
   
-    }
+        const subscription = plugin.current.behaviors?.interaction?.click.subscribe(async (event) => {
+          const selections = Array.from(
+            plugin.current.managers.structure.selection.entries.values()
+          );
+          if (selections.length === 0) {
+            console.log("Brak dostępnych selekcji!");
+            return;
+          }
+          
+          console.log("Selections:", selections); 
+          const localSelected = [];
+          for (const { structure } of selections) {
+            console.log("AAAAAAAAAa");
+            if (!structure) continue;
+            console.log("BBBBBBBBBb");
+            
+            Structure.eachAtomicHierarchyElement(structure, {
+              residue: (loc) => {
+                const position = StructureProperties.residue.label_seq_id(loc);
+                const auth_position = StructureProperties.residue.auth_seq_id(loc);
+                console.log(`Kliknięto pozycja: ${position}`, `auth_pos: ${auth_position}`);
+                
+                // chains.forEach((chain, chainIndex) =>{
+                  
+                //   chain.nucleotides.forEach((nucleotide, index) => {
+                //     console.log(chain);
+                    
+                //     //TODO: zmien na wyszukiwanie po oryginalny id
+                //     //nie dziala - co drugi nukleotyd ma dodatkowo zmieniany stan????
+                   
+                //       console.log(nucleotide.original_index , auth_position);
+                //       if(nucleotide.original_index === auth_position){
+                //         const newChains = [...chains];
+                //         if(!nucleotide.selected)
+                //           newChains[chainIndex].nucleotides[index].selected = true;
+                //         else
+                //           newChains[chainIndex].nucleotides[index].selected = false;
+                //         setChains(newChains);
+                //         console.log("CO ZMIENIAM: ", chain.nucleotides[index], "original index: ", nucleotide.original_index, "auth_pos: ", auth_position );
+                //         return;
+                //       }
+                   
+                    
+                //     // newChains[chainIndex].nucleotides[position].selected = !newChains[chainIndex].nucleotides[position].selected;
+                    
+                //     // console.log(newChains);
+                                
+                // });
+                // }) 
+  
+                // localSelected.push({ auth_position });
+  
+                localSelected.push({  position });
+              },
+            });
+          }
+          // console.log("wybrane obiekty: ",localSelected);
+          // setSelectedNts(prevSelected => [...prevSelected, ...localSelected]);
+          // console.log(selectedNts);
+          setSelected(localSelected);
+        })
+  
+        return () => {
+          subscription?.unsubscribe();
+        };
     
+      }
+      
+    }
+    setChangeSource("molstar");
   }, [setSelected, initialized]);
 
 
@@ -274,15 +281,16 @@ console.log("HALO!")
 //       //TODO: zmien na wyszukiwanie po oryginalny id
 //       //nie dziala - co drugi nukleotyd ma dodatkowo zmieniany stan????
 //       selected.forEach(selected_index =>{
-//         console.log(nucleotide.original_index , selected_index);
-//         if(nucleotide.original_index === selected_index){
+//         console.log(nucleotide.original_index, selected_index.position);
+//         if(nucleotide.index === selected_index.position){
+//           console.log("nucleotide.index === selected_index.position")
 //           const newChains = [...chainsState];
 //           if(!nucleotide.selected)
 //             newChains[chainIndex].nucleotides[index].selected = true;
 //           else
 //             newChains[chainIndex].nucleotides[index].selected = false;
-//           setChains(newChains);
-//           console.log("CO ZMIENIAM: ", chain.nucleotides[index], "original index: ", nucleotide.original_index, "auth_pos: ", selected_index );
+//             setChainsState(newChains);
+//           console.log("CO ZMIENIAM: ", chain.nucleotides[index],"index: ", nucleotide.index ,"original index: ", nucleotide.original_index,"label_seq_id: ", selected_index.position );
 //           return;
 //         }
 //       })
@@ -293,46 +301,54 @@ console.log("HALO!")
                   
 //   });
 //   }) 
-// },[ chainsState, selected, setChains])
+// },[ selected, setChainsState])
 
 
 
-useEffect(() => {
-  setChainsState(chains); // Synchronizuj lokalny stan
-  console.log("chainsState w molstarze:", chainsState);
-}, [chains, setChainsState]);
+// useEffect(() => {
+//   setChains(chains); // Synchronizuj lokalny stan
+//   console.log("chainsState w molstarze:", chains);
+// }, [chains, setChains]);
 
-  // useEffect(() => {
-  //   console.log("Updated selected:", selected);
-  //   console.log("Updated chains in Mol*:", chains);
-  
-  //   // Create a map for faster lookup of selected indices
-  //   const selectedIndices = new Set(selected.map((item) => item.auth_position));
-  
-  //   // Update chains immutably
-  //   const updatedChains = chains.map((chain) => {
-  //     const updatedNucleotides = chain.nucleotides.map((nucleotide) => ({
-  //       ...nucleotide, // Spread existing nucleotide properties
-  //       selected: selectedIndices.has(nucleotide.original_index),
-  //     }));
-  
-  //     return { ...chain, nucleotides: updatedNucleotides };
-  //   });
-  
-  //   setChains(updatedChains);
-  
-  //   // updated chains
-  //   updatedChains.forEach((chain, chainIndex) => {
-  //     chain.nucleotides.forEach((nucleotide, index) => {
-  //       console.log(
-  //         `Nucleotide at index ${index} in chain ${chainIndex} is ${
-  //           nucleotide.selected ? "selected" : "not selected"
-  //         }: `,
-  //         nucleotide
-  //       );
-  //     });
-  //   });
-  // }, [setChains, selected]);
+
+
+//Ta funkcja tez powinna działać po dodaniu flagi
+  useEffect(() => {
+    if(changeSource === "molstar"){
+      console.log("Updated selected:", selected);
+      console.log("Updated chains in Mol*:", chains);
+    
+      // Create a map for faster lookup of selected indices
+      const selectedIndices = new Set(selected.map((item) => item.position));
+    
+      // Update chains immutably
+      const updatedChains = chains.map((chain) => {
+        const updatedNucleotides = chain.nucleotides.map((nucleotide) => ({
+          ...nucleotide, // Spread existing nucleotide properties
+          selected: selectedIndices.has(nucleotide.index),
+        }));
+    
+        return { ...chain, nucleotides: updatedNucleotides };
+      });
+    
+      setChains(updatedChains);
+    
+      // updated chains
+      // updatedChains.forEach((chain, chainIndex) => {
+      //   chain.nucleotides.forEach((nucleotide, index) => {
+      //     console.log(
+      //       `Nucleotide at index ${index} in chain ${chainIndex} is ${
+      //         nucleotide.selected ? "selected" : "not selected"
+      //       }: `,
+      //       nucleotide
+      //     );
+      //   });
+      // });
+      console.log("Updated chains (after update):", updatedChains);
+      
+    }
+    
+  }, [setChains, selected]);
   
   
   
@@ -445,6 +461,8 @@ Molstar.propTypes = {
   setChains: PropTypes.func,
   initialized: PropTypes.bool,
   setInitialized: PropTypes.func,
+  changeSource: PropTypes.string,
+  setChangeSource: PropTypes.func,
 };
 
 export default Molstar;

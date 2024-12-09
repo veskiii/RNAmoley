@@ -3,6 +3,7 @@ import "../App.css";
 import RadioButtons from "./radioButtons";
 import { NameContext } from "../App";
 import { useNavigate } from "react-router-dom";
+import { Checkbox } from "@mui/material";
 
 function checkConditions(
   rnaFile: File | null,
@@ -26,6 +27,7 @@ const Dashboard: React.FC = () => {
   const [radiobutton, setRadiobutton] = useState<string>("None");
   const context = useContext(NameContext);
   const navigate = useNavigate();
+
 
   function handle(id: string) {
     if (context) {
@@ -157,6 +159,7 @@ const Dashboard: React.FC = () => {
                 />
               </label>
             </div>
+            
           </div>
           <div className="flex justify-center content-around align-center flex-wrap flex-col">
             <div className="w-80 mb-5">

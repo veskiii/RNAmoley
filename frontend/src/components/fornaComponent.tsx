@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
-import DownloadLink from "./downloadLink";
 import Loading from "./loading";
 import clsx from "clsx";
-import { ChainsSchema } from "molstar/lib/mol-model/structure/model/properties/atomic";
 import Box from '@mui/material/Box';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
+import { min } from "d3";
 
 declare const fornac: any;
 
@@ -26,10 +25,11 @@ interface Chain {
   dotBracket: string; 
 }
 
-const FornacComponent = ({
+const FornaComponent = ({
   sequences,
   structures,
   chains,
+  setChains,
   labelInterval,
   numbering,
   nodeOutline,
@@ -37,12 +37,13 @@ const FornacComponent = ({
   links,
   directionArrows,
   setAnimation,
-  selectedNts,
-  setSelectedNts,
+  changeSource,
+  setChangeSource,
 }: {
   sequences: string[];
   structures: string[];
   chains: Chain[];
+  setChains: React.Dispatch<React.SetStateAction<Chain[]>>;
   labelInterval: number;
   numbering: boolean;
   nodeOutline: boolean;
@@ -50,17 +51,19 @@ const FornacComponent = ({
   links: boolean;
   directionArrows: boolean;
   setAnimation: boolean;
-  selectedNts: number[];
-  setSelectedNts: React.Dispatch<React.SetStateAction<number[]>>;
+  changeSource: string | null;
+  setChangeSource:React.Dispatch<React.SetStateAction<string|null>>;
 }) => {
   //const [selectedNts, setSelectedNts] = React.useState<number[]>([]);
   // const [labelInterval, setLabelInterval] = useState(1);
-  const [chainsState, setChainsState] = useState<Chain[]>(chains);
+  // const [chainsState, setChainsState] = useState<Chain[]>(chains);
   const [selectedChain, setSelectedChain] = useState<string>(chains[0]?.name.slice(-1));
   const [inputValueStart, setInputValueStart] = useState('');
   const [inputValueEnd, setInputValueEnd] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [needsUpdate, setNeedsUpdate] = useState(false);
+  const [minId, setMinId] = useState<string>();
+  const [maxId, setMaxId] = useState<string>();
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -111,7 +114,7 @@ const FornacComponent = ({
     });
 
     try {
-
+      // setChangeSource("molstar")
       chains.forEach((chain) =>{
         if(!(chain === hybridized_chains[0]  || chain === hybridized_chains[1]))
         {
@@ -184,12 +187,30 @@ const FornacComponent = ({
     // });
     // console.log(nucleotides);
 
-    //Zaznaczamy elementy na podstawie parametru selected 
-    // chainsState.forEach(chain =>{
+    // //Zaznaczamy elementy na podstawie parametru selected 
+    // chains.forEach(chain =>{
     //   chain.nucleotides.forEach((nucleotide, index) => {
     //     //@ts-ignore
     //     const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
     //     g.attr("class", nucleotide.selected ?  "gnode fornac-selectedNode" : "gnode");
+    //   });
+    // }) 
+    // chains.forEach((chain, chainIndex) =>{
+    //   chain.nucleotides.forEach((nucleotide, index) => {
+
+    //     //@ts-ignore
+    //     const g = d3.select(`g.gnode[num="n${index+1}"]`);
+
+    //     // TODO: dodaj obsługę gdy przeciagnięcie
+    //     g.on("click", ()=>{
+    //       const newChains = [...chains];
+    //       newChains[chainIndex].nucleotides[index].selected = (g.attr("class") === "gnode") ? false : true;
+    //       setChains(newChains);
+    //       console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
+
+    //     })
+        
+        
     //   });
     // }) 
 
@@ -217,110 +238,118 @@ const FornacComponent = ({
     links,
     directionArrows,
     setAnimation,
-    setSelectedNts,
+
   ]);
 
 
-  useEffect(() =>{
-    chainsState.map(chain =>{
-      console.log(chain);
-    })
-    setChainsState(chains);
+  // useEffect(() =>{
+  //   chainsState.map(chain =>{
+  //     console.log(chain);
+  //   })
+  //   setChainsState(chains);
 
-  }, [chains])
+  // }, [chains])
 
 
   useEffect(() => {
     const updateSelectedNucleotides = () => {
-      const selectedNodes = document.querySelectorAll("g.gnode.fornac-selectedNode");
-      console.log(selectedNodes);
-      const selectedIndices = new Set<number>();
-      selectedNodes.forEach(node => {
-        const nodeNumAttr = node.getAttribute("num");
-        if (nodeNumAttr) {
-          const numIndex = parseInt(nodeNumAttr.slice(1));
-          selectedIndices.add(numIndex);
-        }
-      });
-
-      //const newChains = chainsState.map(chain => ({
-      //   ...chain,
-      //   nucleotides: chain.nucleotides.map(nucleotide => ({
-      //     ...nucleotide,
-      //     selected: selectedIndices.has(nucleotide.index),
-      //   })),
-      // }));
-      // setChainsState(newChains);
-
-
-      chainsState.forEach((chain, chainIndex) =>{
-          chain.nucleotides.forEach((nucleotide, index) => {
-
-              const newChains = [...chainsState];
-              newChains[chainIndex].nucleotides[index].selected = selectedIndices.has(nucleotide.index);
-              setChainsState(newChains);
-              
-              console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
-
-          });
-        }) 
-
-    };
-  
-    const observer = new MutationObserver(updateSelectedNucleotides);
-  
-    const observeTargets = () => {
-      const targetNodes = document.querySelectorAll("g.gnode");
-      targetNodes.forEach(targetNode => {
-        observer.observe(targetNode, {
-          attributes: true,
-          attributeFilter: ["class"],
+      if(changeSource === 'fornac'){
+        const selectedNodes = document.querySelectorAll("g.gnode.fornac-selectedNode");
+        console.log(selectedNodes);
+        const selectedIndices = new Set<number>();
+        selectedNodes.forEach(node => {
+          const nodeNumAttr = node.getAttribute("num");
+          if (nodeNumAttr) {
+            const numIndex = parseInt(nodeNumAttr.slice(1));
+            selectedIndices.add(numIndex);
+          }
         });
+  
+        //const newChains = chainsState.map(chain => ({
+        //   ...chain,
+        //   nucleotides: chain.nucleotides.map(nucleotide => ({
+        //     ...nucleotide,
+        //     selected: selectedIndices.has(nucleotide.index),
+        //   })),
+        // }));
+        // setChainsState(newChains);
+  
+  
+        chains.forEach((chain, chainIndex) =>{
+            chain.nucleotides.forEach((nucleotide, index) => {
+  
+                const newChains = [...chains];
+                newChains[chainIndex].nucleotides[index].selected = selectedIndices.has(nucleotide.index);
+                setChains(newChains);
+                
+                console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
+  
+            });
+          }) 
+  
+      };
+    
+      const observer = new MutationObserver(updateSelectedNucleotides);
+    
+      const observeTargets = () => {
+        const targetNodes = document.querySelectorAll("g.gnode");
+        targetNodes.forEach(targetNode => {
+          observer.observe(targetNode, {
+            attributes: true,
+            attributeFilter: ["class"],
+          });
+        });
+      };
+    
+      observeTargets(); // Obserwuj istniejące elementy
+      updateSelectedNucleotides(); // Aktualizacja na starcie
+    
+      const globalObserver = new MutationObserver(() => {
+        observer.disconnect(); // Odłącz stary observer
+        observeTargets(); // Obserwuj nowe elementy
       });
-    };
-  
-    observeTargets(); // Obserwuj istniejące elementy
-    updateSelectedNucleotides(); // Aktualizacja na starcie
-  
-    const globalObserver = new MutationObserver(() => {
-      observer.disconnect(); // Odłącz stary observer
-      observeTargets(); // Obserwuj nowe elementy
-    });
-  
-    globalObserver.observe(document.body, { childList: true, subtree: true });
-  
-    return () => {
-      observer.disconnect();
-      globalObserver.disconnect();
-    };
-  }, [setChainsState]);
+    
+      globalObserver.observe(document.body, { childList: true, subtree: true });
+    
+      return () => {
+        observer.disconnect();
+        globalObserver.disconnect();
+      };
+      }
+      
+  }, [setChains]);
   
 
-  
+  //funkcja do obsługi wybory nukleotydów po zakresie
   const handleSubmit = () => {
     const start = parseInt(inputValueStart, 10);
     const end = parseInt(inputValueEnd, 10);
   
     if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
-      setError("Invalid range");
+      alert("Invalid range");
       return;
     }
-  
-    setError(null);
-    const newChains = chainsState.map(chain => ({
-      ...chain,
-      nucleotides: chain.nucleotides.map(nucleotide => ({
-        ...nucleotide,
-        selected: nucleotide.original_index >= start && nucleotide.original_index <= end,
-      })),
-    }));
-  
-    setChainsState(newChains);
-    setNeedsUpdate(true); 
+    if(minId && maxId && start >= parseInt(minId,10) && end <= parseInt(maxId, 10)){
+
+      const newChains = chains.map(chain => ({
+        ...chain,
+        nucleotides: chain.nucleotides.map(nucleotide => ({
+          ...nucleotide,
+          selected: nucleotide.original_index >= start && nucleotide.original_index <= end,
+        })),
+      }));
+    
+      setChains(newChains);
+      setNeedsUpdate(true); 
+    }else{
+      alert("Type valid range on selected chain");
+      return;
+    }
+
   };
   
   const updateFornacSelection = () => {
-    chainsState.forEach(chain => {
+    chains.forEach(chain => {
       chain.nucleotides.forEach(nucleotide => {
         const gNode = document.querySelector(`g.gnode[num="n${nucleotide.index}"]`);
         if (gNode) {
@@ -328,14 +357,41 @@ const FornacComponent = ({
         }
       });
     });
+    setChangeSource("fornac");
   };
 
   useEffect(() => {
+    if(changeSource === "molstar"){
+      setNeedsUpdate(true);
+      updateFornacSelection();
+      
+      // setChangeSource("fornac");
+    }
     if (needsUpdate) {
       updateFornacSelection();
       setNeedsUpdate(false); 
     }
   }, [needsUpdate]);
+
+  useEffect(()=>{
+    console.log(changeSource);
+  },[changeSource])
+
+  //do placeholder z max i min original_id nukleotydów podanego chain
+  useEffect(()=>{
+    chains.forEach((chain) =>{
+      if(chain.name.slice(-1) === selectedChain){
+        const indices = chain.nucleotides.map(nucleotide =>nucleotide.original_index);
+        const min = Math.min(...indices);
+        const max = Math.max(...indices);
+
+        setMinId(min.toString());
+        setMaxId(max.toString());
+      }
+
+    })
+  },[selectedChain])
+
   return (
     <div className="absolute bottom-0 h-[90%] flex-grow w-full bg-transparent">
 <div
@@ -360,22 +416,29 @@ const FornacComponent = ({
       </FormControl>
     </Box>
 <div className="flex flex-row items-baseline m-6 mt-0"> 
-<label htmlFor="range_start" className="text-sm font-medium mr-4">From</label>
+<label htmlFor="range_start" className="text-xl font-medium mr-4">From</label>
           <input
             id="range_start"
-            type="text"
+            type="number"
+            min={minId}
+            max={maxId}
             value={inputValueStart}
             onChange={handleInputChangeStart}
-            className="w-[60px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            // placeholder={chains.filter(chain => chain.name.slice(-1) === selectedChain)}
+            placeholder={minId}
+            className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           
-          <label htmlFor="range_end" className="text-sm font-medium  mr-4">To</label>
+          <label htmlFor="range_end" className="text-xl font-medium  mr-4">To</label>
           <input
             id="range_end"
-            type="text"
+            type="number"
+            min={minId}
+            max={maxId}
             value={inputValueEnd}
             onChange={handleInputChangeEnd}
-            className="w-[60px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={maxId}
+            className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           
           <button
@@ -387,8 +450,9 @@ const FornacComponent = ({
 </div>
 
     </div>
-  {chainsState.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain =>(
     
+  {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain =>(
+    <div className="whitespace-nowrap w-max cursor-pointer ml-2">
     <div key={chain.name.slice(-1)} >
       <span className="text-blue-600">{chain.name}: </span>
       {chain.nucleotides.map((nucleotide, index) => (
@@ -403,8 +467,10 @@ const FornacComponent = ({
         </span>
       ))}
     </div>
+    </div>
   )) 
 }
+
 
     </div>
     {error ? (
@@ -427,4 +493,4 @@ const FornacComponent = ({
   );
 };
 
-export default FornacComponent;
+export default FornaComponent;

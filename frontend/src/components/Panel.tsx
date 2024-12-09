@@ -2,14 +2,13 @@ import React, { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "./loading";
 import DownloadLink from "./downloadLink";
-import ThreeDView from "./ThreeDView";
-import clsx from "clsx";
-import TwoDView from "./TwoDView";
 import "../App.css";
 import { NameContext } from "../App";
 import Molstar from "./mol";
-import FornacComponent from "./fornaComponent";
+import FornaComponent from "./fornaComponent";
 import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { SelectChangeEvent } from "@mui/material";
 
 interface Atom {
   serial: number;
@@ -38,6 +37,11 @@ interface Numeration {
   [key: string] : [number, string];
 }
 
+interface Metadata {
+  status: string;
+  model_count: number;
+}
+
 interface Job {
   id: number;
   originalfilename: string;
@@ -50,6 +54,8 @@ interface Job {
     atoms: Atom[];
   };
   pdb_file_string: string;
+  metadata: Metadata;
+  model_number: number;
 }
 
 
@@ -119,9 +125,11 @@ function transformJobToChains(job: Job): Chain[] {
 }
 
 
-async function fetchMyData(jobID: string | undefined): Promise<Job> {
+async function fetchMyData(jobID: string | undefined, model: number | 1): Promise<Job> {
   //http://localhost:4200/jobs
-  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`);
+  console.log("fetch my data");
+  console.log(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`)
+  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`);
   const data = await response.json();
   return data;
 }
@@ -134,7 +142,7 @@ const Panel: React.FC = () => {
   const [nodeOutline, setNodeOutline] = useState(true);
   const [nodeLabel, setNodeLabel] = useState(true);
   const [links, setLinks] = useState(true);
-  const [directionArrows, setDirectionArrows] = useState(true);
+  const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
   const [is3Dview, setIs3Dview] = useState(true);
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
@@ -144,7 +152,16 @@ const Panel: React.FC = () => {
   let color = "black";
   
   const [chainsState, setChainsState] = useState<Chain[]>([]);
+  const [changeSource, setChangeSource] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<number>(1);
 
+  const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(false);
+  const handleAnalyzeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAnalyzeWholeStructure(e.target.checked);
+  };
+  const navigate = useNavigate();
+
+  
   useEffect(()=>{
     chainsState.forEach(chain =>{
       console.log("Chain z panelu:",chain)
@@ -220,7 +237,35 @@ const Panel: React.FC = () => {
   const handleAnimationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAnimation(e.target.checked);
   };
+  const goToDashboard = () =>{
+    navigate("/");
+  }
+  const changeModel = (model: number) =>{
 
+    const jobID = context?.jobID;
+    // useEffect(() => {
+      if (!jobID) return;
+      async function fetchData() {
+        try {
+          // throw Error("Testing throw error");
+          const data = await fetchMyData(jobID, model);
+          setMyData(data);
+          const chains = transformJobToChains(data);
+          setChainsState(chains);
+          console.log("data:", data);
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
+          }
+          //TODO?: NotFound
+        }
+      }
+      fetchData();
+    // }, [jobID]);
+  }
+  const handleSetSelectedModel = (e: SelectChangeEvent) =>{
+    setSelectedModel(parseInt(e.target.value) as number);
+  }
   const setColor = (index: number) => {
     if (selectedNts.includes(index)) {
       setSelectedNts((prevSelected) => {
@@ -246,7 +291,7 @@ const Panel: React.FC = () => {
     async function fetchData() {
       try {
         // throw Error("Testing throw error");
-        const data = await fetchMyData(jobID);
+        const data = await fetchMyData(jobID, 1);
         setMyData(data);
         const chains = transformJobToChains(data);
         setChainsState(chains);
@@ -267,95 +312,172 @@ const Panel: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-80 bg-neutral-200">
-        {/* TODO: accordion */}
-        {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
-        <div className="flex flex-col h-[80%] ml-4 mt-10 p-2 ">
-          <label className="">
-            Label interval:
-            <br />
-            <input
-              type="number"
-              value={labelInterval}
-              onChange={handleLabelIntervalChange}
-              placeholder="Label Interval"
-              className="rounded-lg w-24 mb-2"
-            />
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              id="displNumbering"
-              // defaultChecked
-              checked={numbering}
-              onChange={handleNumberingChange}
-            />{" "}
-            Numbering
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              id="displNodeOutline"
-              // defaultChecked
-              checked={nodeOutline}
-              onChange={handleNodeOutlineChange}
-            />{" "}
-            Node Outline
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              id="displNodeLabel"
-              // defaultChecked
-              checked={nodeLabel}
-              onChange={handleNodeLabelChange}
-            />{" "}
-            Node Label
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              id="displLinks"
-              // defaultChecked
-              checked={links}
-              onChange={handleLinksChange}
-            />{" "}
-            Links
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              id="displDirectionArrows"
-              // defaultChecked
-              checked={directionArrows}
-              onChange={handleDirectionArrowsChange}
-            />{" "}
-            Direction Arrows
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              id="animation"
-              // defaultChecked
-              checked={animation}
-              onChange={handleAnimationChange}
-            />{" "}
-            Enable Animation
-          </label>
-          <p className="mt-5 mb-5">
-            [left click] select nodes
-            <br />
-            [left click + drag] drag/rotate object
-            <br />
-            [ctrl + left click + drag] box selecting
-            <br />
-            {/* [c] center the graph */}
-          </p>
+      {!is3Dview &&
+      (<div className="w-80 bg-neutral-200">
+      {/* TODO: accordion */}
+      {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
+      <div className="flex flex-col h-[80%] ml-4 mt-10 p-2 ">
+        <label onClick={goToDashboard} className="cursor-pointer">
+        <div className="flex flex-row text-xl font-medium items-center self-start">
+          <div className="flex flex-col">
+            <div className="font-bold">
+              <h1>RNA</h1>
+            </div>
+            <div className="font-semibold">
+              <h1>MOLEY</h1>
+            </div>
+          </div>
+          {/* TODO Logo Krecik */}
+          {/* <img
+            src="/krecik.png"
+            width={100}
+            height={100}
+            alt="Logo RNA Moley"
+          /> */}
+          <h1>| Submition panel</h1>
         </div>
-        <div className="flex flex-col h-[20%] ml-4 mt-3">
-          <DownloadLink />
-        </div>
+        </label>
+        <label className="">
+          Label interval:
+          <br />
+          <input
+            type="number"
+            value={labelInterval}
+            onChange={handleLabelIntervalChange}
+            placeholder="Label Interval"
+            className="rounded-lg w-24 mb-2"
+          />
+        </label>
+        <label className="options">
+          <input
+            type="checkbox"
+            id="displNumbering"
+            // defaultChecked
+            checked={numbering}
+            onChange={handleNumberingChange}
+          />{" "}
+          Numbering
+        </label>
+        <label className="options">
+          <input
+            type="checkbox"
+            id="displNodeOutline"
+            // defaultChecked
+            checked={nodeOutline}
+            onChange={handleNodeOutlineChange}
+          />{" "}
+          Node Outline
+        </label>
+        <label className="options">
+          <input
+            type="checkbox"
+            id="displNodeLabel"
+            // defaultChecked
+            checked={nodeLabel}
+            onChange={handleNodeLabelChange}
+          />{" "}
+          Node Label
+        </label>
+        <label className="options">
+          <input
+            type="checkbox"
+            id="displLinks"
+            // defaultChecked
+            checked={links}
+            onChange={handleLinksChange}
+          />{" "}
+          Links
+        </label>
+        {/* <label className="options">
+          <input
+            type="checkbox"
+            id="displDirectionArrows"
+            // defaultChecked
+            checked={directionArrows}
+            onChange={handleDirectionArrowsChange}
+          />{" "}
+          Direction Arrows
+        </label> */}
+        <label className="options">
+          <input
+            type="checkbox"
+            id="animation"
+            // defaultChecked
+            checked={animation}
+            onChange={handleAnimationChange}
+          />{" "}
+          Enable Animation
+        </label>
+        <div>
+          <label className="options">
+            <input
+              type="checkbox"
+              id="analyze_whole_structure"
+              defaultChecked
+              checked={analyzeWholeStructure}
+              onChange={handleAnalyzeChange}
+            />{" "}
+            Analyze whole structure
+          </label>
+          <div>
+              <div>
+                <label className="options"> 
+                  Model
+                  <input 
+                  className="mx-4 my-2 w-[50%]  justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  type="number"
+                  min="1"
+                  max={myData.metadata.model_count}
+                  value={selectedModel}
+                  onChange={handleSetSelectedModel}
+                  defaultValue={myData.model_number}
+                  /> 
+                </label>
+                
+                <button 
+                  className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+                  onClick={() => changeModel(selectedModel)}
+                >Change model</button>
+              </div>
+
+            <div >
+              <label className="options"> 
+                Radius
+                <input 
+                  className="mx-4 my-2 w-[50%]  justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  type="number"
+                /> 
+              </label>
+            </div>
+
+            <div>
+              <label className="options"> 
+                Interval
+                <input
+                  className="m-2 w-[50%]  justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  type="number"
+                />
+              </label>
+            </div>
+          </div>
+
+          </div>
+        <p className="mt-5 mb-5">
+          [left click] select nodes
+          <br />
+          [left click + drag] drag/rotate object
+          <br />
+          [ctrl + left click + drag] box selecting
+          <br />
+          {/* [c] center the graph */}
+        </p>
       </div>
+      <div className="flex flex-col h-[20%] ml-4 mt-3">
+        <DownloadLink />
+      </div>
+    </div>)
+      }
+      
       {/* 
       <div className="absolute top-0 h-[10%] flex-grow w-full p-2 rounded-t-lg bg-slate-300 ">
         <div className="grid relative">
@@ -414,13 +536,16 @@ const Panel: React.FC = () => {
                   setChains = {setChainsState}
                   initialized={initialized}
                   setInitialized={setInitialized}
+                  changeSource = {changeSource}
+                  setChangeSource={setChangeSource}
                 />
               )}
               {!is3Dview && (
-                <FornacComponent
+                <FornaComponent
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
                   chains = {chainsState}
+                  setChains={setChainsState}
                   labelInterval={labelInterval}
                   numbering={numbering}
                   nodeOutline={nodeOutline}
@@ -428,8 +553,8 @@ const Panel: React.FC = () => {
                   links={links}
                   directionArrows={directionArrows}
                   setAnimation={animation}
-                  selectedNts={selectedNts}
-                  setSelectedNts={setSelectedNts}
+                  changeSource={changeSource}
+                  setChangeSource={setChangeSource}
                 />
               )}
 
