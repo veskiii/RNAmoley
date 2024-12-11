@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Loading from "./loading";
 import clsx from "clsx";
 import Box from '@mui/material/Box';
@@ -37,8 +37,6 @@ const FornaComponent = ({
   links,
   directionArrows,
   setAnimation,
-  changeSource,
-  setChangeSource,
 }: {
   sequences: string[];
   structures: string[];
@@ -51,8 +49,6 @@ const FornaComponent = ({
   links: boolean;
   directionArrows: boolean;
   setAnimation: boolean;
-  changeSource: string | null;
-  setChangeSource:React.Dispatch<React.SetStateAction<string|null>>;
 }) => {
   //const [selectedNts, setSelectedNts] = React.useState<number[]>([]);
   // const [labelInterval, setLabelInterval] = useState(1);
@@ -64,6 +60,8 @@ const FornaComponent = ({
   const [needsUpdate, setNeedsUpdate] = useState(false);
   const [minId, setMinId] = useState<string>();
   const [maxId, setMaxId] = useState<string>();
+
+
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -177,42 +175,26 @@ const FornaComponent = ({
     ) as HTMLElement;
     loadingElement.style.display = "none";
 
-    // // key of the rna is a random sting in the container object so this way we get the first rna
-    // // @ts-expect-error
-    // var nodes = Object.values(container.rnas)[0].nodes;
-    // // filter out the nucleotides
-    // // @ts-expect-error
-    // var nucleotides = nodes.filter((obj) => {
-    //   return obj.nodeType === "nucleotide";
-    // });
-    // console.log(nucleotides);
+    // Analogiczna funkcja, która zmienia parametr selected na podstawie kliknięcia na grafie
+    chains.forEach((chain, chainIndex) =>{
+      chain.nucleotides.forEach((nucleotide, index) => {
 
-    // //Zaznaczamy elementy na podstawie parametru selected 
-    // chains.forEach(chain =>{
-    //   chain.nucleotides.forEach((nucleotide, index) => {
-    //     //@ts-ignore
-    //     const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
-    //     g.attr("class", nucleotide.selected ?  "gnode fornac-selectedNode" : "gnode");
-    //   });
-    // }) 
-    // chains.forEach((chain, chainIndex) =>{
-    //   chain.nucleotides.forEach((nucleotide, index) => {
+        //@ts-ignore
+        const g = d3.select(`g.gnode[num="n${nucleotide.index}"]`);
 
-    //     //@ts-ignore
-    //     const g = d3.select(`g.gnode[num="n${index+1}"]`);
+        // TODO: dodaj obsługę gdy przeciagnięcie
+        g.on("mousedown", ()=>{
+          const newChains = [...chains];
+          newChains[chainIndex].nucleotides[index].selected = (g.attr("class") === "gnode fornac-selectedNode") ? false : true;
+          console.log("Klasa: ", g.attr("class"), "stan: ", newChains[chainIndex].nucleotides[index].selected);
+          setChains(newChains);
+          
+          console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
 
-    //     // TODO: dodaj obsługę gdy przeciagnięcie
-    //     g.on("click", ()=>{
-    //       const newChains = [...chains];
-    //       newChains[chainIndex].nucleotides[index].selected = (g.attr("class") === "gnode") ? false : true;
-    //       setChains(newChains);
-    //       console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
-
-    //     })
-        
-        
-    //   });
-    // }) 
+        })
+      });
+    }) 
+    
 
     container.displayNumbering(numbering);
 
@@ -226,7 +208,9 @@ const FornaComponent = ({
 
     setAnimation ? container.startAnimation() : container.stopAnimation();
 
+    // document.addEventListener("mouseup", updateSelectedNucleotides);
     return () => {
+      // document.removeEventListener("mouseup", updateSelectedNucleotides);
     };
   }, [
     sequences,
@@ -241,19 +225,10 @@ const FornaComponent = ({
 
   ]);
 
-
-  // useEffect(() =>{
-  //   chainsState.map(chain =>{
-  //     console.log(chain);
-  //   })
-  //   setChainsState(chains);
-
-  // }, [chains])
-
-
-  useEffect(() => {
+// Zapis do chains
+// Jeśli nastąpi zmiana na grafie zmieniany jest parametr selected w nucleotides
+  useEffect( ()=> {
     const updateSelectedNucleotides = () => {
-      if(changeSource === 'fornac'){
         const selectedNodes = document.querySelectorAll("g.gnode.fornac-selectedNode");
         console.log(selectedNodes);
         const selectedIndices = new Set<number>();
@@ -279,15 +254,14 @@ const FornaComponent = ({
             chain.nucleotides.forEach((nucleotide, index) => {
   
                 const newChains = [...chains];
-                newChains[chainIndex].nucleotides[index].selected = selectedIndices.has(nucleotide.index);
+                newChains[chainIndex].nucleotides[index].selected = selectedIndices.has(nucleotide.index) ? true : false;
                 setChains(newChains);
                 
                 console.log("ZMIANA W SELECTED:", newChains[chainIndex].nucleotides[index]);
   
             });
           }) 
-  
-      };
+
     
       const observer = new MutationObserver(updateSelectedNucleotides);
     
@@ -319,8 +293,8 @@ const FornaComponent = ({
       
   }, [setChains]);
   
-
-  //funkcja do obsługi wybory nukleotydów po zakresie
+  //Zapis do chains
+  //Służy do obsługi wyboru nukleotydów po zakresie
   const handleSubmit = () => {
     const start = parseInt(inputValueStart, 10);
     const end = parseInt(inputValueEnd, 10);
@@ -348,34 +322,66 @@ const FornaComponent = ({
 
   };
   
-  const updateFornacSelection = () => {
-    chains.forEach(chain => {
-      chain.nucleotides.forEach(nucleotide => {
-        const gNode = document.querySelector(`g.gnode[num="n${nucleotide.index}"]`);
-        if (gNode) {
-          gNode.setAttribute("class", nucleotide.selected ? "gnode fornac-selectedNode" : "gnode");
-        }
+
+  //Odczyt - powinien być wywoływany tylko przy wejsciu do komponentu
+  //zmiana na grafie na podstawie wybranego zakresu powinna byc obsługiwana przez inna funkcję 
+  
+  //Na podstawie parametru selected w nucleotides (zaznacz) zmień klasę wierzchołków na grafie 
+  useEffect(() => {
+    const updateFornacSelection = () => {
+      console.log("Aktualizacja klas w grafie");
+      chains.forEach(chain => {
+        chain.nucleotides.forEach(nucleotide => {
+          const gNode = document.querySelector(`g.gnode[num="n${nucleotide.index}"]`);
+          if (gNode) {
+            gNode.setAttribute("class", nucleotide.selected ? "gnode fornac-selectedNode" : "gnode");
+          }
+        });
       });
+    };
+  
+    // Wywołaj aktualizację przy zmianach w chains
+    updateFornacSelection();
+  
+    // Obserwuj zmiany w grafie
+    const observer = new MutationObserver(() => {
+      console.log("Mutacja w grafie wykryta");
+      updateFornacSelection();
     });
-    setChangeSource("fornac");
-  };
+  
+    const target = document.querySelector("#rna_ss");
+    if (target) {
+      observer.observe(target, { childList: true, subtree: true });
+    }
+  
+    return () => observer.disconnect();
+  }, [chains]);//chains
+  
+  const handleNodeClick = () =>{
+    console.log("handleNodeClick");
+    const newChains = chains.map(chain => ({
+      ...chain,
+      nucleotides: chain.nucleotides.map(nucleotide => ({
+        ...nucleotide,
+        selected: false,
+      })),
+    }));
+  
+    setChains(newChains);
+  }
 
   useEffect(() => {
-    if(changeSource === "molstar"){
-      setNeedsUpdate(true);
-      updateFornacSelection();
-      
-      // setChangeSource("fornac");
+    const target = document.querySelector("#rna_ss");
+    if (target) {
+      target.addEventListener("click", handleNodeClick);
     }
-    if (needsUpdate) {
-      updateFornacSelection();
-      setNeedsUpdate(false); 
-    }
-  }, [needsUpdate]);
-
-  useEffect(()=>{
-    console.log(changeSource);
-  },[changeSource])
+  
+    return () => {
+      if (target) {
+        target.removeEventListener("click", handleNodeClick);
+      }
+    };
+  }, []);
 
   //do placeholder z max i min original_id nukleotydów podanego chain
   useEffect(()=>{
@@ -392,6 +398,7 @@ const FornaComponent = ({
     })
   },[selectedChain])
 
+  
   return (
     <div className="absolute bottom-0 h-[90%] flex-grow w-full bg-transparent">
 <div

@@ -536,8 +536,6 @@ const Panel: React.FC = () => {
                   setChains = {setChainsState}
                   initialized={initialized}
                   setInitialized={setInitialized}
-                  changeSource = {changeSource}
-                  setChangeSource={setChangeSource}
                 />
               )}
               {!is3Dview && (
@@ -553,8 +551,6 @@ const Panel: React.FC = () => {
                   links={links}
                   directionArrows={directionArrows}
                   setAnimation={animation}
-                  changeSource={changeSource}
-                  setChangeSource={setChangeSource}
                 />
               )}
 
