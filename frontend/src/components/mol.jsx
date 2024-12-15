@@ -17,7 +17,6 @@ import { MolScriptBuilder as MS } from "molstar/lib/mol-script/language/builder"
 import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
 
 
-
 const Molstar = props => {
 
   const { useInterface, pdbId, url, file, dimensions, className, showControls, showAxes, selectedNts, setSelectedNts, initialized, setInitialized, chains, setChains } = props;
@@ -53,7 +52,6 @@ const Molstar = props => {
           }
         };
 
-        // plugin.current = await createPluginUI(parentRef.current, spec);
         plugin.current = await createPluginUI({
           target: parentRef.current,
           spec: spec,
@@ -74,7 +72,6 @@ const Molstar = props => {
       await loadStructure(pdbId, url, file, plugin.current);
       setInitialized(true);
     })()};
-    // return () => plugin.current = null;
     return () => {
       plugin.current?.dispose();
       plugin.current = null;
@@ -146,23 +143,15 @@ console.log("oDCZYT!")
     }
   };
   console.log(updateLoci());
-  // setEnableSelection(true);
 
-}, [plugin.current, chains]);// 
+}, [plugin.current, chains]);
 
 //ZAPIS
 //Tworzenie tablicy indeksów elementów zaznaczonych na podstawie zmiany na widoku
   useEffect(() => {
     document.body.addEventListener('click', () => {
-    // if(enableSelection === true){
-
-    
       console.log("PLUGIN: ", plugin.current);
-      // const button = Array.from(document.querySelectorAll("button.msp-btn-link-toggle-on"))
-      // .find(button => button.querySelector("title") && button.querySelector("title").textContent === "Toggle Selection Mode");
-    
-      // console.log(button);
-    
+
       if (initialized && plugin.current && plugin.current.managers.structure ){
   
         console.log("przed subskrypcja")
@@ -202,7 +191,6 @@ console.log("oDCZYT!")
           subscription?.unsubscribe();
         };
     
-      // }
     }
   });
       
@@ -232,12 +220,10 @@ console.log("oDCZYT!")
       setChains(updatedChains);
 
       console.log("Updated chains (after update):", updatedChains);
-      
-      // setEnableSelection(false);
-    }
-      
     
-  }, [selected, setChains, enableSelection]);//, 
+    }
+
+  }, [selected, setChains, enableSelection]);
   
   const loadStructure = async (pdbId, url, file=null, plugin) => {
     console.log("FETCHUJE:", pdbId);
@@ -270,7 +256,7 @@ console.log("oDCZYT!")
 
 
   const width = "100%";
-  const height = 600;
+  const height = "90%";
 
   if (useInterface) {
     return (

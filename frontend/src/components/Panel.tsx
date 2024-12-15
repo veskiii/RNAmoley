@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useParams } from "react-router-dom";
 import Loading from "./loading";
 import DownloadLink from "./downloadLink";
 import "../App.css";
@@ -9,6 +8,13 @@ import FornaComponent from "./fornaComponent";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { SelectChangeEvent } from "@mui/material";
+import FornaControls from "./fornaControls";
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import Typography from '@mui/material/Typography';
+// import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+// import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 interface Atom {
   serial: number;
@@ -126,15 +132,23 @@ function transformJobToChains(job: Job): Chain[] {
 
 
 async function fetchMyData(jobID: string | undefined, model: number | 1): Promise<Job> {
-  //http://localhost:4200/jobs
-  console.log("fetch my data");
-  console.log(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`)
-  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`);
-  const data = await response.json();
-  return data;
+  try{
+    console.log("fetch my data");
+    console.log(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`)
+    const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data;
+  }
+  catch(error){
+    console.error("Error in fetchMyData:", error);
+    throw error; 
+  }
+
 }
 const Panel: React.FC = () => {
-  // const { jobId } = useParams();
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
@@ -193,50 +207,17 @@ const Panel: React.FC = () => {
         "switchViewButton"
       ) as HTMLElement;
       let viewLabel = document.getElementById("viewLabel") as HTMLElement;
-      // let bottom_seq = document.getElementById("bottom-seq") as HTMLElement;
       if (is3Dview) {
         switchViewButton.textContent = "2D view";
         viewLabel.textContent = "3D view";
-        // bottom_seq.style.setProperty("display", "block", "important");
       } else {
         switchViewButton.textContent = "3D view";
         viewLabel.textContent = "2D view";
-
-        // bottom_seq.style.setProperty("display", "none", "important");
       }
       return is3Dview;
     });
   }
 
-  const handleLabelIntervalChange = (e: any) => {
-    setLabelInterval(parseInt(e.target.value, 10));
-  };
-
-  const handleNumberingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNumbering(e.target.checked);
-  };
-
-  const handleNodeOutlineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNodeOutline(e.target.checked);
-  };
-
-  const handleNodeLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNodeLabel(e.target.checked);
-  };
-
-  const handleLinksChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLinks(e.target.checked);
-  };
-
-  const handleDirectionArrowsChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setDirectionArrows(e.target.checked);
-  };
-
-  const handleAnimationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAnimation(e.target.checked);
-  };
   const goToDashboard = () =>{
     navigate("/");
   }
@@ -266,24 +247,6 @@ const Panel: React.FC = () => {
   const handleSetSelectedModel = (e: SelectChangeEvent) =>{
     setSelectedModel(parseInt(e.target.value) as number);
   }
-  const setColor = (index: number) => {
-    if (selectedNts.includes(index)) {
-      setSelectedNts((prevSelected) => {
-        if (prevSelected.includes(index)) {
-          return prevSelected.filter((id) => id !== index);
-        }
-
-        return prevSelected;
-      });
-    } else {
-      {
-        setSelectedNts((prevSelected) => {
-          if (!prevSelected.includes(index)) return [...prevSelected, index];
-          return prevSelected;
-        });
-      }
-    }
-  };
 
   const jobID = context?.jobID;
   useEffect(() => {
@@ -316,9 +279,9 @@ const Panel: React.FC = () => {
       (<div className="w-80 bg-neutral-200">
       {/* TODO: accordion */}
       {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
-      <div className="flex flex-col h-[80%] ml-4 mt-10 p-2 ">
+      <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
         <label onClick={goToDashboard} className="cursor-pointer">
-        <div className="flex flex-row text-xl font-medium items-center self-start">
+        <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
           <div className="flex flex-col">
             <div className="font-bold">
               <h1>RNA</h1>
@@ -337,83 +300,55 @@ const Panel: React.FC = () => {
           <h1>| Submition panel</h1>
         </div>
         </label>
-        <label className="">
-          Label interval:
-          <br />
-          <input
-            type="number"
-            value={labelInterval}
-            onChange={handleLabelIntervalChange}
-            placeholder="Label Interval"
-            className="rounded-lg w-24 mb-2"
-          />
-        </label>
-        <label className="options">
-          <input
-            type="checkbox"
-            id="displNumbering"
-            // defaultChecked
-            checked={numbering}
-            onChange={handleNumberingChange}
-          />{" "}
-          Numbering
-        </label>
-        <label className="options">
-          <input
-            type="checkbox"
-            id="displNodeOutline"
-            // defaultChecked
-            checked={nodeOutline}
-            onChange={handleNodeOutlineChange}
-          />{" "}
-          Node Outline
-        </label>
-        <label className="options">
-          <input
-            type="checkbox"
-            id="displNodeLabel"
-            // defaultChecked
-            checked={nodeLabel}
-            onChange={handleNodeLabelChange}
-          />{" "}
-          Node Label
-        </label>
-        <label className="options">
-          <input
-            type="checkbox"
-            id="displLinks"
-            // defaultChecked
-            checked={links}
-            onChange={handleLinksChange}
-          />{" "}
-          Links
-        </label>
-        {/* <label className="options">
-          <input
-            type="checkbox"
-            id="displDirectionArrows"
-            // defaultChecked
-            checked={directionArrows}
-            onChange={handleDirectionArrowsChange}
-          />{" "}
-          Direction Arrows
-        </label> */}
-        <label className="options">
-          <input
-            type="checkbox"
-            id="animation"
-            // defaultChecked
-            checked={animation}
-            onChange={handleAnimationChange}
-          />{" "}
-          Enable Animation
-        </label>
-        <div>
+      <div className="rounded-scrollbar overflow-auto">
+      <Accordion >
+        <AccordionSummary
+          // expandIcon={<ArrowDownwardIcon />}
+          aria-controls="panel1-content"
+          id="panel1-header"
+         
+        >
+          <Typography>Fornac options</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography component="div">
+            <div>
+            <FornaControls
+              labelInterval={labelInterval}
+              setLabelInterval={setLabelInterval}
+              numbering={numbering}
+              setNumbering={setNumbering}
+              nodeOutline={nodeOutline}
+              setNodeOutline={setNodeOutline}
+              nodeLabel={nodeLabel}
+              setNodeLabel={setNodeLabel}
+              links={links}
+              setLinks={setLinks}
+              directionArrows={directionArrows}
+              setDirectionArrows={setDirectionArrows}
+              animation={animation}
+              setAnimation={setAnimation}
+            />
+            </div>
+          </Typography>
+        </AccordionDetails>
+      </Accordion>
+      <Accordion>
+        <AccordionSummary
+          // expandIcon={<ArrowDropDownIcon />}
+          aria-controls="panel2-content"
+          id="panel2-header"
+        >
+          <Typography>Analyze structure</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography component="div">
+          <div>
           <label className="options">
             <input
               type="checkbox"
               id="analyze_whole_structure"
-              defaultChecked
+              // defaultChecked
               checked={analyzeWholeStructure}
               onChange={handleAnalyzeChange}
             />{" "}
@@ -424,13 +359,12 @@ const Panel: React.FC = () => {
                 <label className="options"> 
                   Model
                   <input 
-                  className="mx-4 my-2 w-[50%]  justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="mx-5 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                   type="number"
                   min="1"
                   max={myData.metadata.model_count}
                   value={selectedModel}
                   onChange={handleSetSelectedModel}
-                  defaultValue={myData.model_number}
                   /> 
                 </label>
                 
@@ -444,7 +378,7 @@ const Panel: React.FC = () => {
               <label className="options"> 
                 Radius
                 <input 
-                  className="mx-4 my-2 w-[50%]  justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                   type="number"
                 /> 
               </label>
@@ -454,7 +388,7 @@ const Panel: React.FC = () => {
               <label className="options"> 
                 Interval
                 <input
-                  className="m-2 w-[50%]  justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                   type="number"
                 />
               </label>
@@ -462,15 +396,35 @@ const Panel: React.FC = () => {
           </div>
 
           </div>
-        <p className="mt-5 mb-5">
-          [left click] select nodes
+          </Typography>
+        </AccordionDetails>
+      </Accordion>
+      <Accordion>
+        <AccordionSummary
+          // expandIcon={<ArrowDownwardIcon />}
+          aria-controls="panel1-content"
+          id="panel1-header"
+        >
+          <Typography>How to use fornac</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography component="div">
+          <div className="mt-5 mb-5">
+          [left click] select/deselect nodes
           <br />
-          [left click + drag] drag/rotate object
+          [left click + drag] drag object
           <br />
-          [ctrl + left click + drag] box selecting
-          <br />
+          {/* [ctrl + left click + drag] box selecting */}
+          {/* <br /> */}
           {/* [c] center the graph */}
-        </p>
+        </div>
+          </Typography>
+        </AccordionDetails>
+      </Accordion>
+    </div>
+ 
+        
+        
       </div>
       <div className="flex flex-col h-[20%] ml-4 mt-3">
         <DownloadLink />
@@ -478,37 +432,10 @@ const Panel: React.FC = () => {
     </div>)
       }
       
-      {/* 
-      <div className="absolute top-0 h-[10%] flex-grow w-full p-2 rounded-t-lg bg-slate-300 ">
-        <div className="grid relative">
-          <label
-            id="viewLabel"
-            className="text-2xl font-bold place-self-center my-1"
-          >
-            2D view
-          </label>
-          <button
-            id="switchViewButton"
-            onClick={toggle}
-            className="font-bold absolute right-0 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300/80 hover:bg-teal-600"
-          >
-            3D view
-          </button>
-        </div>
-      </div> */}
 
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
-          {/* <div
-            className={` text-xl items-center text-justify font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
-          > */}
-          {/* {myData.dotbracket} */}
-          {/* </div> */}
 
-          {/* <h1>{data.id}</h1>
-              <h2>{data.sequnece}</h2>
-              <p>{data.dotbracket}</p>
-              <p>{data.originalfilename}</p> */}
           {myData ? (
             <div id="container">
               <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent z-100">
@@ -558,33 +485,6 @@ const Panel: React.FC = () => {
           ) : (
             <Loading />
           )}
-
-          {/* <Molstar
-            useInterface={true}
-            pdbId="1cbs"
-            dimensions={["100%", "500px"]}
-            showControls={true}
-            showAxes={false}
-          /> */}
-
-          {/* <div
-            id="bottom-seq"
-            className="absolute left-0 right-0 overflow-x-scroll overflow-y-hidden bottom-0 text-xl items-center text-justify font-semibold break-words drop-shadow-xl"
-          > */}
-            {/* <div className="whitespace-nowrap w-max cursor-pointer ml-2">
-              {myData.sequnece.split("").map((nt, index) => (
-                <span
-                  className={clsx(
-                    selectedNts.includes(index) ? "text-red-500" : ""
-                  )}
-                  key={index}
-                  onClick={() => setColor(index)}
-                >
-                  {nt}
-                </span>
-              ))}
-            </div> */}
-          {/* </div> */}
         </div>
       </div>
     </div>

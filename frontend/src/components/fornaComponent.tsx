@@ -99,20 +99,17 @@ const FornaComponent = ({
       return false;
     };
 
-    // var merged_chains: Chain[] = [];
     var hybridized_chains: Chain[] = [];
 
     chains.forEach((chain, index) =>{
       if(isHybridized(chain.dotBracket) && hybridized_chains.length < 3){
         hybridized_chains.push(chain);
-        // console.log(hybridized_chains, index);
       }else if(hybridized_chains.length > 2){
         console.log("Mogą być tylko 2 łańcuchy zhybrydyzowane");
       }
     });
 
     try {
-      // setChangeSource("molstar")
       chains.forEach((chain) =>{
         if(!(chain === hybridized_chains[0]  || chain === hybridized_chains[1]))
         {
@@ -168,7 +165,7 @@ const FornaComponent = ({
       console.error("Failed to add RNA:", error);
       let rnaContainer = document.getElementById("rna_ss") as HTMLElement;
       rnaContainer.setAttribute("style", "color:red; padding:10px;");
-      rnaContainer.innerHTML = `<p>Failed to visualize RNA</p><p>${error}</p>`;
+      rnaContainer.innerHTML = `<div><p>Failed to visualize RNA</p><p>${error}</p></div>`;
     }
     let loadingElement = document.getElementById(
       "containerLoadingText"
@@ -239,16 +236,6 @@ const FornaComponent = ({
             selectedIndices.add(numIndex);
           }
         });
-  
-        //const newChains = chainsState.map(chain => ({
-        //   ...chain,
-        //   nucleotides: chain.nucleotides.map(nucleotide => ({
-        //     ...nucleotide,
-        //     selected: selectedIndices.has(nucleotide.index),
-        //   })),
-        // }));
-        // setChainsState(newChains);
-  
   
         chains.forEach((chain, chainIndex) =>{
             chain.nucleotides.forEach((nucleotide, index) => {
@@ -397,6 +384,24 @@ const FornaComponent = ({
 
     })
   },[selectedChain])
+  const setColor = (index: number) => {
+    console.log("ustawianie na klik")
+    setChains(prevChains =>
+      prevChains.map(chain => { 
+        if(chain.name.slice(-1) === selectedChain){        
+
+            return{
+            ...chain,
+            nucleotides: chain.nucleotides.map(nucleotide => ({
+              ...nucleotide,
+              selected: nucleotide.index === index ? !nucleotide.selected : nucleotide.selected,
+            })),
+          };
+        }
+          return chain;
+          }));
+          console.log(chains)
+        }
 
   
   return (
@@ -416,8 +421,8 @@ const FornaComponent = ({
           onChange={handleChange}
           className="p-0"
         >
-          {chains.map((chain, chainIndex) => (
-            <MenuItem value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
+          {chains.map((chain) => (
+            <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
           ))}
         </Select>
       </FormControl>
@@ -431,7 +436,6 @@ const FornaComponent = ({
             max={maxId}
             value={inputValueStart}
             onChange={handleInputChangeStart}
-            // placeholder={chains.filter(chain => chain.name.slice(-1) === selectedChain)}
             placeholder={minId}
             className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -459,16 +463,16 @@ const FornaComponent = ({
     </div>
     
   {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain =>(
-    <div className="whitespace-nowrap w-max cursor-pointer ml-2">
-    <div key={chain.name.slice(-1)} >
+    <div className="whitespace-nowrap w-max cursor-pointer ml-2" key={chain.name}>
+    <div>
       <span className="text-blue-600">{chain.name}: </span>
-      {chain.nucleotides.map((nucleotide, index) => (
+      {chain.nucleotides.map((nucleotide) => (
         <span
           className={clsx(
             nucleotide.selected ? "text-red-500" : ""
           )}
-          key={index}
-          // onClick={() => setColor(index)}
+          key={nucleotide.index}
+          onClick={() => setColor(nucleotide.index)}
         >
           {nucleotide.base}
         </span>
@@ -482,14 +486,12 @@ const FornaComponent = ({
     </div>
     {error ? (
       <div className="text-red-500 p-4 bg-red-100 border border-red-300 rounded">
-        <p>{error}</p>
+          <p>${error}</p>
       </div>
     ) : (
       <>
       <div
         id="rna_ss"
-
-        //className="rounded-lg border-black border-solid border-2 bg-gray-100 m-2"
       ></div>
       <div id="containerLoadingText" className="p-2">
         <Loading />

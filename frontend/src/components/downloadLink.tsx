@@ -21,7 +21,7 @@ const DownloadLink = () => {
         "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
       }
     >
-      Copy link to workspace
+      TODO: Analyze
     </button>
   );
 };
