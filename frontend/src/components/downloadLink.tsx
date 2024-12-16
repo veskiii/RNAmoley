@@ -23,7 +23,7 @@ const DownloadLink = () => {
       }
       style={{backgroundColor: Colors.salmon}}
     >
-      TODO: Analyze
+      Copy link to workspace
     </button>
   );
 };

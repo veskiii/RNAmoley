@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Loading from "./loading";
-import DownloadLink from "./downloadLink";
 import "../App.css";
 import { NameContext } from "../App";
 import Molstar from "./mol";
@@ -9,10 +8,10 @@ import FornaComponent from "./fornaComponent";
 import { useLocation } from "react-router-dom";
 import { SelectChangeEvent } from "@mui/material";
 import FornaControls from "./fornaControls";
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import Typography from '@mui/material/Typography';
+import Accordion from "@mui/material/Accordion";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import Typography from "@mui/material/Typography";
 // import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 // import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
@@ -33,14 +32,14 @@ interface Atom {
   charge: string;
 }
 
-export interface Annotation{
+export interface Annotation {
   name: string;
   sequnece: string;
   dotbracket: string;
 }
 
 export interface Numeration {
-  [key: string] : [number, string];
+  [key: string]: [number, string];
 }
 
 interface Metadata {
@@ -64,25 +63,27 @@ interface Job {
   model_number: number;
 }
 
-
 export interface Nucleotide {
-  index: number; 
-  original_index: number; 
-  base: string; 
-  structure: string; 
+  index: number;
+  original_index: number;
+  base: string;
+  structure: string;
   selected: boolean;
 }
 
 export interface Chain {
-  name: string; 
-  nucleotides: Nucleotide[]; 
-  sequence: string; 
-  dotBracket: string; 
+  name: string;
+  nucleotides: Nucleotide[];
+  sequence: string;
+  dotBracket: string;
 }
 
-interface JobSelectedNodes{
-  id: string,
-  residues: number[]
+interface JobToPost {
+  id: string;
+  residues: number[];
+  modelNumber: number;
+  radius: number;
+  interval: number;
 }
 
 function transformJobToChains(job: Job): Chain[] {
@@ -90,68 +91,77 @@ function transformJobToChains(job: Job): Chain[] {
 
   let id = 1;
   job.annotation.forEach((annotation) => {
-
     if (!job.annotation || job.annotation.length === 0) {
       console.error("Annotation is undefined or empty.");
       return [];
     }
-    
+
     if (!job.numeration || Object.keys(job.numeration).length === 0) {
       console.error("Numeration is undefined or empty.");
       return [];
     }
 
-      const chain: Chain = {
-          name: annotation.name,
-          sequence: annotation.sequnece,
-          dotBracket: annotation.dotbracket,
-          nucleotides: [] 
-      };
+    const chain: Chain = {
+      name: annotation.name,
+      sequence: annotation.sequnece,
+      dotBracket: annotation.dotbracket,
+      nucleotides: [],
+    };
 
-      for (let i = 0; i < annotation.sequnece.length; i++) {
-
-          const numerationKey = Object.keys(job.numeration).find(key => parseInt(key, 10) === id && job.numeration[key][1] === annotation.name.slice(-1));
-          if (numerationKey) {
-              const nucleotide: Nucleotide = {
-                  index: parseInt(numerationKey, 10),
-                  original_index: job.numeration[numerationKey][0],
-                  base: annotation.sequnece[i],
-                  structure: annotation.dotbracket[i],
-                  selected: false,
-              };
-              chain.nucleotides.push(nucleotide);
-              console.log("Dodano nukleotyd: ",nucleotide);
-          }
-          console.log("id:", id);
-          console.log("Dlugość sekwencji: ",annotation.sequnece.length);
-          id++;
-
+    for (let i = 0; i < annotation.sequnece.length; i++) {
+      const numerationKey = Object.keys(job.numeration).find(
+        (key) =>
+          parseInt(key, 10) === id &&
+          job.numeration[key][1] === annotation.name.slice(-1)
+      );
+      if (numerationKey) {
+        const nucleotide: Nucleotide = {
+          index: parseInt(numerationKey, 10),
+          original_index: job.numeration[numerationKey][0],
+          base: annotation.sequnece[i],
+          structure: annotation.dotbracket[i],
+          selected: false,
+        };
+        chain.nucleotides.push(nucleotide);
+        console.log("Dodano nukleotyd: ", nucleotide);
       }
+      console.log("id:", id);
+      console.log("Dlugość sekwencji: ", annotation.sequnece.length);
+      id++;
+    }
 
-      chains.push(chain);
-      console.log("Dodano łańcuch:", chain.name, chain.sequence,chain.dotBracket, chain.nucleotides);
+    chains.push(chain);
+    console.log(
+      "Dodano łańcuch:",
+      chain.name,
+      chain.sequence,
+      chain.dotBracket,
+      chain.nucleotides
+    );
   });
 
   return chains;
 }
 
-
-async function fetchMyData(jobID: string | undefined, model: number | 1): Promise<Job> {
-  try{
+async function fetchMyData(
+  jobID: string | undefined,
+  model: number | 1
+): Promise<Job> {
+  try {
     console.log("fetch my data");
     console.log(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`)
-    const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`);
+    const response = await fetch(
+      `http://localhost:3000/api/v1/jobs/${jobID}/${model}`
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch data: ${response.statusText}`);
     }
     const data = await response.json();
     return data;
-  }
-  catch(error){
+  } catch (error) {
     console.error("Error in fetchMyData:", error);
-    throw error; 
+    throw error;
   }
-
 }
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
@@ -180,11 +190,10 @@ const Panel: React.FC = () => {
     setAnalyzeWholeStructure(e.target.checked);
   };
 
-  
-  useEffect(()=>{
-    chainsState.forEach(chain =>{
-      console.log("Chain z panelu:",chain)
-    })
+  useEffect(() => {
+    chainsState.forEach((chain) => {
+      console.log("Chain z panelu:", chain);
+    });
   }, [chainsState]);
 
   const location = useLocation();
@@ -194,7 +203,7 @@ const Panel: React.FC = () => {
 
   const pdbString = "";
 
-  if(!pdbCode){
+  if (!pdbCode) {
     pdbCode = pdbCodeRadioButton;
   }
 
@@ -223,26 +232,41 @@ const Panel: React.FC = () => {
     });
   }
 
-  async function sendDataToAnalyze(){
-    const API_URL = "http://localhost:3000/api/v1/jobs/analyzeFragment"; 
+  async function sendDataToAnalyze() {
+    var idList: number[] = [];
+    var API_URL = '';
     const id = jobID;
+
     if (!jobID) {
       throw new Error("jobID is required");
     }
-    const idList: number[] = chainsState.flatMap(chain => 
-      chain.nucleotides.filter(nucleotide => nucleotide.selected).map(nucleotide => nucleotide.index));
 
-    const jobToPost: JobSelectedNodes = {id: jobID, residues: idList};
+    var jobToPost: JobToPost = {id: '', residues: [], modelNumber: 0, radius: 0, interval: 0};
+    if (analyzeWholeStructure) {
+      API_URL = "http://localhost:3000/api/v1/jobs/analyzeStructure";
+      const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
+      const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value); 
+      jobToPost = {id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval}
+    } else {
+      API_URL = "http://localhost:3000/api/v1/jobs/analyzeFragment";
+      idList = chainsState.flatMap((chain) =>
+        chain.nucleotides
+          .filter((nucleotide) => nucleotide.selected)
+          .map((nucleotide) => nucleotide.index)
+      );
+      jobToPost = {id: jobID, modelNumber: 0, residues: idList, radius: 0, interval: 0}
+    }
+
     try {
+      debugger
       const response = await fetch(`${API_URL}`, {
         method: "POST",
         body: JSON.stringify(jobToPost),
         headers: {
           "Access-Control-Allow-Origin": "http://localhost:3000",
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       });
-
       if (response.ok) {
         const data = await response.json();
         console.log("Data posted successfully:", data.id);
@@ -258,40 +282,39 @@ const Panel: React.FC = () => {
     }
   }
 
-  function handleNavigate(){
+  function handleNavigate() {
     sendDataToAnalyze();
     navigate(`/summary/${jobID}`);
   }
 
-  const goToDashboard = () =>{
+  const goToDashboard = () => {
     navigate("/");
-  }
-  const changeModel = (model: number) =>{
-
+  };
+  const changeModel = (model: number) => {
     const jobID = context?.jobID;
     // useEffect(() => {
-      if (!jobID) return;
-      async function fetchData() {
-        try {
-          // throw Error("Testing throw error");
-          const data = await fetchMyData(jobID, model);
-          setMyData(data);
-          const chains = transformJobToChains(data);
-          setChainsState(chains);
-          console.log("data:", data);
-        } catch (error) {
-          if (error instanceof Error) {
-            setError(error.message);
-          }
-          //TODO?: NotFound
+    if (!jobID) return;
+    async function fetchData() {
+      try {
+        // throw Error("Testing throw error");
+        const data = await fetchMyData(jobID, model);
+        setMyData(data);
+        const chains = transformJobToChains(data);
+        setChainsState(chains);
+        console.log("data:", data);
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(error.message);
         }
+        //TODO?: NotFound
       }
-      fetchData();
+    }
+    fetchData();
     // }, [jobID]);
-  }
-  const handleSetSelectedModel = (e: SelectChangeEvent) =>{
+  };
+  const handleSetSelectedModel = (e: SelectChangeEvent) => {
     setSelectedModel(parseInt(e.target.value) as number);
-  }
+  };
 
   const jobID = context?.jobID;
   useEffect(() => {
@@ -313,183 +336,179 @@ const Panel: React.FC = () => {
     }
     fetchData();
   }, [jobID]);
-  
+
   if (!myData) {
     return <Loading />;
   }
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      {!is3Dview &&
-      (<div className="w-80 bg-neutral-200">
-      {/* TODO: accordion */}
-      {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
-      <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
-        <label onClick={goToDashboard} className="cursor-pointer">
-        <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
-          <div className="flex flex-col">
-            <div className="font-bold">
-              <h1>RNA</h1>
-            </div>
-            <div className="font-semibold">
-              <h1>MOLEY</h1>
-            </div>
-          </div>
-          {/* TODO Logo Krecik */}
-          {/* <img
+      {!is3Dview && (
+        <div className="w-80 bg-neutral-200">
+          {/* TODO: accordion */}
+          {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
+          <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
+            <label onClick={goToDashboard} className="cursor-pointer">
+              <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
+                <div className="flex flex-col">
+                  <div className="font-bold">
+                    <h1>RNA</h1>
+                  </div>
+                  <div className="font-semibold">
+                    <h1>MOLEY</h1>
+                  </div>
+                </div>
+                {/* TODO Logo Krecik */}
+                {/* <img
             src="/krecik.png"
             width={100}
             height={100}
             alt="Logo RNA Moley"
           /> */}
-          <h1>| Submition panel</h1>
-        </div>
-        </label>
-      <div className="rounded-scrollbar overflow-auto">
-      <Accordion >
-        <AccordionSummary
-          // expandIcon={<ArrowDownwardIcon />}
-          aria-controls="panel1-content"
-          id="panel1-header"
-         
-        >
-          <Typography>Fornac options</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Typography component="div">
-            <div>
-            <FornaControls
-              labelInterval={labelInterval}
-              setLabelInterval={setLabelInterval}
-              numbering={numbering}
-              setNumbering={setNumbering}
-              nodeOutline={nodeOutline}
-              setNodeOutline={setNodeOutline}
-              nodeLabel={nodeLabel}
-              setNodeLabel={setNodeLabel}
-              links={links}
-              setLinks={setLinks}
-              directionArrows={directionArrows}
-              setDirectionArrows={setDirectionArrows}
-              animation={animation}
-              setAnimation={setAnimation}
-            />
-            </div>
-          </Typography>
-        </AccordionDetails>
-      </Accordion>
-      <Accordion>
-        <AccordionSummary
-          // expandIcon={<ArrowDropDownIcon />}
-          aria-controls="panel2-content"
-          id="panel2-header"
-        >
-          <Typography>Analyze structure</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Typography component="div">
-          <div>
-          <label className="options">
-            <input
-              type="checkbox"
-              id="analyze_whole_structure"
-              // defaultChecked
-              checked={analyzeWholeStructure}
-              onChange={handleAnalyzeChange}
-            />{" "}
-            Analyze whole structure
-          </label>
-          <div>
-              <div>
-                <label className="options"> 
-                  Model
-                  <input 
-                  className="mx-5 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                  type="number"
-                  min="1"
-                  max={myData.metadata.model_count}
-                  value={selectedModel}
-                  onChange={handleSetSelectedModel}
-                  /> 
-                </label>
-                
-                <button 
-                  className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
-                  onClick={() => changeModel(selectedModel)}
-                >Change model</button>
+                <h1>| Submition panel</h1>
               </div>
+            </label>
+            <div className="rounded-scrollbar overflow-auto">
+              <Accordion>
+                <AccordionSummary
+                  // expandIcon={<ArrowDownwardIcon />}
+                  aria-controls="panel1-content"
+                  id="panel1-header"
+                >
+                  <Typography>Fornac options</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography component="div">
+                    <div>
+                      <FornaControls
+                        labelInterval={labelInterval}
+                        setLabelInterval={setLabelInterval}
+                        numbering={numbering}
+                        setNumbering={setNumbering}
+                        nodeOutline={nodeOutline}
+                        setNodeOutline={setNodeOutline}
+                        nodeLabel={nodeLabel}
+                        setNodeLabel={setNodeLabel}
+                        links={links}
+                        setLinks={setLinks}
+                        directionArrows={directionArrows}
+                        setDirectionArrows={setDirectionArrows}
+                        animation={animation}
+                        setAnimation={setAnimation}
+                      />
+                    </div>
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+              <Accordion>
+                <AccordionSummary
+                  // expandIcon={<ArrowDropDownIcon />}
+                  aria-controls="panel2-content"
+                  id="panel2-header"
+                >
+                  <Typography>Analyze structure</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography component="div">
+                    <div>
+                      <label className="options">
+                        <input
+                          type="checkbox"
+                          id="analyze_whole_structure"
+                          // defaultChecked
+                          checked={analyzeWholeStructure}
+                          onChange={handleAnalyzeChange}
+                        />{" "}
+                        Analyze whole structure
+                      </label>
+                      <div>
+                        <div>
+                          <label className="options">
+                            Model
+                            <input
+                              className="mx-5 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                              type="number"
+                              min="1"
+                              max={myData.metadata.model_count}
+                              value={selectedModel}
+                              onChange={handleSetSelectedModel}
+                            />
+                          </label>
 
-            <div >
-              <label className="options"> 
-                Radius
-                <input 
-                  className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                  type="number"
-                /> 
-              </label>
-            </div>
+                          <button
+                            className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+                            onClick={() => changeModel(selectedModel)}
+                          >
+                            Change model
+                          </button>
+                        </div>
 
-            <div>
-              <label className="options"> 
-                Interval
-                <input
-                  className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                  type="number"
-                />
-              </label>
+                        <div>
+                          <label className="options">
+                            Radius
+                            <input
+                              id = "radiusInput"
+                              className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                              type="number"
+                            />
+                          </label>
+                        </div>
+
+                        <div>
+                          <label className="options">
+                            Interval
+                            <input
+                              id = "intervalInput"
+                              className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                              type="number"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+              <Accordion>
+                <AccordionSummary
+                  // expandIcon={<ArrowDownwardIcon />}
+                  aria-controls="panel1-content"
+                  id="panel1-header"
+                >
+                  <Typography>How to use fornac</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography component="div">
+                    <div className="mt-5 mb-5">
+                      [left click] select/deselect nodes
+                      <br />
+                      [left click + drag] drag object
+                      <br />
+                      {/* [ctrl + left click + drag] box selecting */}
+                      {/* <br /> */}
+                      {/* [c] center the graph */}
+                    </div>
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
             </div>
           </div>
-
+          <div className="flex flex-col h-[20%] ml-4 mt-3">
+            <button
+              id="saveButton"
+              onClick={handleNavigate}
+              className={
+                "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+              }
+            >
+              Analyze
+            </button>
           </div>
-          </Typography>
-        </AccordionDetails>
-      </Accordion>
-      <Accordion>
-        <AccordionSummary
-          // expandIcon={<ArrowDownwardIcon />}
-          aria-controls="panel1-content"
-          id="panel1-header"
-        >
-          <Typography>How to use fornac</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Typography component="div">
-          <div className="mt-5 mb-5">
-          [left click] select/deselect nodes
-          <br />
-          [left click + drag] drag object
-          <br />
-          {/* [ctrl + left click + drag] box selecting */}
-          {/* <br /> */}
-          {/* [c] center the graph */}
         </div>
-          </Typography>
-        </AccordionDetails>
-      </Accordion>
-    </div>
- 
-        
-        
-      </div>
-      <div className="flex flex-col h-[20%] ml-4 mt-3">
-        <DownloadLink />
-          <button
-            id="saveButton"
-            onClick={handleNavigate}
-            className={
-              "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
-            }
-          >
-            Analyze
-          </button>
-      </div>
-    </div>)
-      }
-      
+      )}
 
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
-
           {myData ? (
             <div id="container">
               <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent z-100">
@@ -513,8 +532,8 @@ const Panel: React.FC = () => {
                 <Molstar
                   useInterface={true}
                   file={myData.pdb_file_string}
-                  chains = {chainsState}
-                  setChains = {setChainsState}
+                  chains={chainsState}
+                  setChains={setChainsState}
                   initialized={initialized}
                   setInitialized={setInitialized}
                 />
@@ -523,7 +542,7 @@ const Panel: React.FC = () => {
                 <FornaComponent
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
-                  chains = {chainsState}
+                  chains={chainsState}
                   setChains={setChainsState}
                   labelInterval={labelInterval}
                   numbering={numbering}
@@ -534,7 +553,6 @@ const Panel: React.FC = () => {
                   setAnimation={animation}
                 />
               )}
-
             </div>
           ) : (
             <Loading />

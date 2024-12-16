@@ -214,6 +214,7 @@ const Summary: React.FC = () => {
     }
     fetchData();
   }, [jobId]);
+  
 
   if (isLoading) {
     return <JobProcessing />;
@@ -476,6 +477,7 @@ const Summary: React.FC = () => {
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
                   chains={chainsState}
+                  setChains={setChainsState}
                   labelInterval={labelInterval}
                   numbering={numbering}
                   nodeOutline={nodeOutline}
@@ -483,8 +485,6 @@ const Summary: React.FC = () => {
                   links={links}
                   directionArrows={directionArrows}
                   setAnimation={false}
-                  selectedNts={selectedNts}
-                  setSelectedNts={setSelectedNts}
                 />
               )}
             </div>

@@ -29,7 +29,7 @@ const Dashboard: React.FC = () => {
   const context = useContext(NameContext);
   const navigate = useNavigate();
 
-
+  
   function handle(id: string) {
     if (context) {
       const { setId } = context;
@@ -43,7 +43,7 @@ const Dashboard: React.FC = () => {
   //TODO: Check if it's working correctly on backend data
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+    debugger
     const formData = new FormData();
     formData.append("jobName", jobName || "");
     formData.append("pdbCode", pdbCode || "");
@@ -104,13 +104,13 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-between p-24 pt-0">
-      <div className="flex flex-row text-3xl font-medium items-center self-start">
+      <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px]">
         <div className="flex flex-col">
           <div className="font-extrabold">
             <h1>RNA</h1>
           </div>
-          <div className="font-semibold">
-            <h1>MOLEY</h1>
+          <div className="font-semibold pr-5 text-{#526969}">
+            <h1 style={{ color: Colors.blue }}>MOLEY</h1>
           </div>
         </div>
         {/* TODO Logo Krecik */}
@@ -120,7 +120,7 @@ const Dashboard: React.FC = () => {
           height={100}
           alt="Logo RNA Moley"
         /> */}
-        <h1>| Submition panel</h1>
+        <h1>| Submition Panel</h1>
       </div>
       <form onSubmit={handleSubmit}>
         <div className="flex flex-row flex-wrap h-[70vh] w-[90vw] justify-around bg-slate-300 p-24 lg:rounded-xl text-teal-600 font-semibold text-lg">
@@ -160,9 +160,8 @@ const Dashboard: React.FC = () => {
                 />
               </label>
             </div>
-            
           </div>
-          <div className="flex justify-center content-around align-center flex-wrap flex-col">
+          <div className="flex justify-around content-around align-center flex-wrap flex-col">
             <div className="w-80 mb-5">
               <label>Fetch by PDB Code:</label>
               <input
@@ -179,25 +178,24 @@ const Dashboard: React.FC = () => {
               selectedValue={radiobutton}
               onValueChange={setRadiobutton}
             />
-            
 
             <button
               type="submit"
               disabled={!isButtonEnabled}
-              className={`${isButtonEnabled ? "" : "bg-gray-400 cursor-not-allowed"
-                } transition-colors`}
-              >
-                <h2 className="text-2xl text-black">
-                  Run{" "}
-                  <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                    ⮕
-                  </span>
-                </h2>
-              </button>
-            </div>
+              className={`${
+                isButtonEnabled ? "" : "bg-gray-400 cursor-not-allowed"
+              } transition-colors`}
+            >
+              <h2 className="text-2xl text-black">
+                Run{" "}
+                <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                  ⮕
+                </span>
+              </h2>
+            </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 };
