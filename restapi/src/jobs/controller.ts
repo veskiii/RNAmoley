@@ -228,25 +228,23 @@ export async function createJob(req: Request, res: Response) {
     });
     numberOfModels = (await splitResponse.json() as splitModelsResponse).numberOfModels;
 
-    // TODO: run clean up script on  all the models
-    const correctResponse = await fetch(`http://tools:3002/correct?id=${id}&numberOfModels=${numberOfModels}`, {
-        method: 'POST'
-    });
-
-    if (!correctResponse.ok) {
-        console.error('Correction error');
-        deleteJobDirectory(id);
-        res.status(500).send({ error: 'An error occurred while cleaning up the files.' });
-        return;
-    }
-
     // save the original numeration of all the models
     const newNumeration = await saveOriginalNumeration(id, numberOfModels);
-
     if (!newNumeration) {
         console.error('Numeration error');
         deleteJobDirectory(id);
         res.status(500).send({ error: 'Numeration error' });
+        return;
+    }
+
+    // run clean up script on  all the models
+    const correctResponse = await fetch(`http://tools:3002/correct?id=${id}&numberOfModels=${numberOfModels}`, {
+        method: 'POST'
+    });
+    if (!correctResponse.ok) {
+        console.error('Correction error');
+        deleteJobDirectory(id);
+        res.status(500).send({ error: 'An error occurred while cleaning up the files.' });
         return;
     }
 
