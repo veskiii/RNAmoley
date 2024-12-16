@@ -38,9 +38,16 @@ export async function getJobById(req: Request, res: Response) {
         return;
     }
 
-    const metadata = await readMetadata(id);
-    if (!metadata) {
-        res.status(500).send({ error: 'Metadata file not found.' });
+    let metadata: Metadata;
+    try {
+        metadata = await readMetadata(id);
+        if (!metadata) {
+            res.status(500).send({ error: 'Metadata file not found.' });
+            return;
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(404).send({ error: 'Job not found.' });
         return;
     }
 
@@ -195,6 +202,22 @@ export async function createJob(req: Request, res: Response) {
         console.error('PDB file not found after conversion.');
         deleteJobDirectory(id);
         res.status(500).send({ error: 'Conversion error.' });
+        return;
+    }
+
+    // reject if the file contains non-rna residues
+    var nonRNA = false;
+    pdbFile.residues.some((residue) => {
+        if (!['A', 'C', 'G', 'U', ''].includes(residue.resName)) {
+            nonRNA = true;
+            console.error('Non-RNA residues found.');
+            console.error(residue.resName);
+            deleteJobDirectory(id);
+            return true;
+        }
+    });
+    if (nonRNA) {
+        res.status(422).send({ error: 'Non-RNA residues found in the file.' });
         return;
     }
 
