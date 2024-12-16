@@ -1,22 +1,21 @@
 import Loading from "./loading";
+import { Colors } from "./colors";
 
 const JobProcessing: React.FC = () => {
   return (
     <div>
-        <div className="flex min-h-screen flex-col items-center justify-between p-24 pt-0">
-          <div className="flex flex-row text-3xl font-medium items-center self-start">
-            <div className="flex flex-col">
-              <div className="font-extrabold">
-                <h1>RNA</h1>
-              </div>
-              <div className="font-semibold pr-5">
-                <h1>MOLEY</h1>
-              </div>
+        <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px]">
+          <div className="flex flex-col">
+            <div className="font-extrabold">
+              <h1>RNA</h1>
             </div>
-            <h1>| Job summary panel</h1>
+            <div className="font-semibold pr-5 text-{#526969}">
+              <h1 style={{ color: Colors.blue }}>MOLEY</h1>
+            </div>
           </div>
-          <Loading message="Your job is processing..." />
+          <h1>| Processing</h1>
         </div>
+        <Loading message="Your job is processing..." />
     </div>
   );
 };

@@ -71,6 +71,11 @@ export interface Chain {
   dotBracket: string; 
 }
 
+interface JobSelectedNodes{
+  id: string,
+  residues: number[]
+}
+
 function transformJobToChains(job: Job): Chain[] {
   const chains: Chain[] = [];
 
@@ -195,7 +200,43 @@ const Panel: React.FC = () => {
     });
   }
 
+  async function sendDataToAnalyze(){
+    const API_URL = "http://localhost:3000/api/v1/jobs/analyzeFragment"; 
+    const id = jobID;
+    if (!jobID) {
+      throw new Error("jobID is required");
+    }
+    const idList: number[] = chainsState.flatMap(chain => 
+      chain.nucleotides.filter(nucleotide => nucleotide.selected).map(nucleotide => nucleotide.index));
+
+    const jobToPost: JobSelectedNodes = {id: jobID, residues: idList};
+    try {
+      const response = await fetch(`${API_URL}`, {
+        method: "POST",
+        body: JSON.stringify(jobToPost),
+        headers: {
+          "Access-Control-Allow-Origin": "http://localhost:3000",
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Data posted successfully:", data.id);
+      } else {
+        let errorData = await response.json();
+        console.error("Error creating job:", errorData);
+        const errorMessage = errorData?.message || "Unknown error";
+        alert("Failed to create job: " + errorMessage);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to create job");
+    }
+  }
+
   function handleNavigate(){
+    sendDataToAnalyze();
     navigate(`/summary/${jobID}`);
   }
 

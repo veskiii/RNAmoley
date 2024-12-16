@@ -8,7 +8,7 @@ import { Annotation } from "./Panel";
 import { Numeration } from "./Panel";
 import { Chain } from "./Panel";
 import { Nucleotide } from "./Panel";
-import { Colors } from "./colors"
+import { Colors } from "./colors";
 import DownloadLink from "./downloadLink";
 import ErrorPage, { ErrorPageProps } from "./ErrorPage";
 import JobProcessing from "./JobProcessing";
@@ -20,87 +20,25 @@ interface Job {
   createdat: string;
   updatedat: string;
   annotation: Annotation[];
+  metadata: Metadata;
   numeration: Numeration;
   results: {
     mode: string;
-    data: Results[];
+    data: [number, Metrics][];
   };
+  pdb_file_string: string;
 }
 
-interface Residue_result {
-  residue_number: number;
-  metrics: {
-    pdbFileName: string;
-    x_H_type: string;
-    chains: string;
-    residues: string;
-    nucacids: string;
-    resolution: string;
-    rvalue: string;
-    rfree: string;
-    clashscore: string;
-    clashscoreB40: string;
-    minresol: string;
-    maxresol: string;
-    n_samples: string;
-    pct_rank: string;
-    pct_rank40: string;
-    numbadbonds: string;
-    numbonds: string;
-    pct_badbonds: string;
-    pct_resbadbonds: string;
-    numbadangles: string;
-    numangles: string;
-    pct_badangles: string;
-    pct_resbadangles: string;
-    chiralSwaps: string;
-    tetraOutliers: string;
-    pseudochiralErrors: string;
-    waterClashes: string;
-    totalWaters: string;
-    numPperpOutliers: string;
-    numPperp: string;
-    numSuiteOutliers: string;
-    numSuites: string;
-  };
+interface Metadata {
+  status: string;
 }
 
-interface Results {
-  residue_number: number;
-  metrics: {
-    pdbFileName: string;
-    x_H_type: string;
-    chains: string;
-    residues: string;
-    nucacids: string;
-    resolution: string;
-    rvalue: string;
-    rfree: string;
-    clashscore: string;
-    clashscoreB40: string;
-    minresol: string;
-    maxresol: string;
-    n_samples: string;
-    pct_rank: string;
-    pct_rank40: string;
-    numbadbonds: string;
-    numbonds: string;
-    pct_badbonds: string;
-    pct_resbadbonds: string;
-    numbadangles: string;
-    numangles: string;
-    pct_badangles: string;
-    pct_resbadangles: string;
-    chiralSwaps: string;
-    tetraOutliers: string;
-    pseudochiralErrors: string;
-    waterClashes: string;
-    totalWaters: string;
-    numPperpOutliers: string;
-    numPperp: string;
-    numSuiteOutliers: string;
-    numSuites: string;
-  };
+interface Metrics {
+  clashscore: string;
+  numbadbonds: string;
+  pct_badbonds: string;
+  numbadangles: string;
+  pct_badangles: string;
 }
 
 function transformJobToChains(job: Job): Chain[] {
@@ -160,15 +98,9 @@ function transformJobToChains(job: Job): Chain[] {
 
 async function fetchMyData(jobID: string | undefined) {
   console.log(`Sending request to /api/v1/jobs/${jobID}`);
-  {
-    /*const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`, {*/
-  }
-  const response = await fetch(
-    `http://localhost:3069/jobs/b5b99b6e-24d1-480e-b9e8-7d3a7728a6cc`,
-    {
-      signal: AbortSignal.timeout(5000),
-    }
-  );
+  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`, {
+    signal: AbortSignal.timeout(5000),
+  });
   console.log("Fetch data response: " + response.status);
   return response;
 }
@@ -183,34 +115,72 @@ const Summary: React.FC = () => {
   const [nodeLabel, setNodeLabel] = useState(true);
   const [links, setLinks] = useState(true);
   const [directionArrows, setDirectionArrows] = useState(true);
-  const [is2Dview, setIs2Dview] = useState(true);
+  const [is3Dview, setIs3Dview] = useState(true);
   const [selectedNts, setSelectedNts] = useState<number[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
 
   function toggle() {
-    setIs2Dview((is2Dview) => {
-      is2Dview = !is2Dview;
-      console.log(is2Dview);
+    setIs3Dview((is3Dview) => {
+      is3Dview = !is3Dview;
+      console.log(is3Dview);
       let switchViewButton = document.getElementById(
         "switchViewButton"
       ) as HTMLElement;
       let viewLabel = document.getElementById("viewLabel") as HTMLElement;
-      let bottom_seq = document.getElementById("bottom-seq") as HTMLElement;
-      if (is2Dview) {
-        switchViewButton.textContent = "3D view";
-        viewLabel.textContent = "2D view";
-        bottom_seq.style.setProperty("display", "block", "important");
-      } else {
+      if (is3Dview) {
         switchViewButton.textContent = "2D view";
         viewLabel.textContent = "3D view";
-
-        bottom_seq.style.setProperty("display", "none", "important");
+      } else {
+        switchViewButton.textContent = "3D view";
+        viewLabel.textContent = "2D view";
       }
-      return is2Dview;
+      return is3Dview;
     });
   }
+
+  const numToColor: { [key: string]: string } = {
+    n1: "red",
+    n2: "blue",
+    n3: "green",
+    n4: "purple",
+    // Add more mappings as needed
+  };
+
+  function colorGnodes() {
+    const gNodes = document.getElementsByClassName("gnode");
+
+    Array.from(gNodes).forEach((gNode) => {
+      // Get the num attribute value
+      const numValue = gNode.getAttribute("num");
+
+      // Find the corresponding color for this num
+      if (numValue) {
+        // Ensure numValue is not null or undefined
+        // Find the corresponding color for this num
+        const color = numToColor[numValue];
+
+        if (color) {
+          // Find the circle element inside the gnode and cast it to HTMLCircleElement
+          const circle = gNode.querySelector("circle.fornac-node");
+
+          if (circle && circle instanceof SVGCircleElement) {
+            // Ensure it's an SVGCircleElement
+            // Update the fill color based on the num value
+            circle.style.fill = color;
+          }
+        }
+      }
+    });
+  }
+
+  useEffect(() => {
+    // Only run myFunction when FornacComponent is rendered (is3Dview is false)
+    if (!is3Dview) {
+      colorGnodes();
+    }
+  }, [is3Dview]);
 
   useEffect(() => {
     async function fetchData() {
@@ -259,6 +229,10 @@ const Summary: React.FC = () => {
     return <ErrorPage />;
   }
 
+  if (myData.metadata.status !== "completed") {
+    return <JobProcessing />;
+  }
+
   const handleLabelIntervalChange = (e: any) => {
     setLabelInterval(parseInt(e.target.value, 10));
   };
@@ -285,27 +259,94 @@ const Summary: React.FC = () => {
     setDirectionArrows(e.target.checked);
   };
 
-  const rows: JSX.Element[] = [];
-  myData.results.data.forEach((residue) => {
-    rows.push(
-      <tr
-        key={residue.residue_number}
-        className={residue.residue_number % 2 === 0 ? "bg-white" : "bg-gray-100"}
-      >
-        <td className="border border-neutral-300">{residue.residue_number}</td>
-        <td className="border border-neutral-300">
-          {residue.metrics.clashscore}
-        </td>
-        <td className="border border-neutral-300">
-          {residue.metrics.pct_badangles}
-        </td>
-        <td className="border border-neutral-300">
-          {residue.metrics.pct_badbonds}
-        </td>
-      </tr>
-    );
-  });
-  // Użycie forEach do iterowania po danych
+  function makeTable(myData: Job) {
+    const rows: JSX.Element[] = [];
+    const indices: string[] = [];
+    const original_indices: number[] = [];
+
+    myData.results.data.forEach((residue) => {
+      indices.push(residue[0].toString());
+    });
+
+    indices.forEach((index) => {
+      original_indices.push(myData.numeration[index]?.[0]);
+    });
+
+    if (myData.results.mode === "fragment") {
+      return (
+        <tbody className="w-full">
+          <tr>
+            <th className="border border-neutral-300 bg-gray-100 w-[70%] p-3 text-2xl font-semibold">
+              Residue numbers range
+            </th>
+            <td className="border border-neutral-300 bg-gray-100 w-[30%] text-2xl">
+              {original_indices[0]} -{" "}
+              {original_indices[original_indices.length - 1]}
+            </td>
+          </tr>
+          <tr>
+            <th className="border border-neutral-300 p-3 text-2xl font-semibold">
+              Clashscore
+            </th>
+            <td className="border border-neutral-300 text-2xl">
+              {myData.results.data[0][1].clashscore}
+            </td>
+          </tr>
+          <tr>
+            <th className="border border-neutral-300 bg-gray-100 p-3 text-2xl font-semibold">
+              Bad angles
+            </th>
+            <td className="border border-neutral-300 bg-gray-100 text-2xl">
+              {myData.results.data[0][1].numbadangles}
+            </td>
+          </tr>
+          <tr>
+            <th className="border border-neutral-300 p-3 text-2xl font-semibold">
+              Bad bonds
+            </th>
+            <td className="border border-neutral-300 text-2xl">
+              {myData.results.data[0][1].numbadbonds}
+            </td>
+          </tr>
+        </tbody>
+      );
+    } else if (myData.results.mode === "full") {
+      myData.results.data.forEach((residue, i) => {
+        rows.push(
+          <tr
+            key={residue[0]}
+            className={residue[0] % 2 === 0 ? "bg-white" : "bg-gray-100"}
+          >
+            <td className="border border-neutral-300">{original_indices[i]}</td>
+            <td className="border border-neutral-300">
+              {residue[1].clashscore}
+            </td>
+            <td className="border border-neutral-300">
+              {residue[1].pct_badangles}
+            </td>
+            <td className="border border-neutral-300">
+              {residue[1].pct_badbonds}
+            </td>
+          </tr>
+        );
+      });
+      return (
+        <tbody>
+          <tr>
+            <th className="border border-neutral-300">Residue numbers</th>
+            <th className="border border-neutral-300">Clashscore</th>
+            <th className="border border-neutral-300">Bad angles</th>
+            <th className="border border-neutral-300">Bad bonds</th>
+          </tr>
+          {rows}
+        </tbody>
+      );
+    } else {
+      return <ErrorPage />;
+    }
+  }
+
+  
 
   return (
     <div className="flex flex-row h-screen w-screen overflow-y-auto">
@@ -321,28 +362,17 @@ const Summary: React.FC = () => {
           </div>
           <h1>| Analysis Panel</h1>
         </div>
-        <div style = {{backgroundColor: Colors.backgroundBlue}} className="w-[500px] h-full rounded-lg table-fixed">
-          <div className="h-[75%] w-[85%] bg-white mx-auto mt-3">
-            <table className="w-[100%] border-collapse border border-neutral-200 bg-white text-center">
-              <thead>
-                <tr>
-                  <th className="border border-neutral-300">Residue Number</th>
-                  <th className="border border-neutral-300">Clashscore</th>
-                  <th className="border border-neutral-300">Bad angles</th>
-                  <th className="border border-neutral-300">Bad bonds</th>
-                </tr>
-              </thead>
-              <tbody>{rows}</tbody>
-              {/*<tbody>
-          {myData.data.results.data.map((residue) => (
-            <tr key={residue.residue_number}>
-              <td>{residue.residue_number}</td>
-              <td>{residue.metrics.clashscore}</td>
-              <td>{residue.metrics.clashscoreB40}</td>
-            </tr>
-          ))}
-        </tbody>*/}
+        <div
+          style={{ backgroundColor: Colors.backgroundBlue }}
+          className="w-[500px] h-full rounded-lg table-fixed"
+        >
+          <div className="max-h-[75%] min-h-[110px] w-[85%] mx-auto mt-9 overflow-auto">
+            <table className="w-full border-collapse border border-neutral-200 bg-white text-center">
+              {makeTable(myData)}
             </table>
+          </div>
+          <div className="flex flex-col h-[20%] ml-11 mt-6">
+            <DownloadLink />
           </div>
           {/*<div className="flex flex-wrap items-end justify-center h-auto ml-4 mt-10 p-2 ">
             <label className="w-1/4">
@@ -407,9 +437,6 @@ const Summary: React.FC = () => {
               Direction Arrows
             </label>
           </div>*/}
-          <div className="flex flex-col h-[20%] ml-11 mt-6">
-            <DownloadLink />
-          </div>
         </div>
       </div>
       <div key={myData.id} className="flex-grow relative overflow-hidden">
@@ -422,19 +449,29 @@ const Summary: React.FC = () => {
                     id="viewLabel"
                     className="text-2xl font-bold place-self-center my-1 pt-[30px]"
                   >
-                    2D view
+                    3D view
                   </label>
                   <button
                     id="switchViewButton"
                     onClick={toggle}
                     className="font-bold absolute right-[30px] top-[30px] rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
                   >
-                    3D view
+                    2D view
                   </button>
                 </div>
               </div>
 
-              {is2Dview && (
+              {is3Dview && (
+                <Molstar
+                  useInterface={true}
+                  file={myData.pdb_file_string}
+                  chains={chainsState}
+                  setChains={setChainsState}
+                  initialized={initialized}
+                  setInitialized={setInitialized}
+                />
+              )}
+              {!is3Dview && (
                 <FornacComponent
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
@@ -448,16 +485,6 @@ const Summary: React.FC = () => {
                   setAnimation={false}
                   selectedNts={selectedNts}
                   setSelectedNts={setSelectedNts}
-                />
-              )}
-              {!is2Dview && (
-                <Molstar
-                  useInterface={true}
-                  pdbId={"7kuc"}
-                  selectedNts={selectedNts}
-                  setSelectedNts={setSelectedNts}
-                  initialized={initialized}
-                  setInitialized={setInitialized}
                 />
               )}
             </div>
