@@ -1,20 +1,17 @@
 import React, { useEffect, useState, useContext } from "react";
-import Loading from "./loading";
-import DownloadLink from "./downloadLink";
-import "../App.css";
-import { NameContext } from "../App";
-import Molstar from "./mol";
-import FornaComponent from "./fornaComponent";
-import { useLocation } from "react-router-dom";
+import Loading from "../common/loading";
+import DownloadLink from "../common/downloadLink";
+import "../../App.css";
+import { NameContext } from "../../App";
+import Molstar from "../visualizations/molStarComponent";
+import FornaComponent from "../visualizations/fornaComponent";
 import { useNavigate } from "react-router-dom";
 import { SelectChangeEvent } from "@mui/material";
-import FornaControls from "./fornaControls";
+import FornaControls from "../common/fornaControls";
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
-// import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-// import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 interface Atom {
   serial: number;
@@ -63,7 +60,6 @@ interface Job {
   metadata: Metadata;
   model_number: number;
 }
-
 
 interface Nucleotide {
   index: number; 
@@ -131,10 +127,8 @@ function transformJobToChains(job: Job): Chain[] {
 }
 
 
-async function fetchMyData(jobID: string | undefined, model: number | 1): Promise<Job> {
+async function fetchJobData(jobID: string | undefined, model: number = 1): Promise<Job> {
   try{
-    console.log("fetch my data");
-    console.log(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`)
     const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch data: ${response.statusText}`);
@@ -159,45 +153,38 @@ const Panel: React.FC = () => {
   const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
   const [is3Dview, setIs3Dview] = useState(true);
-  const [selectedNts, setSelectedNts] = useState<number[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [chainsState, setChainsState] = useState<Chain[]>([]);
+  const [selectedModel, setSelectedModel] = useState<number>(1);
   const width = document.getElementById("container")?.clientWidth || 1300;
   const height = document.getElementById("container")?.clientHeight || 700;
-  let color = "black";
-  
-  const [chainsState, setChainsState] = useState<Chain[]>([]);
-  const [changeSource, setChangeSource] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<number>(1);
-
   const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(false);
+  
   const handleAnalyzeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAnalyzeWholeStructure(e.target.checked);
   };
-  const navigate = useNavigate();
-
   
   useEffect(()=>{
     chainsState.forEach(chain =>{
       console.log("Chain z panelu:",chain)
     })
   }, [chainsState]);
-
-  const location = useLocation();
-  const rnaFile = location.state?.rnaFile;
-  var pdbCode = location.state?.pdbCode;
-  const pdbCodeRadioButton = location.state?.radiobutton;
-
-  const pdbString = "";
-
-  if(!pdbCode){
-    pdbCode = pdbCodeRadioButton;
+  
+async function loadData(jobID: string | undefined, model: number = 1) {
+  try {
+    const data = await fetchJobData(jobID, model);
+    setMyData(data);
+    const chains = transformJobToChains(data);
+    setChainsState(chains);
+    console.log("data:", data);
+  } catch (error) {
+    if (error instanceof Error) {
+      setError(error.message);
+    }
+    //TODO?: NotFound
   }
+}
 
-  const context = useContext(NameContext);
-  if (context) {
-    const { jobID } = context;
-    console.log("Got jobID:", jobID);
-  }
 
   function toggle() {
     setIs3Dview((is3Dview) => {
@@ -217,58 +204,29 @@ const Panel: React.FC = () => {
       return is3Dview;
     });
   }
-
+  
+  const navigate = useNavigate();
   const goToDashboard = () =>{
     navigate("/");
   }
-  const changeModel = (model: number) =>{
-
-    const jobID = context?.jobID;
-    // useEffect(() => {
-      if (!jobID) return;
-      async function fetchData() {
-        try {
-          // throw Error("Testing throw error");
-          const data = await fetchMyData(jobID, model);
-          setMyData(data);
-          const chains = transformJobToChains(data);
-          setChainsState(chains);
-          console.log("data:", data);
-        } catch (error) {
-          if (error instanceof Error) {
-            setError(error.message);
-          }
-          //TODO?: NotFound
-        }
-      }
-      fetchData();
-    // }, [jobID]);
-  }
+  
   const handleSetSelectedModel = (e: SelectChangeEvent) =>{
     setSelectedModel(parseInt(e.target.value) as number);
   }
 
+  const context = useContext(NameContext);
   const jobID = context?.jobID;
+  const changeModel = (model: number) =>{
+    if (!jobID) return;
+    loadData(jobID, model);
+  }
+
   useEffect(() => {
     if (!jobID) return;
-    async function fetchData() {
-      try {
-        // throw Error("Testing throw error");
-        const data = await fetchMyData(jobID, 1);
-        setMyData(data);
-        const chains = transformJobToChains(data);
-        setChainsState(chains);
-        console.log("data:", data);
-      } catch (error) {
-        if (error instanceof Error) {
-          setError(error.message);
-        }
-        //TODO?: NotFound
-      }
-    }
-    fetchData();
+    loadData(jobID, 1);
   }, [jobID]);
 
+  if (error) return <div>Error: {error}</div>;
   if (!myData) {
     return <Loading />;
   }
@@ -277,8 +235,6 @@ const Panel: React.FC = () => {
     <div className="flex h-screen w-screen flex-row overflow-hidden">
       {!is3Dview &&
       (<div className="w-80 bg-neutral-200">
-      {/* TODO: accordion */}
-      {/* <div className="rounded-scrollbar"><AccordionUsage /></div> */}
       <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
         <label onClick={goToDashboard} className="cursor-pointer">
         <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
@@ -303,7 +259,6 @@ const Panel: React.FC = () => {
       <div className="rounded-scrollbar overflow-auto">
       <Accordion >
         <AccordionSummary
-          // expandIcon={<ArrowDownwardIcon />}
           aria-controls="panel1-content"
           id="panel1-header"
          
@@ -335,7 +290,6 @@ const Panel: React.FC = () => {
       </Accordion>
       <Accordion>
         <AccordionSummary
-          // expandIcon={<ArrowDropDownIcon />}
           aria-controls="panel2-content"
           id="panel2-header"
         >
@@ -348,7 +302,6 @@ const Panel: React.FC = () => {
             <input
               type="checkbox"
               id="analyze_whole_structure"
-              // defaultChecked
               checked={analyzeWholeStructure}
               onChange={handleAnalyzeChange}
             />{" "}
@@ -401,7 +354,6 @@ const Panel: React.FC = () => {
       </Accordion>
       <Accordion>
         <AccordionSummary
-          // expandIcon={<ArrowDownwardIcon />}
           aria-controls="panel1-content"
           id="panel1-header"
         >

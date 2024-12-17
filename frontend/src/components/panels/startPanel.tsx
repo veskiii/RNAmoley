@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent, FormEvent, useContext } from "react";
-import "../App.css";
-import RadioButtons from "./radioButtons";
-import { NameContext } from "../App";
+import "../../App.css";
+import RadioButtons from "../common/radioButtons";
+import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@mui/material";
 

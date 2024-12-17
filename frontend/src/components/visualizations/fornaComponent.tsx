@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import Loading from "./loading";
+import Loading from "../common/loading";
 import clsx from "clsx";
 import Box from '@mui/material/Box';
 import InputLabel from '@mui/material/InputLabel';
