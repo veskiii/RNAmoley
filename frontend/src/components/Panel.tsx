@@ -258,7 +258,6 @@ const Panel: React.FC = () => {
     }
 
     try {
-      debugger
       const response = await fetch(`${API_URL}`, {
         method: "POST",
         body: JSON.stringify(jobToPost),

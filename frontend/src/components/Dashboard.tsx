@@ -29,7 +29,7 @@ const Dashboard: React.FC = () => {
   const context = useContext(NameContext);
   const navigate = useNavigate();
 
-  
+
   function handle(id: string) {
     if (context) {
       const { setId } = context;
@@ -43,7 +43,6 @@ const Dashboard: React.FC = () => {
   //TODO: Check if it's working correctly on backend data
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    debugger
     const formData = new FormData();
     formData.append("jobName", jobName || "");
     formData.append("pdbCode", pdbCode || "");

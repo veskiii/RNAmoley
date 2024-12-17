@@ -13,6 +13,11 @@ import DownloadLink from "./downloadLink";
 import ErrorPage, { ErrorPageProps } from "./ErrorPage";
 import JobProcessing from "./JobProcessing";
 
+type Residue = {
+  residue_number: number;
+  metrics: Metrics;
+};
+
 interface Job {
   id: number;
   originalfilename: string;
@@ -24,8 +29,8 @@ interface Job {
   numeration: Numeration;
   results: {
     mode: string;
-    data: [number, Metrics][];
-  };
+    data: Residue[];
+  }
   pdb_file_string: string;
 }
 
@@ -182,7 +187,9 @@ const Summary: React.FC = () => {
     }
   }, [is3Dview]);
 
+
   useEffect(() => {
+    let interval: NodeJS.Timeout; // Declare interval variable
     async function fetchData() {
       console.log("Start to fetch data");
       try {
@@ -201,6 +208,11 @@ const Summary: React.FC = () => {
           const chains = transformJobToChains(data);
           setChainsState(chains);
           console.log("data:", data);
+
+          if (data.metadata.status === "completed") {
+            clearInterval(interval); // Stop the interval loop
+            setIsLoading(false);    // Set loading to false
+          }
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -208,11 +220,14 @@ const Summary: React.FC = () => {
           errorMessage: "Failed to fetch data",
           statusCode: "500",
         });
-      } finally {
-        setIsLoading(false);
       }
     }
-    fetchData();
+
+    // Set up interval to poll fetchData
+    interval = setInterval(fetchData, 3000); // Retry every 3 seconds
+  
+    // Cleanup interval when component unmounts or jobId changes
+    return () => clearInterval(interval);
   }, [jobId]);
   
 
@@ -266,7 +281,12 @@ const Summary: React.FC = () => {
     const original_indices: number[] = [];
 
     myData.results.data.forEach((residue) => {
-      indices.push(residue[0].toString());
+      if(residue && typeof residue.residue_number === "number"){
+        indices.push(residue.residue_number.toString());
+      }
+      else{
+        console.warn("Unexpected residue format:", residue);
+      }
     });
 
     indices.forEach((index) => {
@@ -274,6 +294,9 @@ const Summary: React.FC = () => {
     });
 
     if (myData.results.mode === "fragment") {
+      const clashscore = myData.results.data?.[0].metrics.clashscore;
+      const numbadangles = myData.results.data?.[0].metrics.numbadangles;
+      const numbadbonds = myData.results.data?.[0].metrics.numbadbonds
       return (
         <tbody className="w-full">
           <tr>
@@ -290,7 +313,7 @@ const Summary: React.FC = () => {
               Clashscore
             </th>
             <td className="border border-neutral-300 text-2xl">
-              {myData.results.data[0][1].clashscore}
+              {clashscore}
             </td>
           </tr>
           <tr>
@@ -298,7 +321,7 @@ const Summary: React.FC = () => {
               Bad angles
             </th>
             <td className="border border-neutral-300 bg-gray-100 text-2xl">
-              {myData.results.data[0][1].numbadangles}
+              {numbadangles}
             </td>
           </tr>
           <tr>
@@ -306,7 +329,7 @@ const Summary: React.FC = () => {
               Bad bonds
             </th>
             <td className="border border-neutral-300 text-2xl">
-              {myData.results.data[0][1].numbadbonds}
+              {numbadbonds}
             </td>
           </tr>
         </tbody>
@@ -315,18 +338,18 @@ const Summary: React.FC = () => {
       myData.results.data.forEach((residue, i) => {
         rows.push(
           <tr
-            key={residue[0]}
-            className={residue[0] % 2 === 0 ? "bg-white" : "bg-gray-100"}
+            key={residue.residue_number}
+            className={residue.residue_number % 2 === 0 ? "bg-white" : "bg-gray-100"}
           >
             <td className="border border-neutral-300">{original_indices[i]}</td>
             <td className="border border-neutral-300">
-              {residue[1].clashscore}
+              {residue.metrics.clashscore}
             </td>
             <td className="border border-neutral-300">
-              {residue[1].pct_badangles}
+              {residue.metrics.pct_badangles}
             </td>
             <td className="border border-neutral-300">
-              {residue[1].pct_badbonds}
+              {residue.metrics.pct_badbonds}
             </td>
           </tr>
         );
