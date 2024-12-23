@@ -22,5 +22,5 @@
   },
   "include": [
     "src"
-, "public/fornac"  ]
+, "public/fornac", "src/components/panels/startPanel.tsx"  ]
 }

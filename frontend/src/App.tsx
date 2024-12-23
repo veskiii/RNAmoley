@@ -1,8 +1,8 @@
 import { useState, createContext, ReactNode } from "react";
 import "./App.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Dashboard from "./components/Dashboard";
-import Panel from "./components/Panel";
+import Dashboard from "./components/panels/startPanel";
+import Panel from "./components/panels/analysisPanel";
 
 interface NameContextType {
   jobID: string | undefined;
