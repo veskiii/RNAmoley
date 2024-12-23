@@ -3,7 +3,6 @@ import "../../App.css";
 import RadioButtons from "../common/radioButtons";
 import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
-import { Checkbox } from "@mui/material";
 
 function checkConditions(
   rnaFile: File | null,
@@ -34,7 +33,7 @@ const Dashboard: React.FC = () => {
       const { setId } = context;
       setId(id);
       console.log("Setted jobID:", id);
-      navigate("/Panel", {state:{rnaFile, pdbCode, radiobutton}});
+      navigate("/Panel", { state: { rnaFile, pdbCode, radiobutton } });
     }
   }
 
@@ -54,7 +53,7 @@ const Dashboard: React.FC = () => {
       console.log(key, value);
     });
 
-    const API_URL = "http://localhost:3000/api/v1/jobs"; 
+    const API_URL = "http://localhost:3000/api/v1/jobs";
     try {
       const response = await fetch(`${API_URL}`, {
         method: "POST",
@@ -149,7 +148,7 @@ const Dashboard: React.FC = () => {
                 className="cursor-pointer text-2xl text-black flex justify-center items-center h-10 mt-2 bg-rose-300/80 w-40 rounded-lg text-center transition-colors hover:bg-teal-600"
                 htmlFor="inputFile"
               >
-                Upload
+                Upload{''}
                 <input
                   id="inputFile"
                   type="file"
@@ -159,26 +158,27 @@ const Dashboard: React.FC = () => {
                 />
               </label>
             </div>
-            
+
           </div>
           <div className="flex justify-center content-around align-center flex-wrap flex-col">
             <div className="w-80 mb-5">
-              <label>Fetch by PDB Code:</label>
-              <input
-                type="text"
-                value={pdbCode}
-                id="pdbCodeInput"
-                className="w-full flex justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                onChange={(e) => setPdbCode(e.target.value)}
-                maxLength={4}
-                placeholder="Enter a PDB code"
-              />
+              <label>Fetch by PDB Code:{''}
+                <input
+                  type="text"
+                  value={pdbCode}
+                  id="pdbCodeInput"
+                  className="w-full flex justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setPdbCode(e.target.value)}
+                  maxLength={4}
+                  placeholder="Enter a PDB code"
+                />
+              </label>
             </div>
             <RadioButtons
               selectedValue={radiobutton}
               onValueChange={setRadiobutton}
             />
-            
+
 
             <button
               type="submit"

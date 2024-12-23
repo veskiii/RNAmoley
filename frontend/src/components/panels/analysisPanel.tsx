@@ -211,7 +211,7 @@ async function loadData(jobID: string | undefined, model: number = 1) {
   }
   
   const handleSetSelectedModel = (e: SelectChangeEvent) =>{
-    setSelectedModel(parseInt(e.target.value) as number);
+    setSelectedModel(parseInt(e.target.value));
   }
 
   const context = useContext(NameContext);
@@ -310,8 +310,8 @@ async function loadData(jobID: string | undefined, model: number = 1) {
           <div>
               <div>
                 <label className="options"> 
-                  Model
-                  <input 
+                  Model{''}
+                  <input
                   className="mx-5 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                   type="number"
                   min="1"
@@ -329,7 +329,7 @@ async function loadData(jobID: string | undefined, model: number = 1) {
 
             <div >
               <label className="options"> 
-                Radius
+                Radius{''}
                 <input 
                   className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                   type="number"
@@ -339,7 +339,7 @@ async function loadData(jobID: string | undefined, model: number = 1) {
 
             <div>
               <label className="options"> 
-                Interval
+                Interval{''}
                 <input
                   className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                   type="number"
@@ -362,13 +362,15 @@ async function loadData(jobID: string | undefined, model: number = 1) {
         <AccordionDetails>
           <Typography component="div">
           <div className="mt-5 mb-5">
-          [left click] select/deselect nodes
+          [left click] select single node
+          <br />
+          [ctrl + left click] select/deselect multiple nodes
           <br />
           [left click + drag] drag object
           <br />
-          {/* [ctrl + left click + drag] box selecting */}
-          {/* <br /> */}
-          {/* [c] center the graph */}
+          [ctrl + left click + drag] box selecting
+          <br />
+          [c] center the graph
         </div>
           </Typography>
         </AccordionDetails>
