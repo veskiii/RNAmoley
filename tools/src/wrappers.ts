@@ -96,3 +96,34 @@ export async function runAnnotator(id: string, numberOfModels: number) {
 
     return results;
 }
+
+export async function walkingSphere(id: string, modelNumber: number, radius: number, interval: number) {
+    console.log(`Using walking sphere on model ${modelNumber} of ${id}...`);
+
+    // #sys.argv[1] = Nazwa analizowanego pliku
+    // #sys.argv[2] = folder do którego trafią wyniki
+    // #sys.argv[3] = wielkość promienia
+    // #sys.argv[4] = Liczba określa co który C-alfa będzie brany pod uwagę
+
+    // delete old sphere folder if exists
+    try {
+        await fs.rm(`${JOBS_DIR}/${id}/sphere`, { recursive: true });
+    } catch (error) {
+        console.log('Sphere folder does not exist, continuing...');
+    }
+
+    const sphere = spawnSync('Walking_sphere.py', [
+        `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
+        `${JOBS_DIR}/${id}/sphere`,
+        radius.toString(),
+        interval.toString()
+    ]);
+
+    if (sphere.error) {
+        console.error('Error running sphere: ', sphere.error);
+        return { error: sphere.error };
+    }
+
+    console.log(`Walking sphere on model ${modelNumber} of ${id} finished.`);
+    return { success: true };
+}
