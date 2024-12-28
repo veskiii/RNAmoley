@@ -118,18 +118,20 @@ export function validateFile(file: Express.Multer.File, maxFileSize: number, all
 }
 
 export async function fetchPdbFile(pdbCode: string) {
+    var filename = `${pdbCode}.pdb`;
     var response = await fetch(`https://files.rcsb.org/download/${pdbCode}.pdb`);
 
     // fallback to cif if pdb is not available
     if (!response.ok) {
         var response = await fetch(`https://files.rcsb.org/download/${pdbCode}.cif`);
+        filename = `${pdbCode}.cif`;
         if (!response.ok) {
             return "Error fetching PDB file: neither PDB nor CIF file found on RCSB server.";
         }
     }
 
     const data = await response.blob();
-    const file = new File([data], `${pdbCode}.pdb`);
+    const file = new File([data], filename);
     return file;
 }
 
@@ -240,7 +242,7 @@ export async function analyzeStructureWalkingSphere(jobID: UUID, modelNumber: st
 
     const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
     const promises = files.map(async (file) => {
-        const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=/${jobID}/sphere/${file}`);
+        const res = await fetch(`http://molprobity:3001/oneline-analysis?filename=/${jobID}/sphere/${file}`, { keepalive: true });
         if (!res.ok) {
             throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
         }
@@ -249,11 +251,16 @@ export async function analyzeStructureWalkingSphere(jobID: UUID, modelNumber: st
         return { residue_number: nucleotideNumber, metrics: tmpMetrics } as nucleotideResult;
     });
 
-    const results = await Promise.all(promises);
-    // sort results by residue number
-    results.sort((a, b) => a.residue_number - b.residue_number);
+    const promisesResults = await Promise.allSettled(promises.map(p => p.catch(e => e))); // Catch individual promise errors
+    const results = promisesResults
+        .filter((p): p is PromiseFulfilledResult<nucleotideResult> => p.status === 'fulfilled')
+        .map(p => p.value);
+    const filteredResults = results.filter(result => !(result instanceof Error)); // Filter out errors
 
-    result.data.push(...results);
+    // sort results by residue number
+    filteredResults.sort((a, b) => a.residue_number - b.residue_number);
+
+    result.data.push(...filteredResults);
 
     metadata.status = "completed";
     await saveMetadata(jobID, metadata);

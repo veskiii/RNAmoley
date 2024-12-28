@@ -32,15 +32,16 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
-button{
+button {
   color: black;
   font-size: 1.5rem;
-  line-height: 2rem; 
+  line-height: 2rem;
   height: 2.5rem;
   width: 10rem;
   display: flex;
@@ -54,7 +55,7 @@ button{
   justify-content: center;
 }
 
-button:hover{
+button:hover {
   background-color: rgb(13 148 136);
 }
 
@@ -64,6 +65,7 @@ button:hover{
   justify-content: flex-start;
   align-items: center;
 }
+
 .radioGroup {
   display: flex;
   flex-direction: column;
@@ -72,23 +74,26 @@ button:hover{
   border-radius: 8px;
   padding-left: 30px;
 }
+
 .radioButton {
   display: flex;
   flex-direction: row;
   align-items: center;
   line-height: 2.15rem;
 }
+
 .radioLabel {
   margin-left: 8px;
   font-size: 1.125rem;
   color: #333;
 }
 
-.options{
+.options {
   width: 100%;
   margin-bottom: 0.5rem;
 }
-.frame { 
+
+.frame {
   display: flex;
   width: 50vw;
   height: 50vh;

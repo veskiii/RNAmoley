@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent, FormEvent, useContext } from "react";
-import "../App.css";
-import RadioButtons from "./radioButtons";
-import { NameContext } from "../App";
+import "../../App.css";
+import RadioButtons from "../common/radioButtons";
+import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@mui/material";
 import { Colors } from "./colors";
@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
       const { setId } = context;
       setId(id);
       console.log("Setted jobID:", id);
-      navigate("/panel", { state: { rnaFile, pdbCode, radiobutton } });
+      navigate("/Panel", { state: { rnaFile, pdbCode, radiobutton } });
     }
   }
 
@@ -43,6 +43,7 @@ const Dashboard: React.FC = () => {
   //TODO: Check if it's working correctly on backend data
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const formData = new FormData();
     formData.append("jobName", jobName || "");
     formData.append("pdbCode", pdbCode || "");
@@ -62,7 +63,7 @@ const Dashboard: React.FC = () => {
         headers: {
           //   "Content-Type": "multipart/form-data",
           "Access-Control-Allow-Origin": "http://localhost:3000",
-        },
+        }
       });
 
       if (response.ok) {
@@ -119,7 +120,7 @@ const Dashboard: React.FC = () => {
           height={100}
           alt="Logo RNA Moley"
         /> */}
-        <h1>| Submition Panel</h1>
+        <h1>| Submition panel</h1>
       </div>
       <form onSubmit={handleSubmit}>
         <div className="flex flex-row flex-wrap h-[70vh] w-[90vw] justify-around bg-slate-300 p-24 lg:rounded-xl text-teal-600 font-semibold text-lg">
@@ -149,7 +150,7 @@ const Dashboard: React.FC = () => {
                 className="cursor-pointer text-2xl text-black flex justify-center items-center h-10 mt-2 bg-rose-300/80 w-40 rounded-lg text-center transition-colors hover:bg-teal-600"
                 htmlFor="inputFile"
               >
-                Upload
+                Upload{''}
                 <input
                   id="inputFile"
                   type="file"
@@ -159,31 +160,33 @@ const Dashboard: React.FC = () => {
                 />
               </label>
             </div>
+
           </div>
           <div className="flex justify-around content-around align-center flex-wrap flex-col">
             <div className="w-80 mb-5">
-              <label>Fetch by PDB Code:</label>
-              <input
-                type="text"
-                value={pdbCode}
-                id="pdbCodeInput"
-                className="w-full flex justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                onChange={(e) => setPdbCode(e.target.value)}
-                maxLength={4}
-                placeholder="Enter a PDB code"
-              />
+              <label>Fetch by PDB Code:{''}
+                <input
+                  type="text"
+                  value={pdbCode}
+                  id="pdbCodeInput"
+                  className="w-full flex justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setPdbCode(e.target.value)}
+                  maxLength={4}
+                  placeholder="Enter a PDB code"
+                />
+              </label>
             </div>
             <RadioButtons
               selectedValue={radiobutton}
               onValueChange={setRadiobutton}
             />
 
+
             <button
               type="submit"
               disabled={!isButtonEnabled}
-              className={`${
-                isButtonEnabled ? "" : "bg-gray-400 cursor-not-allowed"
-              } transition-colors`}
+              className={`${isButtonEnabled ? "" : "bg-gray-400 cursor-not-allowed"
+                } transition-colors`}
             >
               <h2 className="text-2xl text-black">
                 Run{" "}

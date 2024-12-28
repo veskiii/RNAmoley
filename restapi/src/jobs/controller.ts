@@ -162,8 +162,8 @@ export async function createJob(req: Request, res: Response) {
         }
 
         id = randomUUID();
-        originalFilename = `${pdbCode}.pdb`;
-        originalExtension = 'pdb';
+        originalFilename = pdbCodeFile.name;
+        originalExtension = pdbCodeFile.name.split('.').pop() as string;
         newFilename = generateFilename(id, pdbCodeFile);
         await uploadFileFromPDBCode(pdbCodeFile, newFilename);
     }
@@ -179,6 +179,7 @@ export async function createJob(req: Request, res: Response) {
     saveMetadata(id, metadata);
 
     // if not pdb, convert to pdb
+    console.log(originalExtension);
     if (originalExtension != "pdb") {
         const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
             method: 'POST'
@@ -403,6 +404,9 @@ export async function analyzeFragment(req: Request, res: Response) {
 }
 
 export async function analyzeStructure(req: Request, res: Response) {
+    res.setMaxListeners(0);
+    res.setTimeout(0);
+
     const id: UUID = req.body.id;
     const modelNumber = req.body.modelNumber || '1';
     const radius = req.body.radius || 5;
