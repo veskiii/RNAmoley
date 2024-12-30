@@ -1,10 +1,12 @@
 import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
 // @ts-ignore
 import parsePdb from 'parse-pdb';
 import type { UUID } from 'crypto';
 import type { PDBFile, Metadata, metrics, Analysis_results, Job, nucleotideResult } from "./types.js";
+import archiver from 'archiver';
 
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
@@ -99,6 +101,14 @@ export async function deleteFile(filename: string) {
 
 // Removes the job directory and all its contents, used when deleting a job or an error occurs
 export async function deleteJobDirectory(id: UUID) {
+    // check if zip file exists and delete it
+    try {
+        await fs.unlink(`${JOBS_DIR}/${id}.zip`);
+    } catch (err: any) {
+        if (err.code !== 'ENOENT') {
+            throw err;
+        }
+    }
     await fs.rm(`${JOBS_DIR}/${id}`, { recursive: true });
 }
 
@@ -266,4 +276,59 @@ export async function analyzeStructureWalkingSphere(jobID: UUID, modelNumber: st
     await saveMetadata(jobID, metadata);
 
     return result;
+}
+
+// zip whole job directory and return a blob
+export async function createZip(jobID: UUID) {
+    const zipPath = `${JOBS_DIR}/${jobID}.zip`;
+
+    // delete old archive if exists
+    try {
+        await fs.access(zipPath);
+        await fs.unlink(zipPath);
+    } catch (err: any) {
+        if (err.code !== 'ENOENT') {
+            throw err;
+        }
+    }
+
+    const output = createWriteStream(zipPath);
+    const archive = archiver('zip', {
+        zlib: { level: 9 },
+        forceZip64: true,
+        store: false
+    });
+
+    archive.on('warning', function (err) {
+        if (err.code === 'ENOENT') {
+            console.log(err);
+        } else {
+            // throw error
+            throw err;
+        }
+    });
+
+    archive.on('error', function (err) {
+        throw err;
+    });
+
+    archive.pipe(output);
+    archive.directory(`${JOBS_DIR}/${jobID}`, false);
+
+    // Wait for the archive to finish writing
+    // https://github.com/archiverjs/node-archiver/issues/476#issuecomment-1792896115
+    const thisArchive = archive;
+    const streamingCompletedPromise = new Promise<void>((resolve, reject) => {
+        output.on('close', () => resolve());
+        thisArchive.on('error', (err: Error) => reject(err));
+    });
+    const originalArchiverFinalize = archive.finalize;
+    archive.finalize = async () => {
+        await originalArchiverFinalize.call(thisArchive);
+        await streamingCompletedPromise;
+    };
+
+    await archive.finalize();
+
+    return `${process.cwd()}/${zipPath}`;
 }
