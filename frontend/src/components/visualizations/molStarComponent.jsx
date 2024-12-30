@@ -12,10 +12,9 @@ import {
   Structure,
   StructureProperties,
 } from "molstar/lib/mol-model/structure"
-
+import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import { MolScriptBuilder as MS } from "molstar/lib/mol-script/language/builder";
 import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
-
 
 const Molstar = props => {
 
@@ -26,13 +25,6 @@ const Molstar = props => {
   const [selected, setSelected] = useState([]);
   const [enableSelection, setEnableSelection] = useState(false);
 
-  // useEffect(() => {
-  //   console.log("Chains data in Molstar:", chains);
-  //   chains.map(chain =>{
-  //     console.log(chain.nucleotides);
-  //   })
-  // }, [chains]);
-
   useEffect(() => {
     if (plugin.current) {
       console.log("Plugin already initialized");
@@ -40,15 +32,31 @@ const Molstar = props => {
     } else {
       (async () => {
         if (useInterface) {
+          
           const spec = DefaultPluginUISpec();
           spec.layout = {
+
             initial: {
               isExpanded: false,
               controlsDisplay: "reactive",
               showControls,
-            }
+              regionState: {
+                right: 'hidden',
+                bottom: 'hidden',
+                left: 'hidden'
+              },
+            },
           };
 
+          spec.config =[
+            [PluginConfig.VolumeStreaming.Enabled               , true],
+            [PluginConfig.Viewport       .ShowSelectionMode     , true],
+            [PluginConfig.Viewport       .ShowSettings          , true],
+            [PluginConfig.Viewport       .ShowAnimation         , true],
+            [PluginConfig.Viewport       .ShowTrajectoryControls, true],
+            [PluginConfig.Viewport       .ShowControls, true],
+        ];
+        
           plugin.current = await createPluginUI({
             target: parentRef.current,
             spec: spec,
@@ -65,11 +73,7 @@ const Molstar = props => {
         if (!showAxes) {
           plugin.current.canvas3d?.setProps({
             camera: {
-              helper: {
-                axes: {
-                  name: "off", params: {}
-                }
-              }
+              show: true,
             }
           });
         }
@@ -98,11 +102,7 @@ const Molstar = props => {
       if (!showAxes) {
         plugin.current.canvas3d?.setProps({
           camera: {
-            helper: {
-              axes: {
-                name: "off", params: {}
-              }
-            }
+            show: true,
           }
         })
       } else {
@@ -268,32 +268,6 @@ const Molstar = props => {
       console.log("Załadowano strukturę.");
     }
   }
-
-  const hideOptions = () => {
-    const options = [
-      ...document.querySelectorAll('[title="Home"]'),
-      ...document.querySelectorAll('[title="Plugin State"]'),
-      ...document.querySelectorAll('[class="msp-layout-region msp-layout-right"]'),
-
-    ];
-    options.forEach(option => {
-      option.style.display = 'none';
-      option.style.width = "0px";
-      option.remove();
-    });
-  };
-
-  useEffect(() => {
-    const handleHidingOptions = () => {
-      hideOptions();
-    };
-
-    document.body.addEventListener('click', handleHidingOptions);
-
-    return () => {
-      document.body.removeEventListener('click', handleHidingOptions);
-    };
-  }, []);
 
   const width = "100%";
   const height = "90%";

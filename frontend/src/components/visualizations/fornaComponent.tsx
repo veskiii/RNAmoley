@@ -382,7 +382,7 @@ const FornaComponent = ({
   return (
     <div className="absolute bottom-0 h-[90%] flex-grow w-full bg-transparent">
       <div
-        className={`text-xl font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
+        className="text-xl font-semibold pb-2 break-words shadow-sm"
       >
         <div className="flex flex-row items-center mx-4 space-x-4">
           <Box sx={{ width: "80px", maxWidth: 120 }}>
@@ -438,7 +438,7 @@ const FornaComponent = ({
         </div>
 
         {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain => (
-          <div className="whitespace-nowrap w-max cursor-pointer ml-2" key={chain.name}>
+          <div className="whitespace-nowrap overflow-x-auto cursor-pointer ml-2" key={chain.name}>
             <div>
               <span className="text-blue-600">{chain.name}: </span>
               {chain.nucleotides.map((nucleotide) => (

@@ -4,7 +4,7 @@ import RadioButtons from "../common/radioButtons";
 import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 
-function checkConditions(
+export function isInputValid(
   rnaFile: File | null,
   pdbCode: string,
   radiobutton: string
@@ -98,7 +98,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const isButtonEnabled = checkConditions(rnaFile, pdbCode, radiobutton);
+  const isButtonEnabled = isInputValid(rnaFile, pdbCode, radiobutton);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-between p-24 pt-0">
