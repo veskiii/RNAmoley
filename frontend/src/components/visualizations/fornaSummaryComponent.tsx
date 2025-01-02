@@ -1,6 +1,6 @@
 import React, {useEffect} from "react";
 import * as d3 from "d3";
-import {Job} from "../Summary"
+import {Job} from "../panels/summaryPanel"
 
 declare const fornac: any;
 

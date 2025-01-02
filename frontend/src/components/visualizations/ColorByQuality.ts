@@ -13,7 +13,7 @@ import {TableLegend, ScaleLegend} from 'molstar/lib/mol-util/legend';
 import {ModelFormat} from 'molstar/lib/mol-model-formats/format';
 import {ParamDefinition as PD} from 'molstar/lib/mol-util/param-definition';
 import {getPaletteParams, getPalette} from 'molstar/lib/mol-util/color/palette';
-import {clashScoreColorMap, badBonesColorMap, badAnglesColorMap} from "../Summary";
+import {clashScoreColorMap, badBonesColorMap, badAnglesColorMap} from "../panels/summaryPanel";
 
 
 const DefaultList = 'many-distinct';

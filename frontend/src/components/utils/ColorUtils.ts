@@ -1,4 +1,4 @@
-import {QualityScore, Residue} from "../Summary";
+import {QualityScore, Residue} from "../panels/summaryPanel";
 
 export const colorMapByRange: Map<number, string> = new Map([
     [1, "#3fbf00"],

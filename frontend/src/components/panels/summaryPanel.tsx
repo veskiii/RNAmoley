@@ -1,17 +1,17 @@
 import React, {useEffect, useState} from "react";
 import {useParams} from "react-router-dom";
-import Loading from "../components/common/loading";
-import "../App.css";
-import Molstar from "../components/visualizations/molStarSummaryComponent";
-import FornacSummaryComponent from "../components/visualizations/fornaSummaryComponent";
-import {Annotation, Chain, Nucleotide, Numeration} from "./panels/analysisPanel";
-import {Colors} from "./common/colors";
-import DownloadLink from "../components/common/downloadLink";
-import DownloadFile from "../components/common/downloadFile";
-import ErrorPage, {ErrorPageProps} from "./ErrorPage";
-import JobProcessing from "./JobProcessing";
-import {getColor, rangeMap} from "./utils/ColorUtils";
-import VerticalColorBar from "./visualizations/VerticalColorBar";
+import Loading from "../common/loading";
+import "../../App.css";
+import Molstar from "../visualizations/molStarSummaryComponent";
+import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
+import {Annotation, Chain, Nucleotide, Numeration} from "./analysisPanel";
+import {Colors} from "../common/colors";
+import DownloadLink from "../common/downloadLink";
+import DownloadFile from "../common/downloadFile";
+import ErrorPage, {ErrorPageProps} from "../common/ErrorPage";
+import JobProcessing from "../common/JobProcessing";
+import {getColor, rangeMap} from "../utils/ColorUtils";
+import VerticalColorBar from "../visualizations/VerticalColorBar";
 
 export type Residue = {
     residue_number: number;
@@ -125,7 +125,7 @@ export const badAnglesColorMap = new Map<number, string>()
 export const badBonesColorMap = new Map<number, string>()
 
 
-const Summary: React.FC = () => {
+const SummaryPanel: React.FC = () => {
     const {jobId} = useParams();
     const [myData, setMyData] = useState<Job>();
     const [myError, setMyError] = useState<ErrorPageProps | null>(null);
@@ -522,4 +522,4 @@ const Summary: React.FC = () => {
     );
 };
 
-export default Summary;
+export default SummaryPanel;

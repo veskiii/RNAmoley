@@ -1,5 +1,5 @@
-import Loading from "./common/loading";
-import { Colors } from "./common/colors";
+import Loading from "./loading";
+import { Colors } from "./colors";
 
 const JobProcessing: React.FC = () => {
   return (
