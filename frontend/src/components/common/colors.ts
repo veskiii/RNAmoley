@@ -1,4 +1,4 @@
-export enum Colors{
+export enum Colors {
     salmon = "#eb7e77",
     sage = "#829e9f",
     darkSage = "#526969",

@@ -3,8 +3,7 @@ import "../../App.css";
 import RadioButtons from "../common/radioButtons";
 import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
-import { Checkbox } from "@mui/material";
-import { Colors } from "./colors";
+import { Colors } from "../common/colors";
 
 function checkConditions(
   rnaFile: File | null,
@@ -17,8 +16,8 @@ function checkConditions(
   if (pdbCode) {
     if (pdbCode.length === 4) countConditions++;
   }
-  if (countConditions === 1) return true;
-  return false;
+  return countConditions === 1;
+
 }
 
 const Dashboard: React.FC = () => {
