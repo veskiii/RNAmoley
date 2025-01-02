@@ -148,7 +148,7 @@ const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
-  const [numbering, setNumbering] = useState(true);
+  const [numbering, setNumbering] = useState(false);
   const [nodeOutline, setNodeOutline] = useState(true);
   const [nodeLabel, setNodeLabel] = useState(true);
   const [links, setLinks] = useState(true);

@@ -43,7 +43,7 @@ const Molstar = props => {
               regionState: {
                 right: 'hidden',
                 bottom: 'hidden',
-                left: 'hidden'
+                left: 'collapsed'
               },
             },
           };
@@ -268,7 +268,32 @@ const Molstar = props => {
       console.log("Załadowano strukturę.");
     }
   }
-
+  const hideOptions = () => {
+    const options = [
+      ...document.querySelectorAll('[title="Home"]'),
+      ...document.querySelectorAll('[title="Plugin State"]'),
+      ...document.querySelectorAll('[class="msp-layout-region msp-layout-right"]'),
+      ...document.querySelectorAll('[title="Remove All"]'),
+      ...document.querySelectorAll('[class="msp-btn msp-btn-icon-small msp-btn-link-toggle-off"]'),
+      
+      
+    ];
+    options.forEach(option => {
+      option.style.visibility = 'hidden';
+      option.style.width = "0px";
+      option.style.height = "0px";
+      option.style.flex = "0px";
+    });
+  };
+  useEffect(() => {
+    const handleHidingOptions = () => {
+      hideOptions();
+    };
+    document.body.addEventListener('click', handleHidingOptions);
+    return () => {
+      document.body.removeEventListener('click', handleHidingOptions);
+    };
+  }, []);
   const width = "100%";
   const height = "90%";
 

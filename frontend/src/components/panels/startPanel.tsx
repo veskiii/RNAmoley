@@ -86,13 +86,26 @@ const Dashboard: React.FC = () => {
     let element = document.getElementById("fileLabel");
     if (files && files.length > 0) {
       let file = files[0];
-      setRnaFile(file);
-      if (element && file) {
-        element.textContent = file.name;
+      const validExtensions = [".pdb", ".mmCIF", ".cif"];
+      const fileExtension = file.name.slice(file.name.lastIndexOf('.'));
+      if(validExtensions.includes(fileExtension)){
+        setRnaFile(file);
+        if (element && file) {
+          element.style.color = "";
+          element.textContent = file.name;
+        }
+      }else{
+        setRnaFile(null);
+        if (element) {
+          element.style.color = "red"
+          element.textContent = "Invalid file type";
+        }
       }
+
     } else {
       setRnaFile(null);
       if (element) {
+        element.style.color = "";
         element.textContent = "No file selected";
       }
     }
@@ -170,6 +183,7 @@ const Dashboard: React.FC = () => {
                   className="w-full flex justify-center p-1 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   onChange={(e) => setPdbCode(e.target.value)}
                   maxLength={4}
+                  pattern="[A-Za-z0-9]{4}"
                   placeholder="Enter a PDB code"
                 />
               </label>
