@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, saveJSONFileModels, saveJSONFileRoot, validateFile, saveMetadata, fetchModelFileAsString, readMetadata, readResults, saveResults, analyzeStructureWalkingSphere } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, saveJSONFileModels, saveJSONFileRoot, validateFile, saveMetadata, fetchModelFileAsString, readMetadata, readResults, saveResults, analyzeStructureWalkingSphere, createZip } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 import type { Analysis_results, Annotation, Job, Metadata, nucleotideResult, splitModelsResponse } from "./types.js";
@@ -162,8 +162,8 @@ export async function createJob(req: Request, res: Response) {
         }
 
         id = randomUUID();
-        originalFilename = `${pdbCode}.pdb`;
-        originalExtension = 'pdb';
+        originalFilename = pdbCodeFile.name;
+        originalExtension = pdbCodeFile.name.split('.').pop() as string;
         newFilename = generateFilename(id, pdbCodeFile);
         await uploadFileFromPDBCode(pdbCodeFile, newFilename);
     }
@@ -179,6 +179,7 @@ export async function createJob(req: Request, res: Response) {
     saveMetadata(id, metadata);
 
     // if not pdb, convert to pdb
+    console.log(originalExtension);
     if (originalExtension != "pdb") {
         const convertResponse = await fetch(`http://tools:3002/convert?id=${id}&filename=${newFilename}`, {
             method: 'POST'
@@ -403,6 +404,9 @@ export async function analyzeFragment(req: Request, res: Response) {
 }
 
 export async function analyzeStructure(req: Request, res: Response) {
+    res.setMaxListeners(0);
+    res.setTimeout(0);
+
     const id: UUID = req.body.id;
     const modelNumber = req.body.modelNumber || '1';
     const radius = req.body.radius || 5;
@@ -531,4 +535,45 @@ export async function analyzeStructure(req: Request, res: Response) {
         saveMetadata(id, metadata);
         res.status(200).json(jobResponse);
     })
+}
+
+export async function downloadJobFiles(req: Request, res: Response) {
+    const id = req.params.id as UUID;
+
+    if (!id) {
+        res.status(400).send({ error: 'Job ID is required.' });
+        return;
+    }
+
+    if (id.length !== 36) {
+        res.status(422).send({ error: 'Invalid job ID.' });
+        return;
+    }
+
+    let metadata: Metadata;
+    try {
+        metadata = await readMetadata(id);
+        if (!metadata) {
+            res.status(500).send({ error: 'Metadata file not found.' });
+            return;
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(404).send({ error: 'Job not found.' });
+        return;
+    }
+
+    const zipFilePath = await createZip(id);
+
+    if (!zipFilePath) {
+        res.status(500).send({ error: 'Error creating zip file.' });
+        return;
+    }
+
+    res.download(zipFilePath, (err) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send({ error: 'Error downloading zip file.' });
+        }
+    });
 }
