@@ -238,13 +238,12 @@ const Panel: React.FC = () => {
       {!is3Dview &&
         (<div className="w-80 bg-neutral-200">
           <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
-            <label onClick={goToDashboard} className="cursor-pointer">
               <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
                 <div className="flex flex-col">
                   <div className="font-bold">
                     <h1>RNA</h1>
                   </div>
-                  <div className="font-semibold">
+                  <div className="font-semibold text-teal-600 ">
                     <h1>MOLEY</h1>
                   </div>
                 </div>
@@ -255,9 +254,8 @@ const Panel: React.FC = () => {
             height={100}
             alt="Logo RNA Moley"
           /> */}
-                <h1>| Submition panel</h1>
+                <h1 className="pl-2">| Submition panel</h1>
               </div>
-            </label>
             <div className="rounded-scrollbar overflow-auto">
               <Accordion>
                 <AccordionSummary
@@ -324,7 +322,7 @@ const Panel: React.FC = () => {
                           </label>
 
                           <button
-                            className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+                            className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300 hover:bg-teal-600"
                             onClick={() => changeModel(selectedModel)}
                           >Change model</button>
                         </div>
@@ -395,17 +393,23 @@ const Panel: React.FC = () => {
           {myData ? (
             <div id="container">
               <div className="absolute top-0 h-[10%] flex-grow w-full bg-transparent z-100">
-                <div className="grid relative">
+                <div className="grid relative mt-2.5 p-1.5">
+                  <button
+                  className="font-medium absolute w-auto left-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300 hover:bg-teal-600"
+                  onClick={goToDashboard}
+                  >
+                    New Analysis
+                  </button>
                   <label
                     id="viewLabel"
-                    className="text-2xl font-bold place-self-center my-1"
+                    className="text-2xl font-medium place-self-center my-1"
                   >
                     3D view
                   </label>
                   <button
                     id="switchViewButton"
                     onClick={toggle}
-                    className="font-bold absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+                    className="font-medium absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300 hover:bg-teal-600"
                   >
                     2D view
                   </button>

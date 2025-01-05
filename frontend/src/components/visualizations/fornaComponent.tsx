@@ -53,8 +53,8 @@ const FornaComponent = ({
   const [inputValueStart, setInputValueStart] = useState('');
   const [inputValueEnd, setInputValueEnd] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [minId, setMinId] = useState<string>();
-  const [maxId, setMaxId] = useState<string>();
+  const [minId, setMinId] = useState<string>('');
+  const [maxId, setMaxId] = useState<string>('');
   const [hoveredIndex, setHoveredIndex] = useState<number>();
   const [hybridizedName, setHybridizedName] = useState<string>();
 
@@ -77,8 +77,7 @@ const FornaComponent = ({
       animation: setAnimation,
       zoomable: true,
       labelInterval: labelInterval,
-      // initialSize: [41, 26],
-      initialSize: [51, 24],
+      initialSize: [1300, 700],
       numbering: numbering,
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
@@ -86,8 +85,6 @@ const FornaComponent = ({
       directionArrows: directionArrows,
     });
 
-
-    //TODO: check for safety if chains are matching 
     const isHybridized = (structure: string): boolean => {
       const count_openers = Array.from(structure).filter(x => (x === "(" || x === "[")).length
       const count_closers = Array.from(structure).filter(x => (x === ")" || x === "]")).length
@@ -102,7 +99,6 @@ const FornaComponent = ({
       if (isHybridized(chain.dotBracket) && hybridized_chains.length < 3) {
         hybridized_chains.push(chain);
       } else if (hybridized_chains.length > 2) {
-        // console.log("Mogą być tylko 2 łańcuchy zhybrydyzowane");
         throw new Error("Only 2 hybridized chains are possible to visualize");
       }
     });
@@ -375,7 +371,7 @@ const FornaComponent = ({
     const end = parseInt(inputValueEnd, 10);
 
     if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
-      alert("Invalid range");
+      alert(`Invalid range: ${start} to ${end}`);
       return;
     }
     if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
@@ -409,6 +405,8 @@ const FornaComponent = ({
 
         setMinId(min.toString());
         setMaxId(max.toString());
+        setInputValueStart(min.toString());
+        setInputValueEnd(max.toString());
       }
 
     })
@@ -537,7 +535,7 @@ const FornaComponent = ({
               type="number"
               min={minId}
               max={maxId}
-              value={inputValueStart}
+              defaultValue={minId}
               onChange={handleInputChangeStart}
               placeholder={minId}
               className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -549,7 +547,7 @@ const FornaComponent = ({
               type="number"
               min={minId}
               max={maxId}
-              value={inputValueEnd}
+              defaultValue={maxId}
               onChange={handleInputChangeEnd}
               placeholder={maxId}
               className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -568,13 +566,13 @@ const FornaComponent = ({
         {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain => (
           <div className="whitespace-nowrap overflow-x-auto cursor-pointer ml-2" key={chain.name}>
             <div>
-              <span className="text-blue-600">{chain.name}: </span>
+              <span className="text-teal-600">{chain.name}: </span>
               {chain.nucleotides.map((nucleotide) => (
                 <span
                   className={clsx(
                     "relative",
                     {
-                      "text-blue-500": hoveredIndex === nucleotide.index,
+                      "text-teal-500": hoveredIndex === nucleotide.index,
                       "text-red-500": nucleotide.selected && hoveredIndex !== nucleotide.index,
                     }
                   )}
@@ -610,7 +608,7 @@ const FornaComponent = ({
             id="rna_ss"
           >
              <div id="tooltip" 
-             className="hidden absolute mt-2 right-2 bg-blue-500 text-white text-xs rounded px-2 py-1 z-50"
+             className="hidden absolute mt-2 right-2 bg-teal-500 text-white text-xs rounded px-2 py-1 z-50"
              ></div>
           </div>
          
