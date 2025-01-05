@@ -88,14 +88,14 @@ const fornaControls: React.FC<ControlsPanelProps> = ({
         />{' '}
         Links
       </label>
-      <label className="options">
+      {/* <label className="options">
         <input
           type="checkbox"
           checked={directionArrows}
           onChange={handleCheckboxChange(setDirectionArrows)}
         />{' '}
         Direction Arrows
-      </label>
+      </label> */}
       <label className="options">
         <input
           type="checkbox"
