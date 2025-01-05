@@ -53,8 +53,10 @@ const FornaComponent = ({
   const [inputValueStart, setInputValueStart] = useState('');
   const [inputValueEnd, setInputValueEnd] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [minId, setMinId] = useState<string>();
-  const [maxId, setMaxId] = useState<string>();
+  const [minId, setMinId] = useState<string>('');
+  const [maxId, setMaxId] = useState<string>('');
+  const [hoveredIndex, setHoveredIndex] = useState<number>();
+  const [hybridizedName, setHybridizedName] = useState<string>();
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -75,8 +77,7 @@ const FornaComponent = ({
       animation: setAnimation,
       zoomable: true,
       labelInterval: labelInterval,
-      // initialSize: [41, 26],
-      initialSize: [51, 24],
+      initialSize: [1300, 700],
       numbering: numbering,
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
@@ -84,8 +85,6 @@ const FornaComponent = ({
       directionArrows: directionArrows,
     });
 
-
-    //TODO: check for safety if chains are matching 
     const isHybridized = (structure: string): boolean => {
       const count_openers = Array.from(structure).filter(x => (x === "(" || x === "[")).length
       const count_closers = Array.from(structure).filter(x => (x === ")" || x === "]")).length
@@ -100,7 +99,7 @@ const FornaComponent = ({
       if (isHybridized(chain.dotBracket) && hybridized_chains.length < 3) {
         hybridized_chains.push(chain);
       } else if (hybridized_chains.length > 2) {
-        console.log("Mogą być tylko 2 łańcuchy zhybrydyzowane");
+        throw new Error("Only 2 hybridized chains are possible to visualize");
       }
     });
 
@@ -109,45 +108,49 @@ const FornaComponent = ({
         if (!(chain === hybridized_chains[0] || chain === hybridized_chains[1])) {
           const options = {
             structure: chain.dotBracket,
-            sequence: chain.sequence
+            sequence: chain.sequence,
+            name: chain.name,
           }
-          container.addRNA(options.structure, options);
-
-          chain.nucleotides.forEach((nucleotide, index) => {
-            //@ts-ignore
-            d3.select(`circle.fornac-node[node_num="${index + 1}"]`).select("title").text(`${chain.name} ${nucleotide.index}`);
-
-            //@ts-ignore
-            d3.selectAll("text.fornac-nodeLabel").filter(function () {
-              //@ts-ignore
-              return d3.select(this).text() === `${index + 1}`;
-            }).text(`${nucleotide.original_index}`);
-
-          });
+          console.log("Z forny: ", options.structure, options.sequence, options.name);
+          container.addRNA(options.structure, options );
+          console.log(Object.getOwnPropertyNames(container.options));
         }
       });
       if (hybridized_chains.length > 1) {
-        const merged_sequence = hybridized_chains[0].sequence + hybridized_chains[1].sequence;
+        const merged_sequence = hybridized_chains[0].sequence +hybridized_chains[1].sequence;
         const merged_structure = hybridized_chains[0].dotBracket + hybridized_chains[1].dotBracket;
         const options = {
           structure: merged_structure,
-          sequence: merged_sequence
+          sequence: merged_sequence,
+          name: "hybrydized_" +  hybridized_chains[0].name.slice(-1) + "-" +  hybridized_chains[1].name.slice(-1)
         }
         container.addRNA(options.structure, options);
+        setHybridizedName(options.name);
 
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < hybridized_chains.length; i++) { 
           hybridized_chains[i].nucleotides.forEach((nucleotide, index) => {
-            //@ts-ignore
-            d3.select(`circle.fornac-node[node_num="${nucleotide.index}"]`).select("title").text(`${hybridized_chains[i].name} ${nucleotide.index}`);
+            const gNode = document.querySelector(`g.gnode[num="n${nucleotide.index}"][struct_name="${options.name}"]`);
+            
+            if (gNode) {
+              const circle = gNode.querySelector(`circle.fornac-node[node_num="${nucleotide.index}"]`);
+              
+              if (circle) {
+                const title = circle.querySelector("title");
+                
+                if (title ) {
+                  title.textContent = `${hybridized_chains[i].name} ${nucleotide.index}`;
+                }
+              }
+              gNode.setAttribute("struct_name", `${hybridized_chains[i].name}`);
+              if(i === 1 && circle){
+                gNode.setAttribute("num", `n${(nucleotide.index - hybridized_chains[0].sequence.length)}`);
+                circle.setAttribute("node_num", `${(nucleotide.index - hybridized_chains[0].sequence.length)}`);
+              }
 
-            //@ts-ignore
-            d3.selectAll("text.fornac-nodeLabel").filter(function () {
-              //@ts-ignore
-              return d3.select(this).text() === `${nucleotide.index}`;
-            }).text(`${nucleotide.original_index}`);
-
+            }
           });
         }
+        
 
       }
       // @ts-expect-error
@@ -212,9 +215,40 @@ const FornaComponent = ({
 
       selectedNodes.forEach((node) => {
         const nodeNumAttr = node.getAttribute("num");
+        const nodeNameAttr = node.getAttribute("struct_name");
         if (nodeNumAttr) {
+          console.log(nodeNumAttr, nodeNameAttr)
           const numIndex = parseInt(nodeNumAttr.slice(1), 10);
-          selectedIndices.add(numIndex);
+          let found_chain = chains.find(chain => chain.name === nodeNameAttr); 
+          if (found_chain) {
+            console.log(found_chain);
+
+            const found_nucleotide = found_chain.nucleotides[numIndex-1];
+
+            if (found_nucleotide) {
+              selectedIndices.add(found_nucleotide.index);
+              console.log(found_nucleotide);
+            }
+          }else if(nodeNameAttr === hybridizedName){
+            found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3,-2));
+            if(found_chain){
+              let found_nucleotide = found_chain.nucleotides[numIndex-1];
+
+              if (found_nucleotide) {
+                selectedIndices.add(found_nucleotide.index);
+                console.log(found_nucleotide);
+              }else{
+                found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-1));
+                let prevChain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3,-2));
+                if(found_chain && prevChain)
+                  found_nucleotide = found_chain.nucleotides[numIndex-(prevChain.sequence.length)-1];
+                if(found_nucleotide){
+                  selectedIndices.add(found_nucleotide.index);
+                  console.log(found_nucleotide);
+                } 
+              }
+            }
+          }
         }
       });
 
@@ -291,11 +325,24 @@ const FornaComponent = ({
     const updateFornacSelection = () => {
       console.log("Aktualizacja klas w grafie");
       chains.forEach(chain => {
+        let forna_id = 1; 
         chain.nucleotides.forEach(nucleotide => {
-          const gNode = document.querySelector(`g.gnode[num="n${nucleotide.index}"]`);
+          let gNode = document.querySelector(`g.gnode[num="n${forna_id}"][struct_name="${chain.name}"]`);
+          if(!gNode){
+            if(chain.name.slice(-1) === hybridizedName?.slice(-1)){
+              const prevChain = chains.find(chain => chain.name.slice(-1) === hybridizedName.slice(-3,-2))
+              const lengthPrevChain = prevChain?.sequence.length;
+              if(lengthPrevChain)
+                gNode = document.querySelector(`g.gnode[num="n${(forna_id+lengthPrevChain)}"][struct_name="${hybridizedName}"]`);
+            }
+            else
+              gNode = document.querySelector(`g.gnode[num="n${(forna_id)}"][struct_name="${hybridizedName}"]`);
+          }
           if (gNode) {
             gNode.setAttribute("class", nucleotide.selected ? "gnode fornac-selectedNode" : "gnode");
           }
+
+          forna_id++;
         });
       });
     };
@@ -324,20 +371,24 @@ const FornaComponent = ({
     const end = parseInt(inputValueEnd, 10);
 
     if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
-      alert("Invalid range");
+      alert(`Invalid range: ${start} to ${end}`);
       return;
     }
     if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
-
-      const newChains = chains.map(chain => ({
-        ...chain,
-        nucleotides: chain.nucleotides.map(nucleotide => ({
-          ...nucleotide,
-          selected: nucleotide.original_index >= start && nucleotide.original_index <= end,
-        })),
-      }));
-
-      setChains(newChains);
+      setChains(prevChains =>
+        prevChains.map(chain => {
+          if (chain.name.slice(-1) === selectedChain) {
+  
+            return {
+              ...chain,
+              nucleotides: chain.nucleotides.map(nucleotide => ({
+                ...nucleotide,
+                selected: nucleotide.index >= start && nucleotide.index <= end,
+              })),
+            };
+          }
+          return chain;
+        }));
     } else {
       alert("Type valid range on selected chain");
     }
@@ -348,12 +399,14 @@ const FornaComponent = ({
   useEffect(() => {
     chains.forEach((chain) => {
       if (chain.name.slice(-1) === selectedChain) {
-        const indices = chain.nucleotides.map(nucleotide => nucleotide.original_index);
+        const indices = chain.nucleotides.map(nucleotide => nucleotide.index);
         const min = Math.min(...indices);
         const max = Math.max(...indices);
 
         setMinId(min.toString());
         setMaxId(max.toString());
+        setInputValueStart(min.toString());
+        setInputValueEnd(max.toString());
       }
 
     })
@@ -379,12 +432,85 @@ const FornaComponent = ({
     console.log(chains)
   }
 
+  useEffect(() => {
+    const tooltip = document.getElementById("tooltip");
+    const showTooltip = (event: { pageX: any; pageY: number; }, node_num: string, strand: string) => {
+      if (tooltip) {
+        let found_nucleotide;
+        if (node_num) {      
+          console.log(node_num, strand, strand?.slice(-1))
+          const numIndex = parseInt(node_num.slice(1), 10);
+          console.log("STRAND:", strand)
+          let found_chain = chains.find(chain => chain.name === strand); 
+          console.log("found_chain:",found_chain)
+          if (found_chain) {
+
+            found_nucleotide = found_chain.nucleotides[numIndex-1];
+          }else if(strand === hybridizedName){
+            found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3,-2));
+            if(found_chain){
+              let found_nucleotide = found_chain.nucleotides[numIndex-1];
+              if (!found_nucleotide) {
+                found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-1));
+                let prevChain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3,-2));
+                if(found_chain && prevChain)
+                  found_nucleotide = found_chain.nucleotides[numIndex-(prevChain.sequence.length)-1];
+              }
+            }
+          }
+        }
+        tooltip.innerHTML = `
+        ${node_num.slice(1)} node in strand ${strand.slice(-1)} <br>
+        id: ${found_nucleotide?.index} original id: ${found_nucleotide?.original_index}
+        `;
+        tooltip.classList.remove("hidden");
+      }
+    };
+
+    const hideTooltip = () => {
+      if (tooltip) {
+        tooltip.classList.add("hidden");
+      }
+    };
+
+    //@ts-ignore
+    d3.selectAll("g.gnode")
+      .on("mouseover", function (event) {
+        //@ts-ignore
+        const node_num = d3.select(this).attr("num");
+        //@ts-ignore
+        const strand = d3.select(this).attr("struct_name");
+        showTooltip(event, node_num, strand);
+      })
+      .on("mousemove", function (event) {
+      })
+      .on("mouseout", hideTooltip);
+  }, [setAnimation]);
+
+  const showTooltip = (event: React.MouseEvent, id: number, originalId: number) => {
+    const tooltip = document.getElementById("tooltip");
+    if (tooltip) {
+      tooltip.innerHTML = `
+        id: ${id} <br>
+        original id: ${originalId}
+      `;
+      tooltip.classList.remove("hidden");
+    }
+  };
+  
+  const hideTooltip = () => {
+    const tooltip = document.getElementById("tooltip");
+    if (tooltip) {
+      tooltip.classList.add("hidden");
+    }
+  };
+  
   return (
     <div className="absolute bottom-0 h-[90%] flex-grow w-full bg-transparent">
       <div
-        className={`text-xl font-semibold overflow-x-scroll pb-2 break-words drop-shadow-xl`}
+        className="text-xl font-semibold pb-2 break-words shadow-sm"
       >
-        <div className="flex flex-row items-center mx-4 space-x-4">
+        <div className="flex flex-row items-center mx-4 space-x-4 z-0">
           <Box sx={{ width: "80px", maxWidth: 120 }}>
             <FormControl fullWidth>
               <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
@@ -409,7 +535,7 @@ const FornaComponent = ({
               type="number"
               min={minId}
               max={maxId}
-              value={inputValueStart}
+              defaultValue={minId}
               onChange={handleInputChangeStart}
               placeholder={minId}
               className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -421,7 +547,7 @@ const FornaComponent = ({
               type="number"
               min={minId}
               max={maxId}
-              value={inputValueEnd}
+              defaultValue={maxId}
               onChange={handleInputChangeEnd}
               placeholder={maxId}
               className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -438,19 +564,31 @@ const FornaComponent = ({
         </div>
 
         {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain => (
-          <div className="whitespace-nowrap w-max cursor-pointer ml-2" key={chain.name}>
+          <div className="whitespace-nowrap overflow-x-auto cursor-pointer ml-2" key={chain.name}>
             <div>
-              <span className="text-blue-600">{chain.name}: </span>
+              <span className="text-teal-600">{chain.name}: </span>
               {chain.nucleotides.map((nucleotide) => (
                 <span
                   className={clsx(
-                    nucleotide.selected ? "text-red-500" : ""
+                    "relative",
+                    {
+                      "text-teal-500": hoveredIndex === nucleotide.index,
+                      "text-red-500": nucleotide.selected && hoveredIndex !== nucleotide.index,
+                    }
                   )}
                   key={nucleotide.index}
                   onClick={() => setColor(nucleotide.index)}
-
+                  onMouseOver={(event) => {
+                    setHoveredIndex(nucleotide.index);
+                    showTooltip(event, nucleotide.index, nucleotide.original_index);
+                  }}
+                  onMouseOut={(event) => {
+                    setHoveredIndex(0);
+                    hideTooltip();
+                  }}
                 >
                   {nucleotide.base}
+
                 </span>
               ))}
             </div>
@@ -468,7 +606,12 @@ const FornaComponent = ({
         <>
           <div
             id="rna_ss"
-          ></div>
+          >
+             <div id="tooltip" 
+             className="hidden absolute mt-2 right-2 bg-teal-500 text-white text-xs rounded px-2 py-1 z-50"
+             ></div>
+          </div>
+         
           <div id="containerLoadingText" className="p-2">
             <Loading />
           </div>

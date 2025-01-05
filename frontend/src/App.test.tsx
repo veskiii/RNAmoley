@@ -1,9 +1,15 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import App, { NameContext } from './App';
+import { test, expect } from 'vitest';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+test('navigates to analysisPanel on link click', () => {
+  render(
+    <NameContext.Provider value={{ jobID: '123', setId: () => {} }}>
+      <App />
+    </NameContext.Provider>
+  );
+
+  const linkElement = screen.getByText(/Run/i);
+  fireEvent.click(linkElement);
 });

@@ -47,8 +47,8 @@ button {
   display: flex;
   align-items: center;
   margin-top: 2rem;
-  background-color: rgb(253 164 175);
-  opacity: 80%;
+  background-color: #FDA4AF;
+  /* opacity: 80%; */
   cursor: pointer;
   border-radius: 0.5rem;
   text-align: center;
