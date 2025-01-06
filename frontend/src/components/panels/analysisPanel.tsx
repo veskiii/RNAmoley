@@ -392,7 +392,7 @@ const Panel: React.FC = () => {
                         <div >
                           <label className="options">
                             Radius{''}
-                            <input
+                            <input id = "radiusInput"
                               className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                               type="number"
                             />
@@ -402,7 +402,7 @@ const Panel: React.FC = () => {
                         <div>
                           <label className="options">
                             Interval{''}
-                            <input
+                            <input id = "intervalInput"
                               className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                               type="number"
                             />
