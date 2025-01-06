@@ -12,6 +12,7 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
+import AnalyzeButton from "../common/analyzeButton";
 
 interface Atom {
   serial: number;
@@ -30,14 +31,14 @@ interface Atom {
   charge: string;
 }
 
-interface Annotation {
-  name: string;
-  sequnece: string;
-  dotbracket: string;
+export interface Annotation {
+    name: string;
+    sequnece: string;
+    dotbracket: string;
 }
 
-interface Numeration {
-  [key: string]: [number, string];
+export interface Numeration {
+    [key: string]: [number, string];
 }
 
 interface Metadata {
@@ -61,19 +62,27 @@ interface Job {
   model_number: number;
 }
 
-interface Nucleotide {
-  index: number;
-  original_index: number;
-  base: string;
-  structure: string;
-  selected: boolean;
+export interface Nucleotide {
+    index: number;
+    original_index: number;
+    base: string;
+    structure: string;
+    selected: boolean;
 }
 
-interface Chain {
-  name: string;
-  nucleotides: Nucleotide[];
-  sequence: string;
-  dotBracket: string;
+export interface Chain {
+    name: string;
+    nucleotides: Nucleotide[];
+    sequence: string;
+    dotBracket: string;
+}
+
+interface JobToPost {
+    id: string;
+    residues: number[];
+    modelNumber: number;
+    radius: number;
+    interval: number;
 }
 
 export function transformJobToChains(job: Job): Chain[] {
@@ -188,33 +197,86 @@ const Panel: React.FC = () => {
   }
 
 
-  function toggle() {
-    setIs3Dview((is3Dview) => {
-      is3Dview = !is3Dview;
-      console.log(is3Dview);
-      let switchViewButton = document.getElementById(
-        "switchViewButton"
-      ) as HTMLElement;
-      let viewLabel = document.getElementById("viewLabel") as HTMLElement;
-      if (is3Dview) {
-        switchViewButton.textContent = "2D view";
-        viewLabel.textContent = "3D view";
-      } else {
-        switchViewButton.textContent = "3D view";
-        viewLabel.textContent = "2D view";
-      }
-      return is3Dview;
-    });
-  }
+    function toggle() {
+        setIs3Dview((is3Dview) => {
+            is3Dview = !is3Dview;
+            console.log(is3Dview);
+            let switchViewButton = document.getElementById(
+                "switchViewButton"
+            ) as HTMLElement;
+            let viewLabel = document.getElementById("viewLabel") as HTMLElement;
+            if (is3Dview) {
+                switchViewButton.textContent = "2D view";
+                viewLabel.textContent = "3D view";
+            } else {
+                switchViewButton.textContent = "3D view";
+                viewLabel.textContent = "2D view";
+            }
+            return is3Dview;
+        });
+    }
 
-  const navigate = useNavigate();
-  const goToDashboard = () => {
-    navigate("/");
-  }
+    async function sendDataToAnalyze() {
+        var idList: number[] = [];
+        var API_URL = '';
 
-  const handleSetSelectedModel = (e: SelectChangeEvent) => {
-    setSelectedModel(parseInt(e.target.value));
-  }
+        if (!jobID) {
+            throw new Error("jobID is required");
+        }
+
+        var jobToPost: JobToPost = {id: '', residues: [], modelNumber: 0, radius: 0, interval: 0};
+        if (analyzeWholeStructure) {
+            API_URL = "http://localhost:3000/api/v1/jobs/analyzeStructure";
+            const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
+            const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
+            jobToPost = {id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval}
+        } else {
+            API_URL = "http://localhost:3000/api/v1/jobs/analyzeFragment";
+            idList = chainsState.flatMap((chain) =>
+                chain.nucleotides
+                    .filter((nucleotide) => nucleotide.selected)
+                    .map((nucleotide) => nucleotide.index)
+            );
+            jobToPost = {id: jobID, modelNumber: 0, residues: idList, radius: 0, interval: 0}
+        }
+
+        try {
+            const response = await fetch(`${API_URL}`, {
+                method: "POST",
+                body: JSON.stringify(jobToPost),
+                headers: {
+                    "Access-Control-Allow-Origin": "http://localhost:3000",
+                    "Content-Type": "application/json",
+                },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Data posted successfully:", data.id);
+            } else {
+                let errorData = await response.json();
+                console.error("Error creating job:", errorData);
+                const errorMessage = errorData?.message || "Unknown error";
+                alert("Failed to create job: " + errorMessage);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Failed to create job");
+        }
+    }
+
+    function handleNavigate() {
+        sendDataToAnalyze();
+        navigate(`/summary/${jobID}`);
+    }
+
+    const navigate = useNavigate();
+    const goToDashboard = () => {
+        navigate("/");
+    }
+
+    const handleSetSelectedModel = (e: SelectChangeEvent) => {
+        setSelectedModel(parseInt(e.target.value));
+    }
 
   const context = useContext(NameContext);
   const jobID = context?.jobID;
@@ -330,7 +392,7 @@ const Panel: React.FC = () => {
                         <div >
                           <label className="options">
                             Radius{''}
-                            <input
+                            <input id = "radiusInput"
                               className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                               type="number"
                             />
@@ -340,7 +402,7 @@ const Panel: React.FC = () => {
                         <div>
                           <label className="options">
                             Interval{''}
-                            <input
+                            <input id = "intervalInput"
                               className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                               type="number"
                             />
@@ -381,7 +443,7 @@ const Panel: React.FC = () => {
 
           </div>
           <div className="flex flex-col h-[20%] ml-4 mt-3">
-            <DownloadLink />
+              <AnalyzeButton onClick={handleNavigate}/>
           </div>
         </div>)
       }

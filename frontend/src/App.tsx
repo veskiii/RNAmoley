@@ -3,6 +3,9 @@ import "./App.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Dashboard from "./components/panels/startPanel";
 import Panel from "./components/panels/analysisPanel";
+import SummaryPanel from "./components/panels/summaryPanel";
+import JobProcessing from "./components/common/JobProcessing";
+import ErrorPage from "./components/common/ErrorPage";
 
 interface NameContextType {
   jobID: string | undefined;
@@ -35,7 +38,11 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/Panel" element={<Panel />} />
+          <Route path="/panel" element={<Panel />} />
+          <Route path="/summary/:jobId" element={<SummaryPanel />} />
+          <Route path="/jobProcessing" element={<JobProcessing />} />
+          <Route path="/errorPage" element={<ErrorPage />} />
+
         </Routes>
       </Router>
     </NameContextProvider>

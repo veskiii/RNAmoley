@@ -4,6 +4,7 @@ import RadioButtons from "../common/radioButtons";
 import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import InputType from "../common/inputType";
+import { Colors } from "../common/colors";
 
 export function isInputValid(
   rnaFile: File | null,
@@ -192,7 +193,7 @@ const Dashboard: React.FC = () => {
                   className="cursor-pointer text-2xl text-black flex justify-center items-center h-10 mt-2 bg-rose-300 w-40 rounded-lg text-center transition-colors hover:bg-teal-600"
                   htmlFor="inputFile"
                 >
-  
+
                   Upload{''}
                   <input
                     id="inputFile"
@@ -212,12 +213,12 @@ const Dashboard: React.FC = () => {
                   Remove{''}
                 </label>
                 )}
-              
+
               </div>
             )}
             {selectedInputType === "sample" && (
               <div>
-              
+
             <RadioButtons
               selectedValue={radiobutton}
               onValueChange={setRadiobutton}
@@ -247,7 +248,7 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-2xl text-black">
                 Loading{" "}
                 <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                  
+
                   <div role="status">
                       <svg aria-hidden="true" className="w-4 h-4 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
@@ -262,14 +263,14 @@ const Dashboard: React.FC = () => {
 
             </button>
             {selectedInputType !== "none" && (
-              <button 
+              <button
               onClick={()=>{setSelectedInputType("none"); setRnaFile(null); setPdbCode(""); setRadiobutton("None")}}
               className="w-auto px-4"
               >
                 Change input type
               </button>
             )}
-            
+
           </div>
         </div>
       </form>
