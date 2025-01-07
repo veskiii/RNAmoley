@@ -8,6 +8,8 @@ import "molstar/build/viewer/molstar.css";
 import {ParamDefinition} from "molstar/lib/mol-util/param-definition";
 import {CameraHelperParams} from "molstar/lib/mol-canvas3d/helper/camera-helper";
 import {renderReact18} from "molstar/lib/mol-plugin-ui/react18";
+import { StateSelection, StateTransform } from 'molstar/lib/mol-state';
+import { StateTransforms } from 'molstar/lib/mol-plugin-state/transforms';
 import {
     Structure, StructureProperties,
 } from "molstar/lib/mol-model/structure"
@@ -19,6 +21,7 @@ import {
     BadBondsColorThemeProvider,
     ClashScoreThemeProvider
 } from "./ColorByQuality";
+import {mmCIF_Schema as representation} from "molstar/lib/mol-io/reader/cif/schema/mmcif";
 
 const Molstar = props => {
 
@@ -47,8 +50,8 @@ const Molstar = props => {
     const [selected, setSelected] = useState([]);
     const [enableSelection, setEnableSelection] = useState(false);
 
-    function changeNucleotideColors() {
-        console.info("Kolorowanie nukleotyd!");
+     function changeNucleotideColors() {
+        console.info("Kolorowanie nukleotydow!");
 
         if (!plugin.current) {
             console.warn("Plugin nie został zainicjalizowany!");
@@ -57,6 +60,21 @@ const Molstar = props => {
         plugin.current.representation.structure.themes.colorThemeRegistry.add(ClashScoreThemeProvider);
         plugin.current.representation.structure.themes.colorThemeRegistry.add(BadBondsColorThemeProvider);
         plugin.current.representation.structure.themes.colorThemeRegistry.add(BadAnglesColorThemeProvider);
+
+        setClashScoreTheme();
+    }
+
+    async function setClashScoreTheme() {
+        if (!plugin || !plugin.current) {
+            console.warn("Plugin not initialized!");
+            return;
+        }
+        const { components } = plugin.current.managers.structure.hierarchy.current.structures[0];
+        await plugin.current.managers.structure.component.updateRepresentationsTheme(components, ClashScoreThemeProvider);
+        if (plugin.current.canvas3d) {
+             plugin.current.canvas3d.commit(true);
+        }
+        console.log('Custom Clash Score theme applied.');
     }
 
     useEffect(() => {
