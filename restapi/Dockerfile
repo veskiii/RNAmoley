@@ -17,6 +17,7 @@ FROM node:${NODE_VERSION}-alpine as base
 WORKDIR /usr/src/app
 
 RUN mkdir -p /usr/src/app/public/jobs && \
+    mkdir -p /usr/src/app/public/demo_files && \
     chown -R node:node /usr/src/app
 
 # Install pnpm.
@@ -48,6 +49,7 @@ RUN --mount=type=bind,source=package.json,target=package.json \
     pnpm install --frozen-lockfile
 
 # Copy the rest of the source files into the image.
+COPY ./demo_files/ /usr/src/app/public/demo_files/
 COPY . .
 # Run the build script.
 RUN pnpm run build
@@ -70,6 +72,7 @@ COPY package.json .
 # the built application from the build stage into the image.
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
+COPY --from=build /usr/src/app/public/demo_files ./public/demo_files
 
 # Expose the port that the application listens on.
 EXPOSE 3000

@@ -2,7 +2,7 @@ import db from "../db/index.js";
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from './queries.js';
-import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, saveJSONFileModels, saveJSONFileRoot, validateFile, saveMetadata, fetchModelFileAsString, readMetadata, readResults, saveResults, analyzeStructureWalkingSphere, createZip } from "./utils.js";
+import { ALLOWED_EXTENSIONS, analyzeStructureFragment, deleteFile, deleteJobDirectory, fetchJSONFile, fetchPdbFile, fetchPdbFileAsJSON, generateFilename, MAX_FILE_SIZE, moveToJobDirectroy, saveOriginalNumeration, uploadFile, uploadFileFromPDBCode, saveJSONFileModels, saveJSONFileRoot, validateFile, saveMetadata, fetchModelFileAsString, readMetadata, readResults, saveResults, analyzeStructureWalkingSphere, createZip, getDemoFiles } from "./utils.js";
 import fetch from 'node-fetch';
 import type { UUID } from "crypto";
 import type { Analysis_results, Annotation, Job, Metadata, nucleotideResult, splitModelsResponse } from "./types.js";
@@ -117,7 +117,7 @@ export async function createJob(req: Request, res: Response) {
     const rnaFile = req.file as Express.Multer.File;
     var pdbCode = req.body.pdbCode;
     const jobname = req.body.jobName as string || "Untitled job";
-    const radioButton = req.body.radioButton as string || "None";
+    const demoFileName = req.body.radioButton as string || "None";
 
     var id: UUID;
     var newFilename: string;
@@ -125,16 +125,28 @@ export async function createJob(req: Request, res: Response) {
     var finalFilename: string;
     var originalExtension: string;
 
-    if (radioButton.length == 4 && radioButton != "None") {
-        pdbCode = radioButton;
-    }
-
-    if (!rnaFile && pdbCode === '' && radioButton === 'None') {
+    if (!rnaFile && pdbCode === '' && demoFileName === 'None') {
         res.status(400).send({ error: 'Either RNA file or PDB code is required' });
         return;
     }
 
-    if (rnaFile && rnaFile.size > 0) {
+    const possible_demo_files = ['good', 'medium', 'bad'];
+    if (demoFileName !== 'None' && !possible_demo_files.includes(demoFileName)) {
+        res.status(422).send({ error: 'Invalid demo file.' });
+        return;
+    }
+
+
+    if (demoFileName !== 'None') {
+        const demoFileBuffer = await getDemoFiles(demoFileName + '.pdb');
+
+        id = randomUUID();
+        originalFilename = demoFileName + '.pdb';
+        originalExtension = 'pdb';
+        newFilename = id + '.pdb';
+        await uploadFileFromPDBCode(new File([demoFileBuffer], newFilename), newFilename);
+
+    } else if (rnaFile && rnaFile.size > 0) {
         const error = validateFile(rnaFile, MAX_FILE_SIZE, ALLOWED_EXTENSIONS);
         if (error) {
             deleteFile(rnaFile.filename);

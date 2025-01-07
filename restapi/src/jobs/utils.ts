@@ -11,6 +11,7 @@ import archiver from 'archiver';
 export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['pdb', 'cif', 'mmcif'];
 export const JOBS_DIR = 'public/jobs';
+export const DEMO_FILES_DIR = 'public/demo_files';
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -42,6 +43,11 @@ export async function uploadFile(rnaFile: File, jobID: string, newName: string) 
     const buffer = new Uint8Array(arrayBuffer);
 
     await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, buffer);
+}
+
+export async function getDemoFiles(filename: string) {
+    const data = await fs.readFile(`${DEMO_FILES_DIR}/${filename}`);
+    return data;
 }
 
 export async function moveToJobDirectroy(filename: string, jobID: UUID) {
