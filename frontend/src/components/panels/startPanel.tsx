@@ -3,7 +3,6 @@ import "../../App.css";
 import RadioButtons from "../common/radioButtons";
 import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
-import InputType from "../common/inputType";
 import { Colors } from "../common/colors";
 
 export function isInputValid(
@@ -31,6 +30,18 @@ const Dashboard: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isUploadedFile, setIsUploadedFile] = useState<boolean>(false);
   const [selectedInputType, setSelectedInputType] = useState<string>("none");
+
+  const options = [
+    {id: "file", value: "file", label: "Upload file"},
+    {id: "PDBid", value: "PDBid", label: "Fetch by PDB id"},
+    {id: "sample", value: "sample", label: "Choose from samples"},
+  ];
+
+  const samples = [
+    {id: "good", value: "good", label: "good"},
+    {id: "medium", value: "medium", label: "medium"},
+    {id: "bad", value: "bad", label: "bad"},
+  ];
 
   function handle(id: string) {
     if (context) {
@@ -145,22 +156,26 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-4 items-start content-center justify-items-center h-[70vh] w-[80vw] bg-slate-300 p-24 lg:rounded-xl text-teal-600 font-semibold text-lg">
           <div className="flex flex-col ">
             <div>
-              <label htmlFor="jobName">Job name:</label>
+              <label htmlFor="jobName">Name of task:</label>
               <input
                 id="jobName"
                 name="jobName"
                 type="text"
-                placeholder="Enter a job name"
+                placeholder="Enter task name"
                 className="w-full flex justify-center p-1 mb-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 value={jobName}
                 onChange={(e) => setJobName(e.target.value)}
               />
             </div>
             {selectedInputType === "none" && (
-              <InputType
-              selectedValue={selectedInputType}
-              onValueChange={setSelectedInputType}
-              />
+                <div >
+                <p>Choose from samples:</p>
+                <RadioButtons
+                  options={options}
+                  selectedValue={selectedInputType}
+                  onValueChange={setSelectedInputType}
+                />
+              </div>
             )}
             {selectedInputType === "PDBid" && (
               <div>
@@ -218,15 +233,14 @@ const Dashboard: React.FC = () => {
             )}
             {selectedInputType === "sample" && (
               <div>
-
-            <RadioButtons
-              selectedValue={radiobutton}
-              onValueChange={setRadiobutton}
-            />
+                <p>Choose a sample to analyze (quality-based):</p>
+                <RadioButtons
+                  options={samples}
+                  selectedValue={radiobutton}
+                  onValueChange={setRadiobutton}
+                />
               </div>
             )}
-            <div className="w-80">
-            </div>
 
           </div>
           <div className="flex justify-center content-around align-center flex-wrap flex-col">
@@ -238,11 +252,8 @@ const Dashboard: React.FC = () => {
             >
             {isSubmitting===false && (
               <h2 className="text-2xl text-black">
-              Run{" "}
-              <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                ⮕
-              </span>
-            </h2>
+                {" Run >"}
+              </h2>
             )}
             {isSubmitting &&(
                 <h2 className="text-2xl text-black">
@@ -267,7 +278,7 @@ const Dashboard: React.FC = () => {
               onClick={()=>{setSelectedInputType("none"); setRnaFile(null); setPdbCode(""); setRadiobutton("None")}}
               className="w-auto px-4"
               >
-                Change input type
+                {'< Back'}
               </button>
             )}
 
