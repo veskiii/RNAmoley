@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
             </div>
             {selectedInputType === "none" && (
                 <div >
-                <p>Choose from samples:</p>
+                <p>Select input option:</p>
                 <RadioButtons
                   options={options}
                   selectedValue={selectedInputType}
