@@ -153,8 +153,25 @@ const Dashboard: React.FC = () => {
         <h1 className="pl-2">| Submition panel</h1>
       </div>
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-4 items-start content-center justify-items-center h-[70vh] w-[80vw] bg-slate-300 p-24 lg:rounded-xl text-teal-600 font-semibold text-lg">
-          <div className="flex flex-col ">
+        <div className=" p-4 items-start content-center justify-items-center h-[70vh] w-[80vw] bg-slate-300 p-24 lg:rounded-xl text-teal-600 font-semibold text-lg">
+        {(
+          <div>
+          <p>Select input option:</p>
+          <RadioButtons
+            options={options}
+            selectedValue={selectedInputType}
+            onValueChange={setSelectedInputType}
+            onReset={() => {
+              setPdbCode("");
+              setRnaFile(null);
+              setRadiobutton("None");
+              setIsUploadedFile(false);
+            }}
+          />
+          
+        </div>
+        )}
+          <div className="flex flex-col gap-2 ">
             <div>
               <label htmlFor="jobName">Name of task:</label>
               <input
@@ -162,21 +179,12 @@ const Dashboard: React.FC = () => {
                 name="jobName"
                 type="text"
                 placeholder="Enter task name"
-                className="w-full flex justify-center p-1 mb-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-[300px] flex justify-center p-1 mb-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 value={jobName}
                 onChange={(e) => setJobName(e.target.value)}
               />
             </div>
-            {selectedInputType === "none" && (
-                <div >
-                <p>Choose from samples:</p>
-                <RadioButtons
-                  options={options}
-                  selectedValue={selectedInputType}
-                  onValueChange={setSelectedInputType}
-                />
-              </div>
-            )}
+
             {selectedInputType === "PDBid" && (
               <div>
                 <label>Fetch by PDB Code:{''}
@@ -273,14 +281,14 @@ const Dashboard: React.FC = () => {
              )}
 
             </button>
-            {selectedInputType !== "none" && (
+            {/* {selectedInputType !== "none" && (
               <button
               onClick={()=>{setSelectedInputType("none"); setRnaFile(null); setPdbCode(""); setRadiobutton("None")}}
               className="w-auto px-4"
               >
                 {'< Back'}
               </button>
-            )}
+            )} */}
 
           </div>
         </div>
