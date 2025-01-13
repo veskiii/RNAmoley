@@ -56,7 +56,7 @@ const FornaComponent = ({
   const [minId, setMinId] = useState<string>('');
   const [maxId, setMaxId] = useState<string>('');
   const [hoveredIndex, setHoveredIndex] = useState<number>();
-  const [hybridizedName, setHybridizedName] = useState<string>();
+  const [hybridizedName, setHybridizedName] = useState<string[]>([]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -96,39 +96,61 @@ const FornaComponent = ({
     const hybridized_chains: Chain[] = [];
 
     chains.forEach((chain, index) => {
-      if (isHybridized(chain.dotBracket) && hybridized_chains.length < 3) {
+      if (isHybridized(chain.dotBracket)) {
         hybridized_chains.push(chain);
-      } else if (hybridized_chains.length > 2) {
-        throw new Error("Only 2 hybridized chains are possible to visualize");
-      }
+      } 
+      // else if (hybridized_chains.length > 2) {
+      //   throw new Error("Only 2 hybridized chains are possible to visualize");
+      // }
     });
 
     try {
+      const uniqueStructures = new Set(hybridized_chains.map(chain => chain.dotBracket));
+      if (uniqueStructures.size !== hybridized_chains.length) {
+        throw new Error("Duplicate hybridized structures detected. All hybridized structures must be unique.");
+      }
+
+      const hybridizedPairs: [Chain, Chain][] = [];
+      for (let i = 0; i < hybridized_chains.length; i++) {
+        for (let j = i + 1; j < hybridized_chains.length; j++) {
+          const chainA = hybridized_chains[i];
+          const chainB = hybridized_chains[j];
+
+          const combinedStructure = chainA.dotBracket + chainB.dotBracket;
+          const combinedOpeners = Array.from(combinedStructure).filter(x => x === "(" || x === "[").length;
+          const combinedClosers = Array.from(combinedStructure).filter(x => x === ")" || x === "]").length;
+  
+          if (combinedOpeners === combinedClosers) {
+            hybridizedPairs.push([chainA, chainB]);
+          }
+        }
+      }
+
       chains.forEach((chain) => {
-        if (!(chain === hybridized_chains[0] || chain === hybridized_chains[1])) {
+        if (!hybridizedPairs.some(([chainA, chainB]) => chain === chainA || chain === chainB)) {
           const options = {
             structure: chain.dotBracket,
             sequence: chain.sequence,
             name: chain.name,
           }
-          console.log("Z forny: ", options.structure, options.sequence, options.name);
+          //console.log("Z forny: ", options.structure, options.sequence, options.name);
           container.addRNA(options.structure, options );
-          console.log(Object.getOwnPropertyNames(container.options));
+          //console.log(Object.getOwnPropertyNames(container.options));
         }
       });
-      if (hybridized_chains.length > 1) {
-        const merged_sequence = hybridized_chains[0].sequence +hybridized_chains[1].sequence;
-        const merged_structure = hybridized_chains[0].dotBracket + hybridized_chains[1].dotBracket;
+      hybridizedPairs.forEach(([chainA, chainB]) => {
+        const merged_sequence = chainA.sequence + chainB.sequence;
+        const merged_structure = chainA.dotBracket + chainB.dotBracket;
         const options = {
           structure: merged_structure,
           sequence: merged_sequence,
           name: "hybrydized_" +  hybridized_chains[0].name.slice(-1) + "-" +  hybridized_chains[1].name.slice(-1)
         }
         container.addRNA(options.structure, options);
-        setHybridizedName(options.name);
+        setHybridizedName([options.name]);
 
-        for (let i = 0; i < hybridized_chains.length; i++) { 
-          hybridized_chains[i].nucleotides.forEach((nucleotide, index) => {
+        [chainA, chainB].forEach((chain, index) => { 
+          chain.nucleotides.forEach((nucleotide) => {
             const gNode = document.querySelector(`g.gnode[num="n${nucleotide.index}"][struct_name="${options.name}"]`);
             
             if (gNode) {
@@ -138,21 +160,19 @@ const FornaComponent = ({
                 const title = circle.querySelector("title");
                 
                 if (title ) {
-                  title.textContent = `${hybridized_chains[i].name} ${nucleotide.index}`;
+                  title.textContent = `${chain.name} ${nucleotide.index}`;
                 }
               }
-              gNode.setAttribute("struct_name", `${hybridized_chains[i].name}`);
-              if(i === 1 && circle){
-                gNode.setAttribute("num", `n${(nucleotide.index - hybridized_chains[0].sequence.length)}`);
-                circle.setAttribute("node_num", `${(nucleotide.index - hybridized_chains[0].sequence.length)}`);
+              gNode.setAttribute("struct_name", `${chain.name}`);
+              if(chain === chainB && circle){
+                gNode.setAttribute("num", `n${(nucleotide.index - chainA.sequence.length)}`);
+                circle.setAttribute("node_num", `${(nucleotide.index - chainA.sequence.length)}`);
               }
 
             }
           });
-        }
-        
-
-      }
+        });
+      });
       // @ts-expect-error
       const rnaValues = Object.values(container.rnas)[0].nodes;
       if (!rnaValues.length) {
@@ -229,7 +249,7 @@ const FornaComponent = ({
               selectedIndices.add(found_nucleotide.index);
               console.log(found_nucleotide);
             }
-          }else if(nodeNameAttr === hybridizedName){
+          }else if(nodeNameAttr && hybridizedName.includes(nodeNameAttr)){
             found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3,-2));
             if(found_chain){
               let found_nucleotide = found_chain.nucleotides[numIndex-1];
@@ -329,8 +349,8 @@ const FornaComponent = ({
         chain.nucleotides.forEach(nucleotide => {
           let gNode = document.querySelector(`g.gnode[num="n${forna_id}"][struct_name="${chain.name}"]`);
           if(!gNode){
-            if(chain.name.slice(-1) === hybridizedName?.slice(-1)){
-              const prevChain = chains.find(chain => chain.name.slice(-1) === hybridizedName.slice(-3,-2))
+            if(hybridizedName.slice(-1).includes(chain.name.slice(-1))){
+              const prevChain = chains.find(chain => hybridizedName.slice(-3,-2).includes(chain.name.slice(-1) ))
               const lengthPrevChain = prevChain?.sequence.length;
               if(lengthPrevChain)
                 gNode = document.querySelector(`g.gnode[num="n${(forna_id+lengthPrevChain)}"][struct_name="${hybridizedName}"]`);
@@ -446,7 +466,7 @@ const FornaComponent = ({
           if (found_chain) {
 
             found_nucleotide = found_chain.nucleotides[numIndex-1];
-          }else if(strand === hybridizedName){
+          }else if(hybridizedName.includes(strand)){
             found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3,-2));
             if(found_chain){
               let found_nucleotide = found_chain.nucleotides[numIndex-1];

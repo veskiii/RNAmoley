@@ -122,7 +122,6 @@ const Molstar = props => {
   useEffect(() => {
     setEnableSelection(false);
     if (!plugin.current) return;
-    console.log("oDCZYT!")
 
     const atomGroups = chains.flatMap(chain =>
       chain.nucleotides.filter(nucleotide => nucleotide.selected === true).map(nucleotide =>
@@ -134,13 +133,11 @@ const Molstar = props => {
         })
       )
     );
-    console.log("atom groups", atomGroups);
 
     const selectionQuery = StructureSelectionQuery(
       "selected_nucleotides",
       MS.struct.combinator.merge(atomGroups)
     );
-    console.log("Selectionquery", selectionQuery);
 
     plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
 
@@ -151,7 +148,7 @@ const Molstar = props => {
       );
       console.log("Loci:", loci);
       if (loci) {
-        plugin.current.managers.camera.focusLoci(loci);
+        // plugin.current.managers.camera.focusLoci(loci);
         plugin.current.managers.interactivity.lociSelects.select({ loci });
       } else {
         console.warn("No loci found for the selection query");
@@ -165,34 +162,25 @@ const Molstar = props => {
   //Tworzenie tablicy indeksów elementów zaznaczonych na podstawie zmiany na widoku
   useEffect(() => {
     document.body.addEventListener('click', () => {
-      console.log("PLUGIN: ", plugin.current);
-
       if (initialized && plugin.current && plugin.current.managers.structure) {
 
-        console.log("przed subskrypcja")
         const subscription = plugin.current.behaviors?.interaction?.click.subscribe(async (event) => {
 
           const selections = Array.from(
             plugin.current.managers.structure.selection.entries.values()
           );
+
           if (selections.length === 0) {
-            console.log("Brak dostępnych selekcji!");
             return;
           }
 
-          console.log("Selections:", selections);
           const localSelected = [];
           for (const { structure } of selections) {
-            console.log("AAAAAAAAAa");
             if (!structure) continue;
-            console.log("BBBBBBBBBb");
 
             Structure.eachAtomicHierarchyElement(structure, {
               residue: (loc) => {
                 const position = StructureProperties.residue.label_seq_id(loc);
-                const auth_position = StructureProperties.residue.auth_seq_id(loc);
-                console.log(`Kliknięto pozycja: ${position}`, `auth_pos: ${auth_position}`);
-
                 localSelected.push({ position });
               },
             });
@@ -209,7 +197,7 @@ const Molstar = props => {
       }
     });
 
-  }, [initialized]);//setSelected,
+  }, [initialized]);
 
   //Zapis do chains
   //Zmiana selected w nucleotides na podstawie tablicy selected

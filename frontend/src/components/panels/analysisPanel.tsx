@@ -297,8 +297,7 @@ const Panel: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      {!is3Dview &&
-        (<div className="w-80 bg-neutral-200">
+      <div className="w-80 bg-neutral-200">
           <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
               <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
                 <div className="flex flex-col">
@@ -319,6 +318,7 @@ const Panel: React.FC = () => {
                 <h1 className="pl-2">| Submition panel</h1>
               </div>
             <div className="rounded-scrollbar overflow-auto">
+            {!is3Dview &&(
               <Accordion>
                 <AccordionSummary
                   aria-controls="panel1-content"
@@ -350,6 +350,8 @@ const Panel: React.FC = () => {
                   </Typography>
                 </AccordionDetails>
               </Accordion>
+            )}
+              
               <Accordion>
                 <AccordionSummary
                   aria-controls="panel2-content"
@@ -414,29 +416,30 @@ const Panel: React.FC = () => {
                   </Typography>
                 </AccordionDetails>
               </Accordion>
-              <Accordion>
-                <AccordionSummary
-                  aria-controls="panel1-content"
-                  id="panel1-header"
-                >
-                  <Typography>How to use fornac</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography component="div">
-                    <div className="mt-5 mb-5">
-                      [left click] select single node
-                      <br />
-                      [ctrl + left click] select/deselect multiple nodes
-                      <br />
-                      [left click + drag] drag object
-                      <br />
-                      [ctrl + left click + drag] box selecting
-                      <br />
-                      [c] center the graph
-                    </div>
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
+              {!is3Dview &&(
+                <Accordion>
+              <AccordionSummary
+                aria-controls="panel1-content"
+                id="panel1-header"
+              >
+                <Typography>How to use fornac</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography component="div">
+                  <div className="mt-5 mb-5">
+                    [left click] select single node
+                    <br />
+                    [ctrl + left click] select/deselect multiple nodes
+                    <br />
+                    [left click + drag] drag object
+                    <br />
+                    [ctrl + left click + drag] box selecting
+                    <br />
+                    [c] center the graph
+                  </div>
+                </Typography>
+              </AccordionDetails>
+            </Accordion>)}
             </div>
 
 
@@ -445,10 +448,7 @@ const Panel: React.FC = () => {
           <div className="flex flex-col h-[20%] ml-4 mt-3">
               <AnalyzeButton onClick={handleNavigate}/>
           </div>
-        </div>)
-      }
-
-
+        </div>
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
 
