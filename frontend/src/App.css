@@ -68,11 +68,10 @@ button:hover {
 
 .radioGroup {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
   justify-content: flex-start;
   border-radius: 8px;
-  padding-left: 30px;
 }
 
 .radioButton {
@@ -102,4 +101,49 @@ button:hover {
   display: flex;
   width: 50vw;
   height: 50vh;
+}
+
+.button-label {
+  display: inline-block;
+  padding: 1em 2em;
+  margin: 0.5em;
+  cursor: pointer;
+  color: dark;
+  border-radius: 0.25em;
+  background: light;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0 -3px 0 rgba(0,0,0,0.22);
+  transition: 0.3s;
+  user-select: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.button-label:hover {
+  background: darken(light, 10%);
+  color: darken(dark, 10%);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0 -3px 0 rgba(0,0,0,0.32);
+}
+.button-label:active {
+  transform: translateY(2px);
+  background: #FDA4AF;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0px -1px 0 rgba(0,0,0,0.22); 
+}
+.button-label:checked {
+  background: #FDA4AF;
+  color: light;
+
+}
+.button-label:checked:hover {
+  background: darken(#FDA4AF, 5%);
+  color: darken(light, 5%);
+}
+.hidden {
+  display: none;
+}
+input[type="radio"]:checked + .button-label {
+  background: #fda4af;
+}
+
+input[type="radio"]:checked + .button-label:hover {
+  background: darken(#fda4af, 5%);
 }

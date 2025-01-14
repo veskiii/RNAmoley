@@ -11,16 +11,18 @@ interface RadioButtonsProps {
   options: RadioOption[];
   selectedValue: string;
   onValueChange: (value: string) => void;
+  onReset?: () => void;
 }
 
 const RadioButtons: React.FC<RadioButtonsProps> = ({
   options,
   selectedValue,
   onValueChange,
+  onReset,
 }) => {
 
   return (
-    <div className="w-80">
+    <div>
       <div className="radio-container">
         <div className="radioGroup">
         {options.map(option => (
@@ -30,9 +32,13 @@ const RadioButtons: React.FC<RadioButtonsProps> = ({
               id={option.id}
               value={option.value}
               checked={selectedValue === option.value}
-              onChange={() => onValueChange(option.value)}
+              onChange={(e) => {
+                if (onReset) onReset();
+                onValueChange(e.target.value);
+              }}
+              className="hidden"
             />
-            <label htmlFor={option.id} className="radioLabel">
+            <label htmlFor={option.id} className="button-label">
               {option.label}
             </label>
           </div>
