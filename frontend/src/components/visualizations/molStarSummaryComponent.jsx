@@ -8,20 +8,13 @@ import "molstar/build/viewer/molstar.css";
 import {ParamDefinition} from "molstar/lib/mol-util/param-definition";
 import {CameraHelperParams} from "molstar/lib/mol-canvas3d/helper/camera-helper";
 import {renderReact18} from "molstar/lib/mol-plugin-ui/react18";
-import { StateSelection, StateTransform } from 'molstar/lib/mol-state';
-import { StateTransforms } from 'molstar/lib/mol-plugin-state/transforms';
-import {
-    Structure, StructureProperties,
-} from "molstar/lib/mol-model/structure"
+import {Structure, StructureProperties,} from "molstar/lib/mol-model/structure"
 import {MolScriptBuilder as MS} from "molstar/lib/mol-script/language/builder";
 import {StructureSelectionQuery} from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
-import {PluginCommands} from 'molstar/lib/mol-plugin/commands';
-import {
-    BadAnglesColorThemeProvider,
-    BadBondsColorThemeProvider,
-    ClashScoreThemeProvider
-} from "./ColorByQuality";
-import {mmCIF_Schema as representation} from "molstar/lib/mol-io/reader/cif/schema/mmcif";
+import {BadAnglesColorThemeProvider, BadBondsColorThemeProvider, ClashScoreThemeProvider, FragmentColorThemeProvider} from "./ColorByQuality";
+import{StructureRepresentationPresetProvider} from "molstar/lib/mol-plugin-state/builder/structure/representation-preset";
+import {PluginStateObject} from "molstar/lib/mol-plugin-state/objects";
+import {PluginCommands} from "molstar/lib/mol-plugin/commands";
 
 const Molstar = props => {
 
@@ -49,6 +42,25 @@ const Molstar = props => {
     // const [selectedNts, setSelectedNts] = useState([]);
     const [selected, setSelected] = useState([]);
     const [enableSelection, setEnableSelection] = useState(false);
+    const [canColor, setCanColor] = useState(false);
+
+    const FragmentPreset = StructureRepresentationPresetProvider({
+        id: 'fragment-preset',
+        display: {
+            name: 'Fragment analysis preset',
+            description: 'A custom preset with a fragment analysis color theme',
+        },
+        params: () => ({}),
+        apply: async (ctx, structure, params) => {
+            const builder = plugin.current.builders.structure.representation;
+            const structureRepr = await builder.addRepresentation(
+                structure,
+                { type: 'cartoon', color: 'fragment-color' } // Use your custom color theme
+            );
+            return { components: [structure], representations: [structureRepr] };
+        },
+    });
+    //plugin.current.builders.structure.representation.preset.add(FragmentPreset);
 
      function changeNucleotideColors() {
         console.info("Kolorowanie nukleotydow!");
@@ -60,21 +72,59 @@ const Molstar = props => {
         plugin.current.representation.structure.themes.colorThemeRegistry.add(ClashScoreThemeProvider);
         plugin.current.representation.structure.themes.colorThemeRegistry.add(BadBondsColorThemeProvider);
         plugin.current.representation.structure.themes.colorThemeRegistry.add(BadAnglesColorThemeProvider);
-
-        setClashScoreTheme();
+        plugin.current.representation.structure.themes.colorThemeRegistry.add(FragmentColorThemeProvider);
+        setCanColor(true);
+        // setFragmentTheme();
     }
 
-    async function setClashScoreTheme() {
+    useEffect(() => {
+        const selectAllRepresentations = async () => {
+            const state = plugin.current.state.data;
+
+            // Select all 3D structure representations
+            const representations = state.selectQ('*');
+            debugger;
+            if (representations.length === 0) {
+                console.warn('No representations found.');
+                return;
+            }
+
+            for (const repr of representations) {
+                const params = repr.params?.values;
+                if (!params) continue;
+
+                // Update the color theme for this representation
+                const updatedParams = {
+                    ...params,
+                    color: {
+                        name: 'quality-bad-angles-score',
+                        params: {} // Add any additional parameters for the theme if needed
+                    }
+                };
+
+                // Use the `applyState` method to update the representation
+                await plugin.current.state.data.applyState({
+                    state: repr.transform.state,
+                    transform: {
+                        ...repr.transform,
+                        params: updatedParams,
+                    },
+                });
+            }
+        };
+        if(canColor) {
+            // selectAllRepresentations();
+        }
+    }, [canColor]);
+
+    async function setFragmentTheme() {
         if (!plugin || !plugin.current) {
             console.warn("Plugin not initialized!");
             return;
         }
-        const { components } = plugin.current.managers.structure.hierarchy.current.structures[0];
-        await plugin.current.managers.structure.component.updateRepresentationsTheme(components, ClashScoreThemeProvider);
-        if (plugin.current.canvas3d) {
-             plugin.current.canvas3d.commit(true);
-        }
-        console.log('Custom Clash Score theme applied.');
+        const structure = await plugin.current.builders.structure;
+        await plugin.current.builders.structure.representation.applyPreset(structure, FragmentPreset);
+        console.log('Custom fragment theme applied.');
     }
 
     useEffect(() => {
