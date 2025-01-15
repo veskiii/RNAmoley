@@ -589,3 +589,27 @@ export async function downloadJobFiles(req: Request, res: Response) {
         }
     });
 }
+
+// clean up the job directory and db every 2 weeks
+export async function cleanUpJobs() {
+    const twoWeeksAgo = new Date(Date.now() - 12096e5);
+    const twoWeeksAgoString = twoWeeksAgo.toISOString();
+
+    const query = 'SELECT FROM jobs WHERE createdAt < $1';
+
+    const result = await db.query(query, [twoWeeksAgoString]).then((res) => res.rows.map((row) => row.id));
+    // console.log(result);
+
+    result.forEach(async (id: UUID) => {
+        deleteJobDirectory(id);
+    });
+
+    const deleteQuery = 'DELETE FROM jobs WHERE createdAt < $1';
+    db.query(deleteQuery, [twoWeeksAgoString], (err, result) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        console.log('Clean up completed.');
+    });
+}
