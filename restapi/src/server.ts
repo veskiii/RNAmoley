@@ -24,6 +24,7 @@ app.use('/api/v1/jobs', jobRoutes);
 await runDbMigrations();
 
 // Clean up jobs
+console.log('Cleaning up jobs...');
 cleanUpJobs();
 setInterval(() => {
     console.log('Cleaning up jobs...');
