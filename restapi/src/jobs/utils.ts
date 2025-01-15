@@ -338,3 +338,15 @@ export async function createZip(jobID: UUID) {
 
     return `${process.cwd()}/${zipPath}`;
 }
+
+// export async function deleteOldFiles(age: number = 14 * 24 * 60 * 60 * 1000) {
+//     const files = await fs.readdir(JOBS_DIR);
+//     const now = Date.now();
+//     const promises = files.map(async (file) => {
+//         const stats = await fs.stat(`${JOBS_DIR}/${file}`);
+//         if (now - stats.mtimeMs > age) {
+//             await fs.rm(`${JOBS_DIR}/${file}`, { recursive: true });
+//         }
+//     });
+//     await Promise.all(promises);
+// }

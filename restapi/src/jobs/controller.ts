@@ -591,13 +591,14 @@ export async function downloadJobFiles(req: Request, res: Response) {
 }
 
 // clean up the job directory and db every 2 weeks
-export async function cleanUpJobs() {
-    const twoWeeksAgo = new Date(Date.now() - 12096e5);
-    const twoWeeksAgoString = twoWeeksAgo.toISOString();
+export async function cleanUpJobs(time: number = 12096e5) {
+    const age = new Date(Date.now() - time);
+    const ageString = age.toISOString();
 
-    const query = 'SELECT FROM jobs WHERE createdAt < $1';
+    const query = 'SELECT id FROM jobs WHERE createdAt < $1';
 
-    const result = await db.query(query, [twoWeeksAgoString]).then((res) => res.rows.map((row) => row.id));
+    const res = await db.query(query, [ageString])
+    const result = res.rows.map((row) => row.id);
     // console.log(result);
 
     result.forEach(async (id: UUID) => {
@@ -605,7 +606,7 @@ export async function cleanUpJobs() {
     });
 
     const deleteQuery = 'DELETE FROM jobs WHERE createdAt < $1';
-    db.query(deleteQuery, [twoWeeksAgoString], (err, result) => {
+    db.query(deleteQuery, [ageString], (err, result) => {
         if (err) {
             console.error(err);
             return;
