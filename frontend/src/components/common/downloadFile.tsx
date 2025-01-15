@@ -1,5 +1,5 @@
 import React from "react";
-import {Colors} from "./colors";
+import { Colors } from "./colors";
 
 type DownloadButtonProps = {
     id?: string; // Definiujemy, że id musi być stringiem
@@ -39,12 +39,12 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
 
     return (
         <button
-            id = "downloadButton"
+            id="downloadButton"
             onClick={handleDownload}
             className={
                 "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors hover:bg-sky-400"
             }
-            style={{backgroundColor: Colors.salmon}}
+            style={{ backgroundColor: Colors.salmon }}
         >
             Download result files
         </button>

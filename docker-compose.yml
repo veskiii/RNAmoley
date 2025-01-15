@@ -36,7 +36,7 @@ services:
     #   - 3001:3001
     volumes:
       - user_data:/user_data
-    scale: 8
+    scale: 6
 
   tools:
     image: tools
@@ -59,12 +59,26 @@ services:
       NODE_ENV: production
     env_file:
       - ./restapi/.env
-    ports:
-      - 3000:3000
+    # ports:
+    #   - 3000:3000
     volumes:
       - user_data:/usr/src/app/public/jobs
     depends_on:
       - db
+    scale: 1
+    
+  frontend:
+    image: frontend
+    build:
+      context: ./frontend
+    restart: always
+    environment:
+      NODE_ENV: production
+    ports:
+      - 3000:3000
+    depends_on:
+      - restapi
+
 
 volumes:
   db_data:
