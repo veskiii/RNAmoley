@@ -153,7 +153,7 @@ const Dashboard: React.FC = () => {
         <h1 className="pl-2">| Submition panel</h1>
       </div>
       <form onSubmit={handleSubmit}>
-        <div className=" p-4 items-start content-center justify-items-center h-[70vh] w-[80vw] bg-slate-300 p-24 lg:rounded-xl text-teal-600 font-semibold text-lg">
+        <div className="grid p-4 items-start content-center justify-items-center h-[70vh] w-[80vw] bg-slate-300 p-24 lg:rounded-xl text-teal-600 font-semibold text-lg">
         {(
           <div>
           <p>Select input option:</p>
