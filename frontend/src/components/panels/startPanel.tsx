@@ -4,21 +4,9 @@ import RadioButtons from "../common/radioButtons";
 import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import { Colors } from "../common/colors";
-
-export function isInputValid(
-  rnaFile: File | null,
-  pdbCode: string,
-  radiobutton: string
-): boolean {
-  let countConditions = 0;
-  if (radiobutton !== "None") countConditions++;
-  if (rnaFile) countConditions++;
-  if (pdbCode) {
-    if (pdbCode.length === 4) countConditions++;
-  }
-  if (countConditions === 1) return true;
-  return false;
-}
+import { createJob } from "../utils/api";
+import { isFileValid } from "../utils/fileValidation";
+import { isInputValid } from "../utils/inputValidation";
 
 const Dashboard: React.FC = () => {
   const [jobName, setJobName] = useState<string>("");
@@ -43,96 +31,57 @@ const Dashboard: React.FC = () => {
     {id: "bad", value: "bad", label: "bad"},
   ];
 
-  function handle(id: string) {
-    if (context) {
-      const { setId } = context;
-      setId(id);
-      console.log("Setted jobID:", id);
-      navigate("/Panel", { state: { rnaFile, pdbCode, radiobutton } });
-    }
-  }
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData();
     formData.append("jobName", jobName || "");
     formData.append("pdbCode", pdbCode || "");
-    if (rnaFile) formData.append("rnaFile", rnaFile);
-    else formData.append("rnaFile", "");
+    formData.append("rnaFile", rnaFile || "");
     formData.append("radioButton", radiobutton || "None");
 
-    formData.forEach((value, key) => {
-      console.log(key, value);
-    });
+    // formData.forEach((value, key) => {
+    //   console.log(key, value);
+    // });
 
-    const API_URL = "http://localhost:3000/api/v1/jobs";
     try {
-      const response = await fetch(`${API_URL}`, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
-        }
-      });
-
-      if (response.ok) {
-        setIsSubmitting(false);
-        const data = await response.json();
-        console.log("Job created successfully:", data.id);
-        handle(data.id);
-      } else {
-        setIsSubmitting(false);
-        let errorData = await response.json();
-        console.error("Error creating job:", errorData);
-        const errorMessage = errorData?.message || "Unknown error";
-        alert("Failed to create job: " + errorMessage);
-      }
+      const response = await createJob(formData);
+      if (context) context.setId(response.id);
+      // console.log("Setted jobID:", response.id);
+      navigate("/Panel");
     } catch (error) {
       setIsSubmitting(false);
-      console.error(error);
+      // console.error(error);
       alert("Failed to create job");
     }
   };
+
   const removeFile = () =>{
     setRnaFile(null);
     setIsUploadedFile(false);
-    let element = document.getElementById("fileLabel");
-    if (element) {
-      element.style.color = "";
-      element.textContent = "No file selected";
+    let fileLabel = document.getElementById("fileLabel");
+    if (fileLabel) {
+      fileLabel.style.color = "";
+      fileLabel.textContent = "No file selected";
     }
   }
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    let files = e.target.files;
-    let element = document.getElementById("fileLabel");
-    if (files && files.length > 0) {
-      let file = files[0];
-      const validExtensions = [".pdb", ".mmCIF", ".cif"];
-      const fileExtension = file.name.slice(file.name.lastIndexOf('.'));
-      if(validExtensions.includes(fileExtension)){
+    let file = e.target.files?.[0] || null;
+    let fileLabel = document.getElementById("fileLabel");
+    if (file && isFileValid(file.name)) {
         setRnaFile(file);
         setIsUploadedFile(true);
-        if (element && file) {
-          element.style.color = "";
-          element.textContent = file.name;
+        if (fileLabel) {
+          fileLabel.style.color = "";
+          fileLabel.textContent = file.name;
         }
-      }else{
-        setRnaFile(null);
-        setIsUploadedFile(false);
-        if (element) {
-          element.style.color = "red"
-          element.textContent = "Invalid file type";
-        }
-      }
-
-    } else {
+    } else{
       setRnaFile(null);
       setIsUploadedFile(false);
-      if (element) {
-        element.style.color = "";
-        element.textContent = "No file selected";
+      if (fileLabel) {
+        fileLabel.style.color = "red"
+        fileLabel.textContent = "Invalid file type";
       }
     }
   };
@@ -207,7 +156,7 @@ const Dashboard: React.FC = () => {
               <label
                 className="cursor-default flex justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-100/90"
                 id="fileLabel"
-                htmlFor="inputFile"
+                // htmlFor="inputFile"
               >
                 No file selected
               </label>
@@ -281,15 +230,6 @@ const Dashboard: React.FC = () => {
              )}
 
             </button>
-            {/* {selectedInputType !== "none" && (
-              <button
-              onClick={()=>{setSelectedInputType("none"); setRnaFile(null); setPdbCode(""); setRadiobutton("None")}}
-              className="w-auto px-4"
-              >
-                {'< Back'}
-              </button>
-            )} */}
-
           </div>
         </div>
       </form>
