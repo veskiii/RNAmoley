@@ -1,11 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Loading from "../common/loading";
 import clsx from "clsx";
-import Box from '@mui/material/Box';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
 
 declare const fornac: any;
 
@@ -25,8 +20,6 @@ interface Chain {
 }
 
 const FornaComponent = ({
-  sequences,
-  structures,
   chains,
   setChains,
   labelInterval,
@@ -37,8 +30,6 @@ const FornaComponent = ({
   directionArrows,
   setAnimation,
 }: {
-  sequences: string[];
-  structures: string[];
   chains: Chain[];
   setChains: React.Dispatch<React.SetStateAction<Chain[]>>;
   labelInterval: number;
@@ -49,27 +40,10 @@ const FornaComponent = ({
   directionArrows: boolean;
   setAnimation: boolean;
 }) => {
-  const [selectedChain, setSelectedChain] = useState<string>(chains[0]?.name.slice(-1) || "");
-  const [inputValueStart, setInputValueStart] = useState('');
-  const [inputValueEnd, setInputValueEnd] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [minId, setMinId] = useState<string>('');
-  const [maxId, setMaxId] = useState<string>('');
+  const selectedChain = chains[0]?.name.slice(-1) || "";
+  const error = null;
   const [hoveredIndex, setHoveredIndex] = useState<number>();
   const [hybridizedName, setHybridizedName] = useState<string[]>([]);
-
-  const handleInputChangeStart = (event: SelectChangeEvent) => {
-    setInputValueStart(event.target.value);
-  };
-
-  const handleInputChangeEnd = (event: SelectChangeEvent) => {
-    setInputValueEnd(event.target.value);
-  };
-
-
-  const handleChange = (event: SelectChangeEvent) => {
-    setSelectedChain(event.target.value);
-  };
 
   useEffect(() => {
 
@@ -95,13 +69,10 @@ const FornaComponent = ({
 
     const hybridized_chains: Chain[] = [];
 
-    chains.forEach((chain, index) => {
+    chains.forEach((chain) => {
       if (isHybridized(chain.dotBracket)) {
         hybridized_chains.push(chain);
-      } 
-      // else if (hybridized_chains.length > 2) {
-      //   throw new Error("Only 2 hybridized chains are possible to visualize");
-      // }
+      }
     });
 
     try {
@@ -119,7 +90,7 @@ const FornaComponent = ({
           const combinedStructure = chainA.dotBracket + chainB.dotBracket;
           const combinedOpeners = Array.from(combinedStructure).filter(x => x === "(" || x === "[").length;
           const combinedClosers = Array.from(combinedStructure).filter(x => x === ")" || x === "]").length;
-  
+
           if (combinedOpeners === combinedClosers) {
             hybridizedPairs.push([chainA, chainB]);
           }
@@ -134,7 +105,7 @@ const FornaComponent = ({
             name: chain.name,
           }
           //console.log("Z forny: ", options.structure, options.sequence, options.name);
-          container.addRNA(options.structure, options );
+          container.addRNA(options.structure, options);
           //console.log(Object.getOwnPropertyNames(container.options));
         }
       });
@@ -144,27 +115,27 @@ const FornaComponent = ({
         const options = {
           structure: merged_structure,
           sequence: merged_sequence,
-          name: "hybrydized_" +  hybridized_chains[0].name.slice(-1) + "-" +  hybridized_chains[1].name.slice(-1)
+          name: "hybrydized_" + hybridized_chains[0].name.slice(-1) + "-" + hybridized_chains[1].name.slice(-1)
         }
         container.addRNA(options.structure, options);
         setHybridizedName([options.name]);
 
-        [chainA, chainB].forEach((chain, index) => { 
+        [chainA, chainB].forEach((chain, index) => {
           chain.nucleotides.forEach((nucleotide) => {
             const gNode = document.querySelector(`g.gnode[num="n${nucleotide.index}"][struct_name="${options.name}"]`);
-            
+
             if (gNode) {
               const circle = gNode.querySelector(`circle.fornac-node[node_num="${nucleotide.index}"]`);
-              
+
               if (circle) {
                 const title = circle.querySelector("title");
-                
-                if (title ) {
+
+                if (title) {
                   title.textContent = `${chain.name} ${nucleotide.index}`;
                 }
               }
               gNode.setAttribute("struct_name", `${chain.name}`);
-              if(chain === chainB && circle){
+              if (chain === chainB && circle) {
                 gNode.setAttribute("num", `n${(nucleotide.index - chainA.sequence.length)}`);
                 circle.setAttribute("node_num", `${(nucleotide.index - chainA.sequence.length)}`);
               }
@@ -239,33 +210,33 @@ const FornaComponent = ({
         if (nodeNumAttr) {
           console.log(nodeNumAttr, nodeNameAttr)
           const numIndex = parseInt(nodeNumAttr.slice(1), 10);
-          let found_chain = chains.find(chain => chain.name === nodeNameAttr); 
+          let found_chain = chains.find(chain => chain.name === nodeNameAttr);
           if (found_chain) {
             console.log(found_chain);
 
-            const found_nucleotide = found_chain.nucleotides[numIndex-1];
+            const found_nucleotide = found_chain.nucleotides[numIndex - 1];
 
             if (found_nucleotide) {
               selectedIndices.add(found_nucleotide.index);
               console.log(found_nucleotide);
             }
-          }else if(nodeNameAttr && hybridizedName.includes(nodeNameAttr)){
-            found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3,-2));
-            if(found_chain){
-              let found_nucleotide = found_chain.nucleotides[numIndex-1];
+          } else if (nodeNameAttr && hybridizedName.includes(nodeNameAttr)) {
+            found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2));
+            if (found_chain) {
+              let found_nucleotide = found_chain.nucleotides[numIndex - 1];
 
               if (found_nucleotide) {
                 selectedIndices.add(found_nucleotide.index);
                 console.log(found_nucleotide);
-              }else{
+              } else {
                 found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-1));
-                let prevChain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3,-2));
-                if(found_chain && prevChain)
-                  found_nucleotide = found_chain.nucleotides[numIndex-(prevChain.sequence.length)-1];
-                if(found_nucleotide){
+                let prevChain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2));
+                if (found_chain && prevChain)
+                  found_nucleotide = found_chain.nucleotides[numIndex - (prevChain.sequence.length) - 1];
+                if (found_nucleotide) {
                   selectedIndices.add(found_nucleotide.index);
                   console.log(found_nucleotide);
-                } 
+                }
               }
             }
           }
@@ -345,15 +316,15 @@ const FornaComponent = ({
     const updateFornacSelection = () => {
       console.log("Aktualizacja klas w grafie");
       chains.forEach(chain => {
-        let forna_id = 1; 
+        let forna_id = 1;
         chain.nucleotides.forEach(nucleotide => {
           let gNode = document.querySelector(`g.gnode[num="n${forna_id}"][struct_name="${chain.name}"]`);
-          if(!gNode){
-            if(hybridizedName.slice(-1).includes(chain.name.slice(-1))){
-              const prevChain = chains.find(chain => hybridizedName.slice(-3,-2).includes(chain.name.slice(-1) ))
+          if (!gNode) {
+            if (hybridizedName.slice(-1).includes(chain.name.slice(-1))) {
+              const prevChain = chains.find(chain => hybridizedName.slice(-3, -2).includes(chain.name.slice(-1)))
               const lengthPrevChain = prevChain?.sequence.length;
-              if(lengthPrevChain)
-                gNode = document.querySelector(`g.gnode[num="n${(forna_id+lengthPrevChain)}"][struct_name="${hybridizedName}"]`);
+              if (lengthPrevChain)
+                gNode = document.querySelector(`g.gnode[num="n${(forna_id + lengthPrevChain)}"][struct_name="${hybridizedName}"]`);
             }
             else
               gNode = document.querySelector(`g.gnode[num="n${(forna_id)}"][struct_name="${hybridizedName}"]`);
@@ -384,54 +355,6 @@ const FornaComponent = ({
     return () => observer.disconnect();
   }, [chains]);
 
-  //Zapis do chains
-  //Służy do obsługi wyboru nukleotydów po zakresie
-  const handleSubmit = () => {
-    const start = parseInt(inputValueStart, 10);
-    const end = parseInt(inputValueEnd, 10);
-
-    if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
-      alert(`Invalid range: ${start} to ${end}`);
-      return;
-    }
-    if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
-      setChains(prevChains =>
-        prevChains.map(chain => {
-          if (chain.name.slice(-1) === selectedChain) {
-  
-            return {
-              ...chain,
-              nucleotides: chain.nucleotides.map(nucleotide => ({
-                ...nucleotide,
-                selected: nucleotide.index >= start && nucleotide.index <= end,
-              })),
-            };
-          }
-          return chain;
-        }));
-    } else {
-      alert("Type valid range on selected chain");
-    }
-
-  };
-
-  //do placeholder z max i min original_id nukleotydów podanego chain
-  useEffect(() => {
-    chains.forEach((chain) => {
-      if (chain.name.slice(-1) === selectedChain) {
-        const indices = chain.nucleotides.map(nucleotide => nucleotide.index);
-        const min = Math.min(...indices);
-        const max = Math.max(...indices);
-
-        setMinId(min.toString());
-        setMaxId(max.toString());
-        setInputValueStart(min.toString());
-        setInputValueEnd(max.toString());
-      }
-
-    })
-  }, [selectedChain])
-
   //Ustaw kolor nukleotydu na sekwencji i zmień parametr selected
   const setColor = (index: number) => {
     console.log("ustawianie na klik")
@@ -457,24 +380,24 @@ const FornaComponent = ({
     const showTooltip = (event: { pageX: any; pageY: number; }, node_num: string, strand: string) => {
       if (tooltip) {
         let found_nucleotide;
-        if (node_num) {      
+        if (node_num) {
           console.log(node_num, strand, strand?.slice(-1))
           const numIndex = parseInt(node_num.slice(1), 10);
           console.log("STRAND:", strand)
-          let found_chain = chains.find(chain => chain.name === strand); 
-          console.log("found_chain:",found_chain)
+          let found_chain = chains.find(chain => chain.name === strand);
+          console.log("found_chain:", found_chain)
           if (found_chain) {
 
-            found_nucleotide = found_chain.nucleotides[numIndex-1];
-          }else if(hybridizedName.includes(strand)){
-            found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3,-2));
-            if(found_chain){
-              let found_nucleotide = found_chain.nucleotides[numIndex-1];
+            found_nucleotide = found_chain.nucleotides[numIndex - 1];
+          } else if (hybridizedName.includes(strand)) {
+            found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3, -2));
+            if (found_chain) {
+              let found_nucleotide = found_chain.nucleotides[numIndex - 1];
               if (!found_nucleotide) {
                 found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-1));
-                let prevChain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3,-2));
-                if(found_chain && prevChain)
-                  found_nucleotide = found_chain.nucleotides[numIndex-(prevChain.sequence.length)-1];
+                let prevChain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3, -2));
+                if (found_chain && prevChain)
+                  found_nucleotide = found_chain.nucleotides[numIndex - (prevChain.sequence.length) - 1];
               }
             }
           }
@@ -517,72 +440,19 @@ const FornaComponent = ({
       tooltip.classList.remove("hidden");
     }
   };
-  
+
   const hideTooltip = () => {
     const tooltip = document.getElementById("tooltip");
     if (tooltip) {
       tooltip.classList.add("hidden");
     }
   };
-  
+
   return (
-    <div className="absolute bottom-0 h-[90%] flex-grow w-full bg-transparent">
+    <div className="absolute bottom-0 h-[80%] flex-grow w-full bg-transparent">
       <div
         className="text-xl font-semibold pb-2 break-words shadow-sm"
       >
-        <div className="flex flex-row items-center mx-4 space-x-4 z-0">
-          <Box sx={{ width: "80px", maxWidth: 120 }}>
-            <FormControl fullWidth>
-              <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
-              <Select
-                labelId="demo-simple-select-label"
-                id="demo-simple-select"
-                value={selectedChain}
-                label="Chain"
-                onChange={handleChange}
-                className="p-0"
-              >
-                {chains.map((chain) => (
-                  <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-          <div className="flex flex-row items-baseline m-6 mt-0">
-            <label htmlFor="range_start" className="text-xl font-medium mr-4">From</label>
-            <input
-              id="range_start"
-              type="number"
-              min={minId}
-              max={maxId}
-              defaultValue={minId}
-              onChange={handleInputChangeStart}
-              placeholder={minId}
-              className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            <label htmlFor="range_end" className="text-xl font-medium  mr-4">To</label>
-            <input
-              id="range_end"
-              type="number"
-              min={minId}
-              max={maxId}
-              defaultValue={maxId}
-              onChange={handleInputChangeEnd}
-              placeholder={maxId}
-              className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            <button
-              id="select_button"
-              onClick={handleSubmit}
-            >
-              Select
-            </button>
-          </div>
-
-        </div>
-
         {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain => (
           <div className="whitespace-nowrap overflow-x-auto cursor-pointer ml-2" key={chain.name}>
             <div>
@@ -627,11 +497,11 @@ const FornaComponent = ({
           <div
             id="rna_ss"
           >
-             <div id="tooltip" 
-             className="hidden absolute mt-2 right-2 bg-teal-500 text-white text-xs rounded px-2 py-1 z-50"
-             ></div>
+            <div id="tooltip"
+              className="hidden absolute mt-2 right-2 bg-teal-500 text-white text-xs rounded px-2 py-1 z-50"
+            ></div>
           </div>
-         
+
           <div id="containerLoadingText" className="p-2">
             <Loading />
           </div>
