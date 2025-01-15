@@ -24,75 +24,28 @@ export const rangeMap: Map<String, Range> = new Map([
                 [100, Infinity],
             ],
         },
-    ],
-    [
-        "Bad Bonds",
-        {
-            ranges: [
-                [0, 1],
-                [1, 2],
-                [2, 3],
-                [3, 5],
-                [5, Infinity],
-            ],
-        },
-    ],
-    [
-        "Bad Angles",
-        {
-            ranges: [
-                [0, 2],
-                [2, 3.5],
-                [3.5, 5.5],
-                [5.5, 7],
-                [7, Infinity],
-            ],
-        },
-    ],
+    ]
 ]);
 
 function getRange(residue: Residue, givenQualityScore: QualityScore): number {
     if (givenQualityScore === QualityScore.BAD_BONDS) {
         var qualityScore = parseFloat(residue.metrics.numbadbonds)
-        var range = rangeMap.get("Bad Bonds")
-        // @ts-ignore
-        if (qualityScore < range?.ranges[0][1]) {
+        if (qualityScore === 0) {
             return 1;
-            // @ts-ignore
-        } else if (qualityScore >= range?.ranges[1][0] && qualityScore < range?.ranges[1][1]) {
-            return 2;
-            // @ts-ignore
-        } else if (qualityScore >= range?.ranges[2][0] && qualityScore < range?.ranges[2][1]) {
-            return 3;
-            // @ts-ignore
-        } else if (qualityScore >= range?.ranges[3][0] && qualityScore < range?.ranges[3][1]) {
-            return 4;
-        } else {
+        }  else {
             return 5;
         }
     } else if (givenQualityScore == QualityScore.BAD_ANGLES) {
         var qualityScore = parseFloat(residue.metrics.numbadangles)
-        var range = rangeMap.get("Bad Angles")
-
-        // @ts-ignore
-        if (qualityScore < range?.ranges[0][1]) {
+        if (qualityScore === 0) {
             return 1;
-            // @ts-ignore
-        } else if (qualityScore >= range?.ranges[1][0] && qualityScore < range?.ranges[1][1]) {
-            return 2;
-            // @ts-ignore
-        } else if (qualityScore >= range?.ranges[2][0] && qualityScore < range?.ranges[2][1]) {
-            return 3;
-            // @ts-ignore
-        } else if (qualityScore >= range?.ranges[3][0] && qualityScore < range?.ranges[3][1]) {
-            return 4;
-        } else {
+        }  else {
             return 5;
         }
     } else {
         var qualityScore = parseFloat(residue.metrics.clashscore)
         var range = rangeMap.get("Clash Score")
-// @ts-ignore
+            // @ts-ignore
         if (qualityScore < range?.ranges[0][1]) {
             return 1;
             // @ts-ignore

@@ -3,7 +3,7 @@ export enum Colors {
     sage = "#829e9f",
     darkSage = "#526969",
     lightSage = "#b0c4c4",
-    beige = "#f8d5b7",
+    beige = "#ecd7cb",
     blue = "#3a7a7a",
     lightBlue = "#9cc6c6",
     backgroundBlue = "#d1e2e2"

@@ -1,6 +1,7 @@
-import React, {useEffect} from "react";
+import React, {useEffect, useState} from "react";
 import * as d3 from "d3";
 import {Job} from "../panels/summaryPanel"
+import colorGnodes from "../panels/summaryPanel"
 
 declare const fornac: any;
 
@@ -31,7 +32,8 @@ const FornacSummaryComponent = ({
                                     links,
                                     directionArrows,
                                     setAnimation,
-                                    job
+                                    job,
+                                    colorGnodes,
                                 }: {
     sequences: string[];
     structures: string[];
@@ -45,23 +47,53 @@ const FornacSummaryComponent = ({
     directionArrows: boolean;
     setAnimation: boolean;
     job: Job;
+    colorGnodes: () => void;
 }) => {
-    /**
-     * **Inicjalizacja kontenera `FornaContainer`**
-     */
-    const initializeContainer = () => {
-        return new fornac.FornaContainer("#rna_ss", {
-            animation: setAnimation,
-            zoomable: true,
-            labelInterval: labelInterval,
-            initialSize: [100, 40],
-            numbering: numbering,
-            nodeOutline: nodeOutline,
-            nodeLabel: nodeLabel,
-            links: links,
-            directionArrows: directionArrows,
-        });
-    };
+    const [container, setContainer] = useState(null);
+
+    useEffect(() => {
+        const initializeContainer = () => {
+            return new fornac.FornaContainer("#rna_ss", {
+                animation: setAnimation,
+                zoomable: true,
+                labelInterval: labelInterval,
+                initialSize: [100, 40],
+                numbering: numbering,
+                nodeOutline: nodeOutline,
+                nodeLabel: nodeLabel,
+                links: links,
+                directionArrows: directionArrows,
+            });
+        };
+
+        // Initialize and store the container
+        const container = initializeContainer();
+        try {
+            const hybridizedChains = handleHybridChains(chains);
+
+            // Dodaj standardowe łańcuchy (nie-hybrydowe)
+            chains.forEach((chain) => {
+                if (!hybridizedChains || chain.sequence !== hybridizedChains.sequence) {
+                    addRNAtoContainer(container, chain);
+                }
+            });
+
+            // Dodaj RNA połączony z hybrydyzowanych łańcuchów, jeśli istnieje
+            if (hybridizedChains !== null) {
+                addRNAtoContainer(container, {
+                    name: "hybrid",
+                    sequence: hybridizedChains.sequence,
+                    dotBracket: hybridizedChains.dotBracket,
+                    nucleotides: [], // Domyślne wartości
+                });
+            }
+        } catch (error) {
+            console.error("Błąd przy dodawaniu RNA:", error);
+        }
+        setContainer(container);
+    }, [chains, labelInterval]); // Emp
+
+
 
     /**
      * **Dodawanie RNA do kontenera**
@@ -78,7 +110,7 @@ const FornacSummaryComponent = ({
         nodes.select("title").text('No data');
         // Aktualizacja węzłów D3 na podstawie `nucleotide` w `chain`
         chain.nucleotides.forEach((nucleotide, index) => {
-
+            if(index <= job.results.data.length - 1) {
             d3.select(`circle.fornac-node[node_num="${index + 1}"]`)
                 .select("title")
                 .text(`Residue number: ${nucleotide.index}\nClash score: ${job.results.data[index].metrics.clashscore}\nBad angles: ${job.results.data[index].metrics.numbadangles}\nBad bonds: ${job.results.data[index].metrics.numbadbonds}`);
@@ -89,6 +121,7 @@ const FornacSummaryComponent = ({
                     return d3.select(this).text() === `${index + 1}`;
                 })
                 .text(`${nucleotide.original_index}`);
+            }
         });
     };
 
@@ -126,41 +159,25 @@ const FornacSummaryComponent = ({
         return null;
     };
 
+
     useEffect(() => {
-        const container = initializeContainer();
-
-        try {
-            const hybridizedChains = handleHybridChains(chains);
-
-            // Dodaj standardowe łańcuchy (nie-hybrydowe)
-            chains.forEach((chain) => {
-                if (!hybridizedChains || chain.sequence !== hybridizedChains.sequence) {
-                    addRNAtoContainer(container, chain);
-                }
-            });
-
-            // Dodaj RNA połączony z hybrydyzowanych łańcuchów, jeśli istnieje
-            if (hybridizedChains !== null) {
-                addRNAtoContainer(container, {
-                    name: "hybrid",
-                    sequence: hybridizedChains.sequence,
-                    dotBracket: hybridizedChains.dotBracket,
-                    nucleotides: [], // Domyślne wartości
-                });
-            }
-
+        if (container) {
             // Wyświetl parametry kontenera
+            // @ts-ignore
             container.displayNumbering(numbering);
+            // @ts-ignore
             container.displayNodeOutline(nodeOutline);
+            // @ts-ignore
             container.displayNodeLabel(nodeLabel);
+            // @ts-ignore
             container.displayLinks(links);
+            // @ts-ignore
             container.displayDirectionArrows(directionArrows);
-
+            // @ts-ignore
             setAnimation ? container.startAnimation() : container.stopAnimation();
-        } catch (error) {
-            console.error("Błąd przy dodawaniu RNA:", error);
+            // colorGnodes();
         }
-    }, [chains, labelInterval, numbering, nodeOutline, nodeLabel, links, directionArrows, setAnimation]);
+    }, [labelInterval, numbering, nodeOutline, nodeLabel, links, directionArrows, setAnimation]);
 
     return <div className="w-full h-full" id="rna_ss"></div>;
 };
