@@ -22,9 +22,9 @@ RUN apt-get update && apt-get install -y \
     gcc \
     curl \
     git \
-    python3-full \
+    python3.10-full \
     python3-pip \
-    python3-dev \
+    python3.10-dev \
     python-is-python3 \
     npm \
     make \
