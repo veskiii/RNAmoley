@@ -1,3 +1,6 @@
+:root {
+  --color-button-pink: #ffc4cb;
+}
 .App {
   text-align: center;
 }
@@ -47,12 +50,14 @@ button {
   display: flex;
   align-items: center;
   margin-top: 2rem;
-  background-color: #FDA4AF;
-  /* opacity: 80%; */
+  background-color: var(--color-button-pink);
   cursor: pointer;
   border-radius: 0.5rem;
   text-align: center;
   justify-content: center;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 button:hover {
@@ -105,13 +110,12 @@ button:hover {
 
 .button-label {
   display: inline-block;
-  padding: 1em 2em;
+  padding: 0.4em 2em;
   margin: 0.5em;
   cursor: pointer;
-  color: dark;
   border-radius: 0.25em;
   background: light;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0 -3px 0 rgba(0,0,0,0.22);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1), inset 0 -2px 0 rgba(0,0,0,0.22);
   transition: 0.3s;
   user-select: none;
   -webkit-appearance: none;
@@ -119,31 +123,22 @@ button:hover {
   appearance: none;
 }
 .button-label:hover {
-  background: darken(light, 10%);
-  color: darken(dark, 10%);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0 -3px 0 rgba(0,0,0,0.32);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1), inset 0 -2px 0 rgba(0,0,0,0.32);
 }
 .button-label:active {
   transform: translateY(2px);
-  background: #FDA4AF;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.2), inset 0px -1px 0 rgba(0,0,0,0.22); 
+  background: var(--color-button-pink);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1), inset 0px -2px 0 rgba(0,0,0,0.22);
 }
 .button-label:checked {
-  background: #FDA4AF;
-  color: light;
-
+  background: var(--color-button-pink);
 }
 .button-label:checked:hover {
-  background: darken(#FDA4AF, 5%);
-  color: darken(light, 5%);
+  background: darken(var(--color-button-pink), 5%);
 }
 .hidden {
   display: none;
 }
 input[type="radio"]:checked + .button-label {
-  background: #fda4af;
-}
-
-input[type="radio"]:checked + .button-label:hover {
-  background: darken(#fda4af, 5%);
+  background: var(--color-button-pink);
 }
