@@ -16,145 +16,12 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-interface Atom {
-  serial: number;
-  name: string;
-  altLoc: string;
-  resName: string;
-  chainID: string;
-  resSeq: number;
-  iCode: string;
-  x: number;
-  y: number;
-  z: number;
-  occupancy: number;
-  tempFactor: number;
-  element: string;
-  charge: string;
-}
+import { Atom, Annotation, Numeration, Metadata, Job, Nucleotide, Chain, JobToPost } from "../utils/types";
+import {fetchJobData} from "../utils/api";
+import {transformJobToChains} from "../utils/transformJobToChains";
+import {Colors} from "../common/colors"
+import HelpIcon from "../common/helpIcon";
 
-export interface Annotation {
-  name: string;
-  sequnece: string;
-  dotbracket: string;
-}
-
-export interface Numeration {
-  [key: string]: [number, string];
-}
-
-interface Metadata {
-  status: string;
-  model_count: number;
-}
-
-interface Job {
-  id: number;
-  originalfilename: string;
-  name: string;
-  createdat: string;
-  updatedat: string;
-  annotation: Annotation[];
-  numeration: Numeration;
-  data: {
-    atoms: Atom[];
-  };
-  pdb_file_string: string;
-  metadata: Metadata;
-  model_number: number;
-}
-
-export interface Nucleotide {
-  index: number;
-  original_index: number;
-  base: string;
-  structure: string;
-  selected: boolean;
-}
-
-export interface Chain {
-  name: string;
-  nucleotides: Nucleotide[];
-  sequence: string;
-  dotBracket: string;
-}
-
-interface JobToPost {
-  id: string;
-  residues: number[];
-  modelNumber: number;
-  radius: number;
-  interval: number;
-}
-
-export function transformJobToChains(job: Job): Chain[] {
-  const chains: Chain[] = [];
-
-  if (!job.annotation || job.annotation.length === 0) {
-    throw new Error("Annotation is undefined or empty.");
-  }
-
-  if (!job.numeration || Object.keys(job.numeration).length === 0) {
-    throw new Error("Numeration is undefined or empty.");
-  }
-
-  let id = 1;
-  job.annotation.forEach((annotation) => {
-    if ((annotation.sequnece.length !== annotation.dotbracket.length) || annotation.sequnece.length === 0 || annotation.dotbracket.length === 0) {
-      throw new Error("Sequence length and dotBracket length are not equal or 0.");
-    }
-
-    const chain: Chain = {
-      name: annotation.name,
-      sequence: annotation.sequnece,
-      dotBracket: annotation.dotbracket,
-      nucleotides: []
-    };
-
-    for (let i = 0; i < annotation.sequnece.length; i++) {
-
-      const numerationKey = Object.keys(job.numeration).find(key => parseInt(key, 10) === id && job.numeration[key][1] === annotation.name.slice(-1));
-      if (numerationKey) {
-        const nucleotide: Nucleotide = {
-          index: parseInt(numerationKey, 10),
-          original_index: job.numeration[numerationKey][0],
-          base: annotation.sequnece[i],
-          structure: annotation.dotbracket[i],
-          selected: false,
-        };
-        chain.nucleotides.push(nucleotide);
-        console.log("Dodano nukleotyd: ", nucleotide);
-      }
-      console.log("id:", id);
-      console.log("Dlugość sekwencji: ", annotation.sequnece.length);
-      id++;
-
-    }
-    if (chain.nucleotides.length !== chain.sequence.length) {
-      throw new Error("Number of nucleotides do not match length of the sequence.");
-    }
-    chains.push(chain);
-    console.log("Dodano łańcuch:", chain.name, chain.sequence, chain.dotBracket, chain.nucleotides);
-  });
-
-  return chains;
-}
-
-async function fetchJobData(jobID: string | undefined, model: number = 1): Promise<Job> {
-  try {
-    const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}/${model}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data;
-  }
-  catch (error) {
-    console.error("Error in fetchMyData:", error);
-    throw error;
-  }
-
-}
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
@@ -192,10 +59,10 @@ const Panel: React.FC = () => {
     setSelectedChain(event.target.value);
   };
 
-
   const handleAnalyzeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAnalyzeWholeStructure(e.target.checked);
   };
+
   const handleSubmit = () => {
     const start = parseInt(inputValueStart, 10);
     const end = parseInt(inputValueEnd, 10);
@@ -242,11 +109,11 @@ const Panel: React.FC = () => {
     })
   }, [selectedChain])
 
-  useEffect(() => {
-    chainsState.forEach(chain => {
-      console.log("Chain z panelu:", chain)
-    })
-  }, [chainsState]);
+  // useEffect(() => {
+  //   chainsState.forEach(chain => {
+  //     console.log("Chain z panelu:", chain)
+  //   })
+  // }, [chainsState]);
 
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
@@ -267,10 +134,6 @@ const Panel: React.FC = () => {
   function toggle() {
     setIs3Dview((is3Dview) => {
       is3Dview = !is3Dview;
-      console.log(is3Dview);
-      let switchViewButton = document.getElementById(
-        "switchViewButton"
-      ) as HTMLElement;
       let viewLabel = document.getElementById("viewLabel") as HTMLElement;
       if (is3Dview) {
         viewLabel.textContent = "3D view";
@@ -362,7 +225,7 @@ const Panel: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-80 bg-neutral-200">
+      <div className="w-80 bg-neutral-200" style={{background: Colors.backgroundBlue}}>
         <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
           <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
             <div className="flex flex-col">
@@ -373,13 +236,6 @@ const Panel: React.FC = () => {
                 <h1>MOLEY</h1>
               </div>
             </div>
-            {/* TODO Logo Krecik */}
-            {/* <img
-            src="/krecik.png"
-            width={100}
-            height={100}
-            alt="Logo RNA Moley"
-          /> */}
             <h1 className="pl-2">| Submition panel</h1>
           </div>
           <div className="rounded-scrollbar overflow-auto">
@@ -451,7 +307,7 @@ const Panel: React.FC = () => {
                         </label>
 
                         <button
-                          className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300 hover:bg-teal-600"
+                          className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1"
                           onClick={() => changeModel(selectedModel)}
                         >Change model</button>
                       </div>
@@ -520,7 +376,7 @@ const Panel: React.FC = () => {
               <div className="absolute top-0 h-[20%] flex-grow w-full bg-transparent z-100">
                 <div className="grid relative mt-2.5 p-1.5">
                   <button
-                    className="font-medium absolute w-auto left-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300 hover:bg-teal-600"
+                    className="font-medium absolute w-auto left-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1"
                     onClick={goToDashboard}
                   >
                     New Analysis
@@ -534,7 +390,7 @@ const Panel: React.FC = () => {
                   <button
                     id="switchViewButton"
                     onClick={toggle}
-                    className="font-medium absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1 transition-colors bg-rose-300 hover:bg-teal-600"
+                    className="font-medium absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1"
                   >
                     Switch view
                   </button>
@@ -621,6 +477,7 @@ const Panel: React.FC = () => {
           )}
         </div>
       </div>
+          <HelpIcon/>
     </div>
   );
 };

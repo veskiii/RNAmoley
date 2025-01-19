@@ -6,6 +6,7 @@ import Panel from "./components/panels/analysisPanel";
 import SummaryPanel from "./components/panels/summaryPanel";
 import JobProcessing from "./components/common/JobProcessing";
 import ErrorPage from "./components/common/ErrorPage";
+import HelpPage from "./components/common/help";
 
 interface NameContextType {
   jobID: string | undefined;
@@ -42,7 +43,7 @@ function App() {
           <Route path="/summary/:jobId" element={<SummaryPanel />} />
           <Route path="/jobProcessing" element={<JobProcessing />} />
           <Route path="/errorPage" element={<ErrorPage />} />
-
+          <Route path="/help" element={<HelpPage />} />
         </Routes>
       </Router>
     </NameContextProvider>

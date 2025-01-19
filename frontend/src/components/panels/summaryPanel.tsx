@@ -4,7 +4,7 @@ import Loading from "../common/loading";
 import "../../App.css";
 import Molstar from "../visualizations/molStarSummaryComponent";
 import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
-import {Annotation, Chain, Nucleotide, Numeration} from "./analysisPanel";
+import {Annotation, Chain, Nucleotide, Numeration} from "../utils/types";
 import {Colors} from "../common/colors";
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";

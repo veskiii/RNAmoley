@@ -1,23 +1,25 @@
 import React, { useEffect, useRef, useState } from "react";
 import Loading from "../common/loading";
 import clsx from "clsx";
+import { hideTooltip, showTooltip, showGraphTooltip, setColor, updateFornacSelection } from "../common/fornaMethods";
+import { Nucleotide, Chain } from "../utils/types";
 
 declare const fornac: any;
 
-interface Nucleotide {
-  index: number;
-  original_index: number;
-  base: string;
-  structure: string;
-  selected: boolean;
-}
+// interface Nucleotide {
+//   index: number;
+//   original_index: number;
+//   base: string;
+//   structure: string;
+//   selected: boolean;
+// }
 
-interface Chain {
-  name: string;
-  nucleotides: Nucleotide[];
-  sequence: string;
-  dotBracket: string;
-}
+// interface Chain {
+//   name: string;
+//   nucleotides: Nucleotide[];
+//   sequence: string;
+//   dotBracket: string;
+// }
 
 const FornaComponent = ({
   chains,
@@ -313,38 +315,14 @@ const FornaComponent = ({
   //Na podstawie parametru selected w nucleotides (zaznacz) zmień klasę wierzchołków na grafie 
   //Kolorowanie grafu poprzez zmianę klasy na podstawie zmiany selected
   useEffect(() => {
-    const updateFornacSelection = () => {
-      console.log("Aktualizacja klas w grafie");
-      chains.forEach(chain => {
-        let forna_id = 1;
-        chain.nucleotides.forEach(nucleotide => {
-          let gNode = document.querySelector(`g.gnode[num="n${forna_id}"][struct_name="${chain.name}"]`);
-          if (!gNode) {
-            if (hybridizedName.slice(-1).includes(chain.name.slice(-1))) {
-              const prevChain = chains.find(chain => hybridizedName.slice(-3, -2).includes(chain.name.slice(-1)))
-              const lengthPrevChain = prevChain?.sequence.length;
-              if (lengthPrevChain)
-                gNode = document.querySelector(`g.gnode[num="n${(forna_id + lengthPrevChain)}"][struct_name="${hybridizedName}"]`);
-            }
-            else
-              gNode = document.querySelector(`g.gnode[num="n${(forna_id)}"][struct_name="${hybridizedName}"]`);
-          }
-          if (gNode) {
-            gNode.setAttribute("class", nucleotide.selected ? "gnode fornac-selectedNode" : "gnode");
-          }
-
-          forna_id++;
-        });
-      });
-    };
 
     // Wywołaj aktualizację przy zmianach w chains
-    updateFornacSelection();
+    updateFornacSelection(chains, hybridizedName);
 
     // Obserwuj zmiany w grafie
     const observer = new MutationObserver(() => {
       console.log("Mutacja w grafie wykryta");
-      updateFornacSelection();
+      updateFornacSelection(chains, hybridizedName);
     });
 
     const target = document.querySelector("#rna_ss");
@@ -355,98 +333,20 @@ const FornaComponent = ({
     return () => observer.disconnect();
   }, [chains]);
 
-  //Ustaw kolor nukleotydu na sekwencji i zmień parametr selected
-  const setColor = (index: number) => {
-    console.log("ustawianie na klik")
-    setChains(prevChains =>
-      prevChains.map(chain => {
-        if (chain.name.slice(-1) === selectedChain) {
-
-          return {
-            ...chain,
-            nucleotides: chain.nucleotides.map(nucleotide => ({
-              ...nucleotide,
-              selected: nucleotide.index === index ? !nucleotide.selected : nucleotide.selected,
-            })),
-          };
-        }
-        return chain;
-      }));
-    console.log(chains)
-  }
-
   useEffect(() => {
-    const tooltip = document.getElementById("tooltip");
-    const showTooltip = (event: { pageX: any; pageY: number; }, node_num: string, strand: string) => {
-      if (tooltip) {
-        let found_nucleotide;
-        if (node_num) {
-          console.log(node_num, strand, strand?.slice(-1))
-          const numIndex = parseInt(node_num.slice(1), 10);
-          console.log("STRAND:", strand)
-          let found_chain = chains.find(chain => chain.name === strand);
-          console.log("found_chain:", found_chain)
-          if (found_chain) {
-
-            found_nucleotide = found_chain.nucleotides[numIndex - 1];
-          } else if (hybridizedName.includes(strand)) {
-            found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3, -2));
-            if (found_chain) {
-              let found_nucleotide = found_chain.nucleotides[numIndex - 1];
-              if (!found_nucleotide) {
-                found_chain = chains.find(chain => chain.name.slice(-1) === strand.slice(-1));
-                let prevChain = chains.find(chain => chain.name.slice(-1) === strand.slice(-3, -2));
-                if (found_chain && prevChain)
-                  found_nucleotide = found_chain.nucleotides[numIndex - (prevChain.sequence.length) - 1];
-              }
-            }
-          }
-        }
-        tooltip.innerHTML = `
-        ${node_num.slice(1)} node in strand ${strand.slice(-1)} <br>
-        id: ${found_nucleotide?.index} original id: ${found_nucleotide?.original_index}
-        `;
-        tooltip.classList.remove("hidden");
-      }
-    };
-
-    const hideTooltip = () => {
-      if (tooltip) {
-        tooltip.classList.add("hidden");
-      }
-    };
-
     //@ts-ignore
     d3.selectAll("g.gnode")
-      .on("mouseover", function (event) {
+      .on("mouseover", function () {
         //@ts-ignore
         const node_num = d3.select(this).attr("num");
         //@ts-ignore
         const strand = d3.select(this).attr("struct_name");
-        showTooltip(event, node_num, strand);
+        showGraphTooltip(node_num, strand, chains, hybridizedName);
       })
-      .on("mousemove", function (event) {
+      .on("mousemove", function () {
       })
       .on("mouseout", hideTooltip);
   }, [setAnimation]);
-
-  const showTooltip = (event: React.MouseEvent, id: number, originalId: number) => {
-    const tooltip = document.getElementById("tooltip");
-    if (tooltip) {
-      tooltip.innerHTML = `
-        id: ${id} <br>
-        original id: ${originalId}
-      `;
-      tooltip.classList.remove("hidden");
-    }
-  };
-
-  const hideTooltip = () => {
-    const tooltip = document.getElementById("tooltip");
-    if (tooltip) {
-      tooltip.classList.add("hidden");
-    }
-  };
 
   return (
     <div className="absolute bottom-0 h-[80%] flex-grow w-full bg-transparent">
@@ -467,7 +367,7 @@ const FornaComponent = ({
                     }
                   )}
                   key={nucleotide.index}
-                  onClick={() => setColor(nucleotide.index)}
+                  onClick={() => setColor(nucleotide.index, setChains, selectedChain)}
                   onMouseOver={(event) => {
                     setHoveredIndex(nucleotide.index);
                     showTooltip(event, nucleotide.index, nucleotide.original_index);
