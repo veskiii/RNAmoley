@@ -9,9 +9,11 @@ import {Colors} from "../common/colors";
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
 import ErrorPage, {ErrorPageProps} from "../common/ErrorPage";
-import {getColor} from "../utils/ColorUtils";
-import VerticalColorBar from "../visualizations/VerticalColorBar";
+import {colorMapByRange, getColor} from "../utils/ColorUtils";
 import JobProcessing from "../common/JobProcessing";
+import { useNavigate } from "react-router-dom";
+import HelpIcon from "../common/helpIcon";
+import {transformJobToChains} from '../utils/transformJobToChains';
 
 export type Residue = {
     residue_number: number;
@@ -46,60 +48,60 @@ interface Metrics {
     pct_badangles: string;
 }
 
-function transformJobToChains(job: Job): Chain[] {
-    const chains: Chain[] = [];
-
-    let startIndex = Math.min(
-        ...Object.values(job.numeration).map((entry) => entry[0])
-    );
-
-    // Iterate over each annotation to create a Chain object
-    job.annotation.forEach((annotation) => {
-        console.log("START INDEX = ", startIndex);
-        const chain: Chain = {
-            name: annotation.name,
-            sequence: annotation.sequnece,
-            dotBracket: annotation.dotbracket,
-            nucleotides: [],
-        };
-
-        // Iterate over the sequence and dotBracket to build Nucleotides
-        console.log(
-            annotation.name,
-            annotation.sequnece,
-            annotation.sequnece.length
-        );
-        for (let i = 0; i < annotation.sequnece.length; i++) {
-            const numerationKey = Object.keys(job.numeration).find(
-                (key) =>
-                    job.numeration[key][0] === startIndex + i &&
-                    job.numeration[key][1] === annotation.name.slice(-1)
-            );
-            // console.log(numerationKey, )
-            if (numerationKey) {
-                const nucleotide: Nucleotide = {
-                    index: parseInt(numerationKey),
-                    original_index: job.numeration[numerationKey][0],
-                    base: annotation.sequnece[i],
-                    structure: annotation.dotbracket[i],
-                    selected: false,
-                };
-                chain.nucleotides.push(nucleotide);
-            }
-        }
-        startIndex += annotation.sequnece.length;
-
-        chains.push(chain);
-        console.log(
-            "CHAIN Z PANELU:",
-            chain.name,
-            chain.sequence,
-            chain.nucleotides
-        );
-    });
-
-    return chains;
-}
+// function transformJobToChains(job: Job): Chain[] {
+//     const chains: Chain[] = [];
+//
+//     let startIndex = Math.min(
+//         ...Object.values(job.numeration).map((entry) => entry[0])
+//     );
+//
+//     // Iterate over each annotation to create a Chain object
+//     job.annotation.forEach((annotation) => {
+//         console.log("START INDEX = ", startIndex);
+//         const chain: Chain = {
+//             name: annotation.name,
+//             sequence: annotation.sequnece,
+//             dotBracket: annotation.dotbracket,
+//             nucleotides: [],
+//         };
+//
+//         // Iterate over the sequence and dotBracket to build Nucleotides
+//         console.log(
+//             annotation.name,
+//             annotation.sequnece,
+//             annotation.sequnece.length
+//         );
+//         for (let i = 0; i < annotation.sequnece.length; i++) {
+//             const numerationKey = Object.keys(job.numeration).find(
+//                 (key) =>
+//                     job.numeration[key][0] === startIndex + i &&
+//                     job.numeration[key][1] === annotation.name.slice(-1)
+//             );
+//             // console.log(numerationKey, )
+//             if (numerationKey) {
+//                 const nucleotide: Nucleotide = {
+//                     index: parseInt(numerationKey),
+//                     original_index: job.numeration[numerationKey][0],
+//                     base: annotation.sequnece[i],
+//                     structure: annotation.dotbracket[i],
+//                     selected: false,
+//                 };
+//                 chain.nucleotides.push(nucleotide);
+//             }
+//         }
+//         startIndex += annotation.sequnece.length;
+//
+//         chains.push(chain);
+//         console.log(
+//             "CHAIN Z PANELU:",
+//             chain.name,
+//             chain.sequence,
+//             chain.nucleotides
+//         );
+//     });
+//
+//     return chains;
+// }
 
 export enum QualityScore {
     CLASH_SCORE = "Clash Score",
@@ -139,8 +141,8 @@ const SummaryPanel: React.FC = () => {
     const [selectedQualityScore, setQualityScore] = useState<QualityScore>(QualityScore.CLASH_SCORE);
     const [chainsState, setChainsState] = useState<Chain[]>([]);
     const devColor = "#f3f4f6"
-    const selectedColor = Colors.beige;
     const selectedBorderColor = Colors.salmon;
+    const navigate = useNavigate();
 
     const colorGnodes = () => {
         if (!myData || !myData.results || !myData.results.data) {
@@ -157,13 +159,13 @@ const SummaryPanel: React.FC = () => {
                 //@ts-ignore
                 const node = d3.select(`circle.fornac-node[node_num="${residue.residue_number}"]`);
                 if (!node.empty() && myData.results.mode === "full") {
-                    node.classed("fornac-selectedNode", true) // Dodanie/ustawienie klasy np. dla wybranego
-                        .style("fill", getColor(residue, selectedQualityScore)); // Zmiana koloru wypełnienia węzła
+                    node.classed("fornac-selectedNode", true)
+                        .style("fill", getColor(residue, selectedQualityScore));
                 } else if (!node.empty() && myData.results.mode === "fragment") {
                     //@ts-ignore
 
-                    node.classed("fornac-selectedNode", true) // Dodanie/ustawienie klasy np. dla wybranego
-                        .style("fill", "#6fc2d3"); // Zmiana koloru wypełnienia węzła
+                    node.classed("fornac-selectedNode", true)
+                        .style("fill", "#6fc2d3");
                 } else {
                     console.warn(`Node with index ${residue.residue_number} not found`);
                 }
@@ -184,7 +186,7 @@ const SummaryPanel: React.FC = () => {
         }
 
         myData.results.data.forEach((residue) => {
-            var color = getColor(residue, QualityScore.CLASH_SCORE); // Uzyskaj kolor za pomocą getColor
+            var color = getColor(residue, QualityScore.CLASH_SCORE);
             clashScoreColorMap.set(residue.residue_number, color);
             color = getColor(residue, QualityScore.BAD_ANGLES)
             badAnglesColorMap.set(residue.residue_number, color);
@@ -209,6 +211,66 @@ const SummaryPanel: React.FC = () => {
         });
     }
 
+    function colorColumn (selectedScore: QualityScore = QualityScore.CLASH_SCORE)  {
+        const getEnumKeyByValue = (value: string): string | undefined => {
+            return Object.keys(QualityScore).find(
+                (key) => QualityScore[key as keyof typeof QualityScore] === value
+            );
+        };
+
+        const score = getEnumKeyByValue(selectedScore);
+
+        if(myData){
+            document.querySelectorAll(`td[class*="column-${score}"]`).forEach((cell, index) => {
+                const residue = myData.results.data[index];
+                if(residue){
+                    (cell as HTMLElement).style.backgroundColor = getColor(residue, selectedScore);
+                }
+            });
+        }
+        return <div></div>
+    }
+
+    const resetColumns = () => {
+        ["CLASH_SCORE", "BAD_ANGLES", "BAD_BONDS"].forEach((column) => {
+            document.querySelectorAll(`.column-${column}`).forEach((cell, index) => {
+                const isRowEven = index % 2 === 0;
+                (cell as HTMLElement).style.backgroundColor = isRowEven ? "#ffffff" : "#f3f4f6";
+            });
+        });
+    };
+
+    const handleClick = (selectedScore: QualityScore, event?: React.MouseEvent<HTMLTableHeaderCellElement>) => {
+        setQualityScore(selectedScore);
+        resetColumns();
+
+        let tableClashscore = document.getElementById("tableClashscore") as HTMLElement;
+        let tableBadAngles = document.getElementById("tableBadAngles") as HTMLElement;
+        let tableBadBonds = document.getElementById("tableBadBonds") as HTMLElement;
+        tableClashscore.style.backgroundColor = devColor;
+        tableClashscore.style.borderColor = "#d4d4d4";
+        tableClashscore.style.borderWidth = "1px"
+        tableBadAngles.style.backgroundColor = devColor;
+        tableBadAngles.style.borderColor = "#d4d4d4";
+        tableBadAngles.style.borderWidth = "1px"
+        tableBadBonds.style.backgroundColor = devColor;
+        tableBadBonds.style.borderColor = "#d4d4d4";
+        tableBadBonds.style.borderWidth = "1px"
+
+        if (selectedScore === QualityScore.CLASH_SCORE) {
+
+            tableClashscore.style.borderColor = selectedBorderColor;
+            tableClashscore.style.borderWidth = "3px"
+        } else if (selectedScore === QualityScore.BAD_ANGLES) {
+            tableBadAngles.style.borderColor = selectedBorderColor;
+            tableBadAngles.style.borderWidth = "3px"
+        } else {
+            tableBadBonds.style.borderColor = selectedBorderColor;
+            tableBadBonds.style.borderWidth = "3px"
+
+        }
+    };
+
     const toggleRangeMenuVisibility = () => {
         setshowRangeDetails((prevShowMenu) => !prevShowMenu);
     };
@@ -216,7 +278,6 @@ const SummaryPanel: React.FC = () => {
     const toggleDisplayOptionsVisibility = () => {
         setshowDisplayOptions((prevShowOptions) => !prevShowOptions);
     };
-
 
     useEffect(() => {
         let interval: NodeJS.Timeout; // Declare interval variable
@@ -266,7 +327,6 @@ const SummaryPanel: React.FC = () => {
         return () => clearInterval(interval);
     }, [jobId]);
 
-
     if (isLoading) {
         return <Loading/>;
     }
@@ -289,40 +349,8 @@ const SummaryPanel: React.FC = () => {
         const indices: string[] = [];
         const original_indices: number[] = [];
 
-        const handleClick = (selectedScore: QualityScore, event: React.MouseEvent<HTMLTableHeaderCellElement>) => {
-            setQualityScore(selectedScore)
-
-            let tableClashscore = document.getElementById("tableClashscore") as HTMLElement;
-            let tableBadAngles = document.getElementById("tableBadAngles") as HTMLElement;
-            let tableBadBonds = document.getElementById("tableBadBonds") as HTMLElement;
-            tableClashscore.style.backgroundColor = devColor;
-            tableClashscore.style.borderColor = "#d4d4d4";
-            tableClashscore.style.borderWidth = "1px"
-            tableBadAngles.style.backgroundColor = devColor;
-            tableBadAngles.style.borderColor = "#d4d4d4";
-            tableBadAngles.style.borderWidth = "1px"
-            tableBadBonds.style.backgroundColor = devColor;
-            tableBadBonds.style.borderColor = "#d4d4d4";
-            tableBadBonds.style.borderWidth = "1px"
-
-            if (selectedScore === QualityScore.CLASH_SCORE) {
-                tableClashscore.style.backgroundColor = selectedColor;
-                tableClashscore.style.borderColor = selectedBorderColor;
-                tableClashscore.style.borderWidth = "3px"
-            } else if (selectedScore === QualityScore.BAD_ANGLES) {
-                tableBadAngles.style.backgroundColor = selectedColor;
-                tableBadAngles.style.borderColor = selectedBorderColor;
-                tableBadAngles.style.borderWidth = "3px"
-            } else {
-                tableBadBonds.style.backgroundColor = selectedColor;
-                tableBadBonds.style.borderColor = selectedBorderColor;
-                tableBadBonds.style.borderWidth = "3px"
-            }
-
-        };
-
         myData.results.data.forEach((residue) => {
-            if (residue && typeof residue.residue_number === "number") {
+            if (residue) {
                 indices.push(residue.residue_number.toString());
             } else {
                 console.warn("Unexpected residue format:", residue);
@@ -332,11 +360,9 @@ const SummaryPanel: React.FC = () => {
         indices.forEach((index) => {
             original_indices.push(myData.numeration[index]?.[0]);
         });
-        {
-            {
-                colorGnodes()
-            }
-        }
+
+        {{colorGnodes()}}
+
         if (myData.results.mode === "fragment") {
             const clashscore = myData.results.data?.[0].metrics.clashscore;
             const numbadangles = myData.results.data?.[0].metrics.numbadangles;
@@ -384,13 +410,13 @@ const SummaryPanel: React.FC = () => {
             );
         } else if (myData.results.mode === "full") {
             return <table className="text-center min-w-full text-wrap">
-                <thead className="sticky top-0 z-10">
+                <thead className="sticky top-0">
                 <tr className="bg-gray-100 font-semibold">
                     <th className="border border-neutral-300 text-center py-2 px-1">
                         <div className="text-sm whitespace-normal">Residue numbers</div>
                     </th>
                     <th id="tableClashscore" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                        style={{backgroundColor: selectedColor, borderColor: selectedBorderColor, borderWidth: "3px"}}
+                        style={{borderColor: selectedBorderColor, borderWidth: "3px"}}
                         onClick={(event) => handleClick(QualityScore.CLASH_SCORE, event)}>
                         <div className="text-sm whitespace-normal">Clash score</div>
                     </th>
@@ -409,9 +435,9 @@ const SummaryPanel: React.FC = () => {
                     <tr key={residue.residue_number}
                         className={residue.residue_number % 2 === 0 ? "bg-gray-100" : "bg-white"}>
                         <td className="border border-neutral-300">{original_indices[index]}</td>
-                        <td className="border border-neutral-300">{residue.metrics.clashscore}</td>
-                        <td className="border border-neutral-300">{residue.metrics.pct_badangles}</td>
-                        <td className="border border-neutral-300">{residue.metrics.pct_badbonds}</td>
+                        <td className="border border-neutral-300 column-CLASH_SCORE">{residue.metrics.clashscore}</td>
+                        <td className="border border-neutral-300 column-BAD_ANGLES">{residue.metrics.numbadangles}</td>
+                        <td className="border border-neutral-300 column-BAD_BONDS">{residue.metrics.numbadbonds}</td>
                     </tr>
                 ))}
                 </tbody>
@@ -428,35 +454,26 @@ const SummaryPanel: React.FC = () => {
                     <h2><b> Clash score </b></h2>
                     <div className="ml-4">
                         <div className="mb-1">
-                            <span className="font-bold">1 - </span>
-                            Clash score  &lt; 10 <br/>
-                            <span className="font-bold">2 - </span>
-                            10 &lt; Clash score  &lt; 40 <br/>
-                            <span className="font-bold">3 - </span>
-                            40 &lt; Clash score  &lt; 70 <br/>
-                            <span className="font-bold">4 - </span>
-                            70 &lt; Clash score  &lt; 100 <br/>
-                            <span className="font-bold">5 - </span>
-                            Clash score &gt; 100<br/>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(1)}}>&nbsp; Clash score  &lt; 10 &nbsp;<br/></span>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(2)}}>&nbsp; 10 &lt; Clash score  &lt; 40 &nbsp;<br/></span>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(3)}}>&nbsp; 40 &lt; Clash score  &lt; 70 &nbsp;<br/></span>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(4)}}>&nbsp; 70 &lt; Clash score  &lt; 100 &nbsp;<br/></span>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(5)}}>&nbsp; Clash score &gt; 100 &nbsp;<br/></span>
 
                         </div>
                     </div>
                     <h2><b> Bad bonds </b></h2>
                     <div className="ml-4">
                         <div className="mb-1">
-                            <span className="font-bold">1 - </span>
-                            Bad bonds = 0 <br/>
-                            <span className="font-bold">5 - </span>
-                            Bad bonds &gt; 0 <br/>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(1)}}>&nbsp; Bad bonds = 0 &nbsp;<br/> </span>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(5)}}>&nbsp; Bad bonds &gt; 0 &nbsp;<br/> </span>
                         </div>
                     </div>
                     <h2><b> Bad angles </b></h2>
-                    <div className="ml-4">
+                    <div className="ml-4">&nbsp;
                         <div className="mb-1">
-                            <span className="font-bold">1 - </span>
-                            Bad angles = 0 <br/>
-                            <span className="font-bold">5 - </span>
-                            Bad angles &gt; 0 <br/>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(1)}}>&nbsp; Bad angles = 0 &nbsp;<br/> </span>
+                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(5)}}>&nbsp; Bad angles &gt; 0 &nbsp;<br/> </span>
                         </div>
                     </div>
                 </div>
@@ -472,7 +489,6 @@ const SummaryPanel: React.FC = () => {
     ) => {
         setter(e.target.checked);
     };
-
 
     function createFornacDisplayDetails() {
         return (
@@ -528,8 +544,9 @@ const SummaryPanel: React.FC = () => {
 
     return (
         <div className="flex flex-col h-screen w-screen">
-            <div className="flex w-full">
-                <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px]">
+            <div className="flex flex-row w-full justify-between">
+                <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px] cursor-pointer"
+                     onClick={() => navigate("/")}>
                     <div className="flex flex-col">
                         <div className="font-extrabold">
                             <h1>RNA</h1>
@@ -540,29 +557,31 @@ const SummaryPanel: React.FC = () => {
                     </div>
                     <h1>| Result Panel</h1>
                 </div>
-                <div className="flex justify-center items-center ml-auto h-full">
+                <div className="my-auto">
+                    <span className="font-bold" style={{color: Colors.blue}}> Name of task: </span> {myData.name} <br/>
+                    <span className="font-bold" style={{color: Colors.blue}}> Job ID: </span> {myData.id}
+                </div>
+                <div className="flex justify-center items-center h-full">
                     <button
                         id="switchViewButton"
                         onClick={toggle}
-                        className="font-bold rounded-lg p-4 text-2xl text-black flex justify-center items-center my-1 mr-[30px] transition-colors bg-rose-400/80 hover:bg-sky-400 w-auto"
-                        style={{backgroundColor: Colors.salmon}}
+                        className="font-bold rounded-lg p-4 text-2xl text-black flex justify-center items-center my-1 mr-[30px] w-auto"
                     >
                         Switch to 3D view
                     </button>
                 </div>
             </div>
             <div className="flex flex-wrap w-full h-full rounded-lg">
-                <div className="flex flex-col h-full max-h-full items-center p-9 rounded-lg"
-                     style={{backgroundColor: Colors.backgroundBlue}}>
-                    <div className="min-h-[12rem] max-h-[50vh] overflow-y-auto table-fixed mb-3">
+                <div className="flex flex-col h-full max-h-full items-center p-9 rounded-lg bg-neutral-200">
+                    <div className="min-h-[12rem] max-h-[50vh] overflow-y-auto table-fixed mb-7">
                         {makeTable(myData)}
+                        {colorColumn(selectedQualityScore)}
                     </div>
                     <DownloadLink/>
                     <DownloadFile id={jobId}/>
                 </div>
                 <div className="flex flex-grow bg-white">
-                    <div className="relative w-full h-full border-2 rounded-lg"
-                         style={{borderColor: Colors.backgroundBlue}}>
+                    <div className="relative w-full h-full border-2 rounded-lg border-neutral-200">
                         {myData.results.mode === "full" &&
                             <div>
                                 <div
@@ -573,7 +592,7 @@ const SummaryPanel: React.FC = () => {
                                                 id="menuButton"
                                                 onClick={toggleRangeMenuVisibility}
                                                 className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                                Show range details
+                                                Show coloring ranges
                                             </button>
                                         </div>)}
                                     {showRangeDetails && (
@@ -598,7 +617,7 @@ const SummaryPanel: React.FC = () => {
                                                 id="menuButton"
                                                 onClick={toggleDisplayOptionsVisibility}
                                                 className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                                Show display options
+                                                Fornac options
                                             </button>
                                         </div>)}
                                     {showDisplayOptions && (
@@ -625,7 +644,7 @@ const SummaryPanel: React.FC = () => {
                                             id="menuButton"
                                             onClick={toggleDisplayOptionsVisibility}
                                             className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                            Show display options
+                                            Fornac options
                                         </button>
                                     </div>)}
                                 {showDisplayOptions && (
@@ -675,9 +694,9 @@ const SummaryPanel: React.FC = () => {
                             />
                         </div>
                     </div>
-                    {myData.results.mode === "full" && <VerticalColorBar/>}
                 </div>
             </div>
+            <HelpIcon/>
         </div>
     );
 };

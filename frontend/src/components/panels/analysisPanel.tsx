@@ -225,14 +225,14 @@ const Panel: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-80 bg-neutral-200" style={{background: Colors.backgroundBlue}}>
+      <div className="w-80 bg-neutral-200">
         <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
           <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
             <div className="flex flex-col">
               <div className="font-bold">
                 <h1>RNA</h1>
               </div>
-              <div className="font-semibold text-teal-600 ">
+              <div className="font-semibold" style = {{color: Colors.blue}}>
                 <h1>MOLEY</h1>
               </div>
             </div>
