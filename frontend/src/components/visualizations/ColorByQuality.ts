@@ -117,7 +117,7 @@ export function ClashScoreColorTheme(ctx: ThemeDataContext, props: PD.Values<Ent
 export const ClashScoreThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'quality-clash-score'> = {
     name: 'quality-clash-score',
     label: 'Clash Score',
-    category: "Quality Score",
+    category: "Color by quality",
     factory: ClashScoreColorTheme,
     getParams: getEntityIdColorThemeParams,
     defaultValues: PD.getDefaultValues(EntityIdColorThemeParams),
@@ -170,7 +170,7 @@ export function BadBondsColorTheme(ctx: ThemeDataContext, props: PD.Values<Entit
 export const BadBondsColorThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'quality-bad-bonds-score'> = {
     name: 'quality-bad-bonds-score',
     label: 'Bad Bonds Score',
-    category: "Quality Score",
+    category: "Color by quality",
     factory: BadBondsColorTheme,
     getParams: getEntityIdColorThemeParams,
     defaultValues: PD.getDefaultValues(EntityIdColorThemeParams),
@@ -224,8 +224,68 @@ export function BadAnglesColorTheme(ctx: ThemeDataContext, props: PD.Values<Enti
 export const BadAnglesColorThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'quality-bad-angles-score'> = {
     name: 'quality-bad-angles-score',
     label: 'Bad Angles Score',
-    category: "Quality Score",
+    category: "Color by quality",
     factory: BadAnglesColorTheme,
+    getParams: getEntityIdColorThemeParams,
+    defaultValues: PD.getDefaultValues(EntityIdColorThemeParams),
+    isApplicable: (ctx: ThemeDataContext) => !!ctx.structure
+};
+
+export function FragmentColorTheme(ctx: ThemeDataContext, props: PD.Values<EntityIdColorThemeParams>): ColorTheme<EntityIdColorThemeParams> {
+    let color: LocationColor;
+    let legend: ScaleLegend | TableLegend | undefined;
+
+    if (ctx.structure) {
+        const l = StructureElement.Location.create(ctx.structure.root);
+        const sourceSerialMap = getSourceSerialMap(ctx.structure);
+        const entityIdSerialMap = getEntityIdSerialMap(ctx.structure.root, sourceSerialMap);
+
+        const labelTable = Array.from(entityIdSerialMap.keys());
+        const valueLabel = (i: number) => labelTable[i];
+
+        const palette = getPalette(entityIdSerialMap.size, props, {valueLabel});
+        legend = palette.legend;
+
+        color = (location: Location): Color => {
+            if (StructureElement.Location.is(location)) {
+                const atomIndex = StructureProperties.residue.label_seq_id(location); // Get the atom index directly
+                console.error("ATOM INDEX" + atomIndex);
+                var colorStr = "0xFAFAFA";
+                if(clashScoreColorMap.get(atomIndex)) {
+                    colorStr = "#6fc2d3";
+                }
+                return Color.fromHexString(colorStr.replace('#', '0X'));
+            } else if (Bond.isLocation(location)) {
+                l.unit = location.aUnit;
+                l.element = location.aUnit.elements[location.aIndex];
+                var colorStr = "0xFAFAFA";
+                const atomId = StructureProperties.atom.id(l); // Get the atom index for the bond
+                if(clashScoreColorMap.get(atomId)) {
+                    colorStr = "#6fc2d3";
+                }
+                return Color.fromHexString(colorStr.replace('#', '0X'));
+            }
+            return DefaultColor; // Fallback color
+        }
+    } else {
+        color = () => DefaultColor;
+    }
+
+    return {
+        factory: BadAnglesColorTheme,
+        granularity: 'group',
+        color,
+        props,
+        description: Description,
+        legend
+    };
+}
+
+export const FragmentColorThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'fragment-color'> = {
+    name: 'fragment-color',
+    label: 'Color by fragment',
+    category: "Color by fragment",
+    factory: FragmentColorTheme,
     getParams: getEntityIdColorThemeParams,
     defaultValues: PD.getDefaultValues(EntityIdColorThemeParams),
     isApplicable: (ctx: ThemeDataContext) => !!ctx.structure
