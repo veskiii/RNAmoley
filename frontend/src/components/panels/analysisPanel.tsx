@@ -3,7 +3,7 @@ import Loading from "../common/loading";
 import "../../App.css";
 import { NameContext } from "../../App";
 import Molstar from "../visualizations/molStarComponent";
-import FornaComponent from "../visualizations/fornaComponent";
+import FornaComponent from "../visualizations/fornacWrapper";
 import { useNavigate } from "react-router-dom";
 import FornaControls from "../common/fornaControls";
 import Accordion from '@mui/material/Accordion';
@@ -17,10 +17,11 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import { Atom, Annotation, Numeration, Metadata, Job, Nucleotide, Chain, JobToPost } from "../utils/types";
-import {fetchJobData} from "../utils/api";
-import {transformJobToChains} from "../utils/transformJobToChains";
-import {Colors} from "../common/colors"
+import { fetchJobData } from "../utils/api";
+import { transformJobToChains } from "../utils/transformJobToChains";
+import { Colors } from "../common/colors"
 import HelpIcon from "../common/helpIcon";
+import Logo from "../common/logo";
 
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
@@ -43,9 +44,9 @@ const Panel: React.FC = () => {
   const [minId, setMinId] = useState<string>('');
   const [maxId, setMaxId] = useState<string>('');
 
-  useEffect(()=>{
+  useEffect(() => {
     setSelectedChain(chainsState[0]?.name.slice(-1));
-  },[chainsState]);
+  }, [myData]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -198,10 +199,6 @@ const Panel: React.FC = () => {
   }
 
   const navigate = useNavigate();
-  const goToDashboard = () => {
-    navigate("/");
-  }
-
   const handleSetSelectedModel = (e: SelectChangeEvent) => {
     setSelectedModel(parseInt(e.target.value));
   }
@@ -225,19 +222,13 @@ const Panel: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-80 bg-neutral-200" style={{background: Colors.backgroundBlue}}>
-        <div className="flex flex-col h-[80%] mx-4 mt-10 p-2">
-          <div className="flex flex-row text-xl font-medium items-center self-start mb-4 ">
-            <div className="flex flex-col">
-              <div className="font-bold">
-                <h1>RNA</h1>
-              </div>
-              <div className="font-semibold text-teal-600 ">
-                <h1>MOLEY</h1>
-              </div>
-            </div>
-            <h1 className="pl-2">| Submition panel</h1>
-          </div>
+      <div className="w-80 bg-neutral-200" style={{ background: Colors.backgroundBlue }}>
+        <div className="flex pl-4 pt-4 h-[15%]">
+          <Logo page="Analysis panel" />
+          <HelpIcon />
+        </div>
+
+        <div className="flex flex-col h-[65%] mx-4 mt-10 p-2">
           <div className="rounded-scrollbar overflow-auto">
             {!is3Dview && (
               <Accordion>
@@ -364,23 +355,17 @@ const Panel: React.FC = () => {
           </div>
 
         </div>
-        <div className="flex flex-col h-[30%] ml-4 mt-3">
+        <div className="flex flex-col h-[20%] ml-4 mt-3">
           <AnalyzeButton onClick={handleNavigate} />
         </div>
       </div>
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
-          
+
           {myData ? (
             <div id="container">
-              <div className="absolute top-0 h-[20%] flex-grow w-full bg-transparent z-100">
-                <div className="grid relative mt-2.5 p-1.5">
-                  <button
-                    className="font-medium absolute w-auto left-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1"
-                    onClick={goToDashboard}
-                  >
-                    New Analysis
-                  </button>
+              <div className="absolute top-0 h-[15%] flex-grow w-full bg-transparent z-100">
+                <div className="grid relative mt-1.5 px-1.5">
                   <label
                     id="viewLabel"
                     className="text-2xl font-medium place-self-center my-1"
@@ -395,57 +380,58 @@ const Panel: React.FC = () => {
                     Switch view
                   </button>
                 </div>
-                <div className="flex items-center mx-4 space-x-4 z-0 text-xl font-semibold ">
-            <Box sx={{ width: "80px", maxWidth: 120 }}>
-              <FormControl fullWidth>
-                <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
-                <Select
-                  labelId="demo-simple-select-label"
-                  id="demo-simple-select"
-                  value={selectedChain||chainsState[0].name.slice(-1)}
-                  label="Chain"
-                  onChange={handleChange}
-                  className="p-0"
-                >
-                  {chainsState.map((chain) => (
-                    <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <div className="flex flex-row  items-baseline m-6 mt-0">
-              <label htmlFor="range_start" className="text-xl font-medium mr-4">From</label>
-              <input
-                id="range_start"
-                type="number"
-                min={minId}
-                max={maxId}
-                defaultValue={minId}
-                onChange={handleInputChangeStart}
-                placeholder={minId}
-                className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+                <div className="flex items-center h-[auto] mx-4 space-x-4 z-0 text-xl font-semibold ">
+                  <Box sx={{ width: "80px", maxWidth: 120 }}>
+                    <FormControl fullWidth>
+                      <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
+                      <Select
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
+                        value={selectedChain || chainsState[0].name.slice(-1)}
+                        label="Chain"
+                        onChange={handleChange}
+                        className="p-0"
+                      >
+                        {chainsState.map((chain) => (
+                          <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <div className="flex flex-row items-baseline mx-6 mt-0">
+                    <label htmlFor="range_start" className="text-xl font-medium mr-4">From</label>
+                    <input
+                      id="range_start"
+                      type="number"
+                      min={minId}
+                      max={maxId}
+                      defaultValue={minId}
+                      onChange={handleInputChangeStart}
+                      placeholder={minId}
+                      className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
 
-              <label htmlFor="range_end" className="text-xl font-medium  mr-4">To</label>
-              <input
-                id="range_end"
-                type="number"
-                min={minId}
-                max={maxId}
-                defaultValue={maxId}
-                onChange={handleInputChangeEnd}
-                placeholder={maxId}
-                className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+                    <label htmlFor="range_end" className="text-xl font-medium  mr-4">To</label>
+                    <input
+                      id="range_end"
+                      type="number"
+                      min={minId}
+                      max={maxId}
+                      defaultValue={maxId}
+                      onChange={handleInputChangeEnd}
+                      placeholder={maxId}
+                      className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
 
-              <button
-                id="select_button"
-                onClick={handleSubmit}
-              >
-                Select
-              </button>
-            </div>
-          </div>
+                    <button
+                      id="select_button"
+                      onClick={handleSubmit}
+                      className="p-0 m-0"
+                    >
+                      Select
+                    </button>
+                  </div>
+                </div>
               </div>
               {is3Dview && (
                 <Molstar
@@ -468,6 +454,7 @@ const Panel: React.FC = () => {
                   links={links}
                   directionArrows={directionArrows}
                   setAnimation={animation}
+                  selectedChain={selectedChain}
                 />
               )}
 
@@ -477,7 +464,6 @@ const Panel: React.FC = () => {
           )}
         </div>
       </div>
-          <HelpIcon/>
     </div>
   );
 };
