@@ -32,3 +32,12 @@ export async function fetchJobData(jobID: string | undefined, model: number = 1)
     throw error;
   }
 }
+
+export async function fetchMyData(jobID: string | undefined) {
+  console.log(`Sending request to /api/v1/jobs/${jobID}`);
+  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`, {
+    signal: AbortSignal.timeout(5000),
+  });
+  console.log("Fetch data response: " + response.status);
+  return response;
+}

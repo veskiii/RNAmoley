@@ -1,7 +1,6 @@
 import React, {useEffect, useState} from "react";
 import * as d3 from "d3";
-import {Job} from "../panels/summaryPanel"
-import colorGnodes from "../panels/summaryPanel"
+import {SummaryJob} from "../utils/types"
 
 declare const fornac: any;
 
@@ -46,7 +45,7 @@ const FornacSummaryComponent = ({
     links: boolean;
     directionArrows: boolean;
     setAnimation: boolean;
-    job: Job;
+    job: SummaryJob;
     colorGnodes: () => void;
 }) => {
     const [container, setContainer] = useState(null);
@@ -94,10 +93,6 @@ const FornacSummaryComponent = ({
     }, [chains, labelInterval]); // Emp
 
 
-
-    /**
-     * **Dodawanie RNA do kontenera**
-     */
     const addRNAtoContainer = (container: any, chain: Chain) => {
         const options = {
             structure: chain.dotBracket,
@@ -175,7 +170,6 @@ const FornacSummaryComponent = ({
             container.displayDirectionArrows(directionArrows);
             // @ts-ignore
             setAnimation ? container.startAnimation() : container.stopAnimation();
-            // colorGnodes();
         }
     }, [labelInterval, numbering, nodeOutline, nodeLabel, links, directionArrows, setAnimation]);
 

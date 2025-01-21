@@ -4,7 +4,7 @@ import Loading from "../common/loading";
 import "../../App.css";
 import Molstar from "../visualizations/molStarSummaryComponent";
 import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
-import {Annotation, Chain, Nucleotide, Numeration} from "../utils/types";
+import { Chain, SummaryJob, QualityScore, clashScoreColorMap, badAnglesColorMap, badBondsColorMap} from "../utils/types";
 import {Colors} from "../common/colors";
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
@@ -14,117 +14,12 @@ import JobProcessing from "../common/JobProcessing";
 import { useNavigate } from "react-router-dom";
 import HelpIcon from "../common/helpIcon";
 import {transformJobToChains} from '../utils/transformJobToChains';
-
-export type Residue = {
-    residue_number: number;
-    metrics: Metrics;
-};
-
-export interface Job {
-    id: number;
-    originalfilename: string;
-    name: string;
-    createdat: string;
-    updatedat: string;
-    annotation: Annotation[];
-    metadata: Metadata;
-    numeration: Numeration;
-    results: {
-        mode: string;
-        data: Residue[];
-    }
-    pdb_file_string: string;
-}
-
-interface Metadata {
-    status: string;
-}
-
-interface Metrics {
-    clashscore: string;
-    numbadbonds: string;
-    pct_badbonds: string;
-    numbadangles: string;
-    pct_badangles: string;
-}
-
-// function transformJobToChains(job: Job): Chain[] {
-//     const chains: Chain[] = [];
-//
-//     let startIndex = Math.min(
-//         ...Object.values(job.numeration).map((entry) => entry[0])
-//     );
-//
-//     // Iterate over each annotation to create a Chain object
-//     job.annotation.forEach((annotation) => {
-//         console.log("START INDEX = ", startIndex);
-//         const chain: Chain = {
-//             name: annotation.name,
-//             sequence: annotation.sequnece,
-//             dotBracket: annotation.dotbracket,
-//             nucleotides: [],
-//         };
-//
-//         // Iterate over the sequence and dotBracket to build Nucleotides
-//         console.log(
-//             annotation.name,
-//             annotation.sequnece,
-//             annotation.sequnece.length
-//         );
-//         for (let i = 0; i < annotation.sequnece.length; i++) {
-//             const numerationKey = Object.keys(job.numeration).find(
-//                 (key) =>
-//                     job.numeration[key][0] === startIndex + i &&
-//                     job.numeration[key][1] === annotation.name.slice(-1)
-//             );
-//             // console.log(numerationKey, )
-//             if (numerationKey) {
-//                 const nucleotide: Nucleotide = {
-//                     index: parseInt(numerationKey),
-//                     original_index: job.numeration[numerationKey][0],
-//                     base: annotation.sequnece[i],
-//                     structure: annotation.dotbracket[i],
-//                     selected: false,
-//                 };
-//                 chain.nucleotides.push(nucleotide);
-//             }
-//         }
-//         startIndex += annotation.sequnece.length;
-//
-//         chains.push(chain);
-//         console.log(
-//             "CHAIN Z PANELU:",
-//             chain.name,
-//             chain.sequence,
-//             chain.nucleotides
-//         );
-//     });
-//
-//     return chains;
-// }
-
-export enum QualityScore {
-    CLASH_SCORE = "Clash Score",
-    BAD_ANGLES = "Bad Angles",
-    BAD_BONDS = "Bad Bonds",
-}
-
-async function fetchMyData(jobID: string | undefined) {
-    console.log(`Sending request to /api/v1/jobs/${jobID}`);
-    const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`, {
-        signal: AbortSignal.timeout(5000),
-    });
-    console.log("Fetch data response: " + response.status);
-    return response;
-}
-
-export const clashScoreColorMap = new Map<number, string>()
-export const badAnglesColorMap = new Map<number, string>()
-export const badBonesColorMap = new Map<number, string>()
+import {fetchMyData} from "../utils/api";
+import Logo from "../common/logo";
 
 const SummaryPanel: React.FC = () => {
     const {jobId} = useParams();
-    const [myData, setMyData] = useState<Job>();
+    const [myData, setMyData] = useState<SummaryJob>();
     const [myError, setMyError] = useState<ErrorPageProps | null>(null);
     const [labelInterval, setLabelInterval] = useState(10);
     const [numbering, setNumbering] = useState(true);
@@ -146,7 +41,7 @@ const SummaryPanel: React.FC = () => {
 
     const colorGnodes = () => {
         if (!myData || !myData.results || !myData.results.data) {
-            console.warn("Brak danych w myData.results.data");
+            console.warn("No data in myData.results.data");
             return <ErrorPage/>
         }
         if (myData.results.mode === "fragment") {
@@ -181,7 +76,7 @@ const SummaryPanel: React.FC = () => {
 
     const getColorMap = () => {
         if (!myData || !myData.results || !myData.results.data) {
-            console.error("Brak danych w myData.results.data");
+            console.error("No data in myData.results.data");
             return <ErrorPage/>
         }
 
@@ -191,14 +86,14 @@ const SummaryPanel: React.FC = () => {
             color = getColor(residue, QualityScore.BAD_ANGLES)
             badAnglesColorMap.set(residue.residue_number, color);
             color = getColor(residue, QualityScore.BAD_BONDS)
-            badBonesColorMap.set(residue.residue_number, color);
+            badBondsColorMap.set(residue.residue_number, color);
         });
     };
 
     function toggle() {
         setIs3Dview((is3Dview) => {
             is3Dview = !is3Dview;
-            console.log(is3Dview);
+            //console.log(is3Dview);
             let switchViewButton = document.getElementById(
                 "switchViewButton"
             ) as HTMLElement;
@@ -282,14 +177,14 @@ const SummaryPanel: React.FC = () => {
     useEffect(() => {
         let interval: NodeJS.Timeout; // Declare interval variable
         async function fetchData() {
-            console.log("Start to fetch data");
+            //console.log("Start to fetch data");
             try {
                 const response = await fetchMyData(jobId);
                 const data = await response.json();
                 if (!response.ok) {
-                    console.log(
-                        `Error during fetching data. Message: ${data.error} Status code: ${response.status}`
-                    );
+                    // console.log(
+                    //     `Error during fetching data. Message: ${data.error} Status code: ${response.status}`
+                    // );
                     setMyError({
                         errorMessage: data.error,
                         statusCode: response.status.toString(),
@@ -300,11 +195,11 @@ const SummaryPanel: React.FC = () => {
                     setMyData(data);
                     const chains = transformJobToChains(data);
                     setChainsState(chains);
-                    console.log("data:", data);
+                    //console.log("data:", data);
 
                     if (data.metadata.status === "completed") {
                         clearInterval(interval); // Stop the interval loop
-                        setIsLoading(false);    // Set loading to false
+                        setIsLoading(false);
                     }else if(data.metadata.status === "running"){
                         setIsLoading(false);
                     }
@@ -320,7 +215,6 @@ const SummaryPanel: React.FC = () => {
         }
 
         fetchData();
-        // Set up interval to poll fetchData
         interval = setInterval(fetchData, 3000); // Retry every 3 seconds
 
         // Cleanup interval when component unmounts or jobId changes
@@ -345,7 +239,7 @@ const SummaryPanel: React.FC = () => {
         return <JobProcessing/>;
     }
 
-    function makeTable(myData: Job) {
+    function makeTable(myData: SummaryJob) {
         const indices: string[] = [];
         const original_indices: number[] = [];
 
@@ -545,21 +439,23 @@ const SummaryPanel: React.FC = () => {
     return (
         <div className="flex flex-col h-screen w-screen">
             <div className="flex flex-row w-full justify-between">
-                <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px] cursor-pointer"
-                     onClick={() => navigate("/")}>
-                    <div className="flex flex-col">
-                        <div className="font-extrabold">
-                            <h1>RNA</h1>
-                        </div>
-                        <div className="font-semibold pr-5 text-{#526969}">
-                            <h1 style={{color: Colors.blue}}>MOLEY</h1>
-                        </div>
-                    </div>
-                    <h1>| Result Panel</h1>
+                <div className="flex flex-row font-medium items-center self-start ml-[30px] cursor-pointer">
+                    {/*//  onClick={() => navigate("/")}>*/}
+                    {/*// <div className="flex flex-col text-3xl">*/}
+                    {/*//     <div className="font-extrabold">*/}
+                    {/*//         <h1>RNA</h1>*/}
+                    {/*//     </div>*/}
+                    {/*//     <div className="font-semibold pr-5 text-{#526969}">*/}
+                    {/*//         <h1 style={{color: Colors.blue}}>MOLEY</h1>*/}
+                    {/*//     </div>*/}
+                    {/*// </div>*/}
+                    {/*// <h1 className="text-3xl">| Result Panel</h1>*/}
+                    <Logo page="Result panel"/>
+                    <div className="ml-2"> <HelpIcon/> </div>
                 </div>
                 <div className="my-auto">
                     <span className="font-bold" style={{color: Colors.blue}}> Name of task: </span> {myData.name} <br/>
-                    <span className="font-bold" style={{color: Colors.blue}}> Job ID: </span> {myData.id}
+                    <span className="font-bold" style={{color: Colors.blue}}> ID: </span> {myData.id}
                 </div>
                 <div className="flex justify-center items-center h-full">
                     <button
@@ -696,7 +592,6 @@ const SummaryPanel: React.FC = () => {
                     </div>
                 </div>
             </div>
-            <HelpIcon/>
         </div>
     );
 };
