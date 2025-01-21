@@ -43,7 +43,9 @@ const Panel: React.FC = () => {
   const [maxId, setMaxId] = useState<string>('');
 
   useEffect(() => {
+  useEffect(() => {
     setSelectedChain(chainsState[0]?.name.slice(-1));
+  }, [myData]);
   }, [myData]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
@@ -253,6 +255,7 @@ const Panel: React.FC = () => {
                           <input id="radiusInput"
                             className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                             type="number"
+                                 defaultValue={5}
                           />
                         </label>
                       </div>
@@ -263,6 +266,7 @@ const Panel: React.FC = () => {
                           <input id="intervalInput"
                             className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                             type="number"
+                                 defaultValue={1}
                           />
                         </label>
                       </div>
@@ -305,6 +309,7 @@ const Panel: React.FC = () => {
       </div>
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
+
 
           {myData ? (
             <div id="container">
