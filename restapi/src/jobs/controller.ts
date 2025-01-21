@@ -324,7 +324,7 @@ export async function analyzeFragment(req: Request, res: Response) {
         return;
     }
 
-    if (!id || !residues) {
+    if (!id || residues?.length === 0) {
         saveMetadata(id, { ...metadata, status: 'failed' });
         res.status(400).send({ error: 'ID and residue list are required.' });
         return;
