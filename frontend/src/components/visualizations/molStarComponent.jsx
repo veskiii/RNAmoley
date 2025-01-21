@@ -18,7 +18,7 @@ import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/st
 
 const Molstar = props => {
 
-  const { useInterface, pdbId, url, file, dimensions, className, showControls, showAxes, selectedNts, setSelectedNts, initialized, setInitialized, chains, setChains } = props;
+  const { useInterface, pdbId, url, file, className, showControls, showAxes, initialized, setInitialized, chains, setChains } = props;
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
@@ -260,7 +260,6 @@ const Molstar = props => {
     const options = [
       ...document.querySelectorAll('[title="Home"]'),
       ...document.querySelectorAll('[title="Plugin State"]'),
-      ...document.querySelectorAll('[class="msp-layout-region msp-layout-right"]'),
       ...document.querySelectorAll('[title="Remove All"]'),
       ...document.querySelectorAll('[class="msp-btn msp-btn-icon-small msp-btn-link-toggle-off"]'),
       
@@ -283,11 +282,11 @@ const Molstar = props => {
     };
   }, []);
   const width = "100%";
-  const height = "90%";
+  const height = "85%";
 
   if (useInterface) {
     return (
-      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "10%" }}>
+      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "15%", "zIndex":"1000" }}>
         <div ref={parentRef} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} />
       </div>
     )
@@ -312,7 +311,6 @@ Molstar.propTypes = {
   pdbId: PropTypes.string,
   url: PropTypes.string,
   file: PropTypes.string,
-  dimensions: PropTypes.array,
   showControls: PropTypes.bool,
   showAxes: PropTypes.bool,
   className: PropTypes.string,

@@ -4,14 +4,14 @@ import Loading from "../common/loading";
 import "../../App.css";
 import Molstar from "../visualizations/molStarSummaryComponent";
 import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
-import {Annotation, Chain, Nucleotide, Numeration} from "./analysisPanel";
+import {Annotation, Chain, Nucleotide, Numeration} from "../utils/types";
 import {Colors} from "../common/colors";
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
 import ErrorPage, {ErrorPageProps} from "../common/ErrorPage";
-import JobProcessing from "../common/JobProcessing";
-import {getColor, rangeMap} from "../utils/ColorUtils";
+import {getColor} from "../utils/ColorUtils";
 import VerticalColorBar from "../visualizations/VerticalColorBar";
+import JobProcessing from "../common/JobProcessing";
 
 export type Residue = {
     residue_number: number;
@@ -107,9 +107,6 @@ export enum QualityScore {
     BAD_BONDS = "Bad Bonds",
 }
 
-// Inside your component render return statement
-
-
 async function fetchMyData(jobID: string | undefined) {
     console.log(`Sending request to /api/v1/jobs/${jobID}`);
     const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`, {
@@ -119,31 +116,31 @@ async function fetchMyData(jobID: string | undefined) {
     return response;
 }
 
-
 export const clashScoreColorMap = new Map<number, string>()
 export const badAnglesColorMap = new Map<number, string>()
 export const badBonesColorMap = new Map<number, string>()
-
 
 const SummaryPanel: React.FC = () => {
     const {jobId} = useParams();
     const [myData, setMyData] = useState<Job>();
     const [myError, setMyError] = useState<ErrorPageProps | null>(null);
-    const [labelInterval] = useState(10);
-    const [numbering] = useState(true);
-    const [nodeOutline] = useState(true);
-    const [nodeLabel] = useState(true);
-    const [links] = useState(true);
-    const [directionArrows] = useState(true);
+    const [labelInterval, setLabelInterval] = useState(10);
+    const [numbering, setNumbering] = useState(true);
+    const [nodeOutline, setNodeOutline] = useState(true);
+    const [nodeLabel, setNodeLabel] = useState(true);
+    const [links, setLinks] = useState(true);
+    const [directionArrows, setDirectionArrows] = useState(false);
+    const [animation, setAnimation] = useState(false);
     const [is3Dview, setIs3Dview] = useState(false);
-    const [showMenu, setShowMenu] = useState(false);
+    const [showRangeDetails, setshowRangeDetails] = useState(false);
+    const [showDisplayOptions, setshowDisplayOptions] = useState(false);
     const [initialized, setInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [selectedQualityScore, setQualityScore] = useState<QualityScore>(QualityScore.CLASH_SCORE);
     const [chainsState, setChainsState] = useState<Chain[]>([]);
-
-    const devColor = "#f3f4f6";
-    const selectedColor = "#C6C4C4FF";
+    const devColor = "#f3f4f6"
+    const selectedColor = Colors.beige;
+    const selectedBorderColor = Colors.salmon;
 
     const colorGnodes = () => {
         if (!myData || !myData.results || !myData.results.data) {
@@ -166,7 +163,7 @@ const SummaryPanel: React.FC = () => {
                     //@ts-ignore
 
                     node.classed("fornac-selectedNode", true) // Dodanie/ustawienie klasy np. dla wybranego
-                        .style("fill", "lightblue"); // Zmiana koloru wypełnienia węzła
+                        .style("fill", "#6fc2d3"); // Zmiana koloru wypełnienia węzła
                 } else {
                     console.warn(`Node with index ${residue.residue_number} not found`);
                 }
@@ -175,6 +172,10 @@ const SummaryPanel: React.FC = () => {
             }
         });
     };
+
+    useEffect(() => {
+        colorGnodes()
+    }, [labelInterval, numbering, nodeOutline, nodeLabel, links, directionArrows, setAnimation]);
 
     const getColorMap = () => {
         if (!myData || !myData.results || !myData.results.data) {
@@ -208,17 +209,14 @@ const SummaryPanel: React.FC = () => {
         });
     }
 
-    const toggleVisibility = () => {
-        setShowMenu((prevShowMenu) => !prevShowMenu);
+    const toggleRangeMenuVisibility = () => {
+        setshowRangeDetails((prevShowMenu) => !prevShowMenu);
     };
 
+    const toggleDisplayOptionsVisibility = () => {
+        setshowDisplayOptions((prevShowOptions) => !prevShowOptions);
+    };
 
-    useEffect(() => {
-        if (!is3Dview) {
-            console.log("FornacComponent has been rendered!");
-            colorGnodes(); // Wywołanie funkcji
-        }
-    }, [is3Dview]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout; // Declare interval variable
@@ -235,15 +233,19 @@ const SummaryPanel: React.FC = () => {
                         errorMessage: data.error,
                         statusCode: response.status.toString(),
                     });
+                    clearInterval(interval);
+                    return;
                 } else {
                     setMyData(data);
                     const chains = transformJobToChains(data);
                     setChainsState(chains);
                     console.log("data:", data);
 
-                    if (data.metadata.status === "completed" || data.metadata.status === "running") {
+                    if (data.metadata.status === "completed") {
                         clearInterval(interval); // Stop the interval loop
                         setIsLoading(false);    // Set loading to false
+                    }else if(data.metadata.status === "running"){
+                        setIsLoading(false);
                     }
                 }
             } catch (error) {
@@ -252,9 +254,11 @@ const SummaryPanel: React.FC = () => {
                     errorMessage: "Failed to fetch data",
                     statusCode: "500",
                 });
+                clearInterval(interval);
             }
         }
 
+        fetchData();
         // Set up interval to poll fetchData
         interval = setInterval(fetchData, 3000); // Retry every 3 seconds
 
@@ -292,15 +296,27 @@ const SummaryPanel: React.FC = () => {
             let tableBadAngles = document.getElementById("tableBadAngles") as HTMLElement;
             let tableBadBonds = document.getElementById("tableBadBonds") as HTMLElement;
             tableClashscore.style.backgroundColor = devColor;
+            tableClashscore.style.borderColor = "#d4d4d4";
+            tableClashscore.style.borderWidth = "1px"
             tableBadAngles.style.backgroundColor = devColor;
+            tableBadAngles.style.borderColor = "#d4d4d4";
+            tableBadAngles.style.borderWidth = "1px"
             tableBadBonds.style.backgroundColor = devColor;
+            tableBadBonds.style.borderColor = "#d4d4d4";
+            tableBadBonds.style.borderWidth = "1px"
 
             if (selectedScore === QualityScore.CLASH_SCORE) {
                 tableClashscore.style.backgroundColor = selectedColor;
+                tableClashscore.style.borderColor = selectedBorderColor;
+                tableClashscore.style.borderWidth = "3px"
             } else if (selectedScore === QualityScore.BAD_ANGLES) {
                 tableBadAngles.style.backgroundColor = selectedColor;
+                tableBadAngles.style.borderColor = selectedBorderColor;
+                tableBadAngles.style.borderWidth = "3px"
             } else {
                 tableBadBonds.style.backgroundColor = selectedColor;
+                tableBadBonds.style.borderColor = selectedBorderColor;
+                tableBadBonds.style.borderWidth = "3px"
             }
 
         };
@@ -316,7 +332,11 @@ const SummaryPanel: React.FC = () => {
         indices.forEach((index) => {
             original_indices.push(myData.numeration[index]?.[0]);
         });
-
+        {
+            {
+                colorGnodes()
+            }
+        }
         if (myData.results.mode === "fragment") {
             const clashscore = myData.results.data?.[0].metrics.clashscore;
             const numbadangles = myData.results.data?.[0].metrics.numbadangles;
@@ -336,7 +356,7 @@ const SummaryPanel: React.FC = () => {
                         </tr>
                         <tr>
                             <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-                                Clashscore
+                                Clash score
                             </th>
                             <td className="border border-neutral-300 bg-white text-2xl text-center">
                                 {clashscore}
@@ -367,20 +387,20 @@ const SummaryPanel: React.FC = () => {
                 <thead className="sticky top-0 z-10">
                 <tr className="bg-gray-100 font-semibold">
                     <th className="border border-neutral-300 text-center py-2 px-1">
-                        <div className="text-sm whitespace-normal">Residue Numbers</div>
+                        <div className="text-sm whitespace-normal">Residue numbers</div>
                     </th>
                     <th id="tableClashscore" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                        style={{backgroundColor: selectedColor}}
+                        style={{backgroundColor: selectedColor, borderColor: selectedBorderColor, borderWidth: "3px"}}
                         onClick={(event) => handleClick(QualityScore.CLASH_SCORE, event)}>
-                        <div className="text-sm whitespace-normal">Clashscore</div>
+                        <div className="text-sm whitespace-normal">Clash score</div>
                     </th>
                     <th id="tableBadAngles" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
                         onClick={(event) => handleClick(QualityScore.BAD_ANGLES, event)}>
-                        <div className="text-sm whitespace-normal">Bad Angles</div>
+                        <div className="text-sm whitespace-normal">Bad angles</div>
                     </th>
                     <th id="tableBadBonds" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
                         onClick={(event) => handleClick(QualityScore.BAD_BONDS, event)}>
-                        <div className="text-sm whitespace-normal">Bad Bonds</div>
+                        <div className="text-sm whitespace-normal">Bad bonds</div>
                     </th>
                 </tr>
                 </thead>
@@ -404,22 +424,107 @@ const SummaryPanel: React.FC = () => {
     function createRangeMenu() {
         return (
             <div>
-                {Array.from(rangeMap).map(([key, value]) => (
-                    <div>
-                        <h2><b> {key} </b></h2>
-                        <div className="ml-4">
-                            {value.ranges.map((range, index) => (
-                                <div key={index} className="mb-1">
-                                    <span className="font-bold">{index + 1} -</span>{" "}
-                                    {range[0]} &lt; {key}{" "} {range[1] !== Infinity ? `< ${range[1]}` : ""}
-                                </div>
-                            ))}
+                <div>
+                    <h2><b> Clash score </b></h2>
+                    <div className="ml-4">
+                        <div className="mb-1">
+                            <span className="font-bold">1 - </span>
+                            Clash score  &lt; 10 <br/>
+                            <span className="font-bold">2 - </span>
+                            10 &lt; Clash score  &lt; 40 <br/>
+                            <span className="font-bold">3 - </span>
+                            40 &lt; Clash score  &lt; 70 <br/>
+                            <span className="font-bold">4 - </span>
+                            70 &lt; Clash score  &lt; 100 <br/>
+                            <span className="font-bold">5 - </span>
+                            Clash score &gt; 100<br/>
+
                         </div>
                     </div>
-                ))}
+                    <h2><b> Bad bonds </b></h2>
+                    <div className="ml-4">
+                        <div className="mb-1">
+                            <span className="font-bold">1 - </span>
+                            Bad bonds = 0 <br/>
+                            <span className="font-bold">5 - </span>
+                            Bad bonds &gt; 0 <br/>
+                        </div>
+                    </div>
+                    <h2><b> Bad angles </b></h2>
+                    <div className="ml-4">
+                        <div className="mb-1">
+                            <span className="font-bold">1 - </span>
+                            Bad angles = 0 <br/>
+                            <span className="font-bold">5 - </span>
+                            Bad angles &gt; 0 <br/>
+                        </div>
+                    </div>
+                </div>
             </div>);
     }
 
+    const handleLabelIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLabelInterval(parseInt(e.target.value, 10));
+    };
+
+    const handleCheckboxChange = (setter: (checked: boolean) => void) => (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        setter(e.target.checked);
+    };
+
+
+    function createFornacDisplayDetails() {
+        return (
+            <div>
+                <div className="flex flex-col">
+                    <label>
+                        Label interval:
+                        <br/>
+                        <input
+                            type="number"
+                            value={labelInterval}
+                            onChange={handleLabelIntervalChange}
+                            placeholder="Label Interval"
+                            className="rounded-lg w-24 mb-2 border-gray-300 border-2 pl-2 p-1"
+                        />
+                    </label>
+                    <label className="options">
+                        <input
+                            type="checkbox"
+                            checked={numbering}
+                            onChange={handleCheckboxChange(setNumbering)}
+                        />{' '}
+                        Numbering
+                    </label>
+                    <label className="options">
+                        <input
+                            type="checkbox"
+                            checked={nodeOutline}
+                            onChange={handleCheckboxChange(setNodeOutline)}
+                        />{' '}
+                        Node Outline
+                    </label>
+                    <label className="options">
+                        <input
+                            type="checkbox"
+                            checked={nodeLabel}
+                            onChange={handleCheckboxChange(setNodeLabel)}
+                        />{' '}
+                        Node Label
+                    </label>
+                    <label className="options">
+                        <input
+                            type="checkbox"
+                            checked={links}
+                            onChange={handleCheckboxChange(setLinks)}
+                        />{' '}
+                        Links
+                    </label>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col h-screen w-screen">
@@ -459,26 +564,80 @@ const SummaryPanel: React.FC = () => {
                     <div className="relative w-full h-full border-2 rounded-lg"
                          style={{borderColor: Colors.backgroundBlue}}>
                         {myData.results.mode === "full" &&
-                            <div className="z-40 absolute bottom-2 left-2  bg-white">
-                                {!showMenu && (
+                            <div>
+                                <div
+                                    className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
+                                    {!showRangeDetails && (
+                                        <div>
+                                            <button
+                                                id="menuButton"
+                                                onClick={toggleRangeMenuVisibility}
+                                                className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                Show range details
+                                            </button>
+                                        </div>)}
+                                    {showRangeDetails && (
+                                        <div>
+                                            <button
+                                                id="menuButton"
+                                                onClick={toggleRangeMenuVisibility}
+                                                className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                Close
+                                            </button>
+                                            <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
+                                                {createRangeMenu()}
+                                            </div>
+                                        </div>)}
+
+                                </div>
+                                <div style={{display: is3Dview ? "none" : "block"}}
+                                     className="z-40 absolute bottom-2 left-60 border rounded-lg border-neutral-300 bg-white">
+                                    {!showDisplayOptions && (
+                                        <div>
+                                            <button
+                                                id="menuButton"
+                                                onClick={toggleDisplayOptionsVisibility}
+                                                className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                Show display options
+                                            </button>
+                                        </div>)}
+                                    {showDisplayOptions && (
+                                        <div>
+                                            <button
+                                                id="menuButton"
+                                                onClick={toggleDisplayOptionsVisibility}
+                                                className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                Close
+                                            </button>
+                                            <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
+                                                {createFornacDisplayDetails()}
+                                            </div>
+                                        </div>)}
+                                </div>
+                            </div>
+                        }
+                        {myData.results.mode === "fragment" &&
+                            <div style={{display: is3Dview ? "none" : "block"}}
+                                 className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
+                                {!showDisplayOptions && (
                                     <div>
                                         <button
                                             id="menuButton"
-                                            onClick={toggleVisibility}
-                                            className="w-full mt-0 inline-block rounded bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                            Show range details
+                                            onClick={toggleDisplayOptionsVisibility}
+                                            className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                            Show display options
                                         </button>
                                     </div>)}
-                                {showMenu && (
+                                {showDisplayOptions && (
                                     <div>
                                         <button
                                             id="menuButton"
-                                            onClick={toggleVisibility}
-                                            className="w-full mt-0 inline-block rounded bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                            onClick={toggleDisplayOptionsVisibility}
+                                            className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
                                             Close
                                         </button>
                                         <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
-                                            {createRangeMenu()}
+                                            {createFornacDisplayDetails()}
                                         </div>
                                     </div>)}
 
@@ -498,8 +657,9 @@ const SummaryPanel: React.FC = () => {
                                 directionArrows={directionArrows}
                                 setAnimation={false}
                                 job={myData}
+                                colorGnodes={colorGnodes}
                             />
-                            {colorGnodes()}
+                            {/*{colorGnodes()}*/}
                         </div>
                         <div style={{display: is3Dview ? "block" : "none"}}
                              className="absolute h-full w-full">
