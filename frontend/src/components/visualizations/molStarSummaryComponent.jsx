@@ -8,13 +8,7 @@ import "molstar/build/viewer/molstar.css";
 import {ParamDefinition} from "molstar/lib/mol-util/param-definition";
 import {CameraHelperParams} from "molstar/lib/mol-canvas3d/helper/camera-helper";
 import {renderReact18} from "molstar/lib/mol-plugin-ui/react18";
-import {Structure, StructureProperties,} from "molstar/lib/mol-model/structure"
-import {MolScriptBuilder as MS} from "molstar/lib/mol-script/language/builder";
-import {StructureSelectionQuery} from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
-import {BadAnglesColorThemeProvider, BadBondsColorThemeProvider, ClashScoreThemeProvider, FragmentColorThemeProvider} from "./ColorByQuality";
-import{StructureRepresentationPresetProvider} from "molstar/lib/mol-plugin-state/builder/structure/representation-preset";
-import {PluginStateObject} from "molstar/lib/mol-plugin-state/objects";
-import {PluginCommands} from "molstar/lib/mol-plugin/commands";
+import {BadAnglesColorThemeProvider, BadBondsColorThemeProvider, ClashScoreThemeProvider, FragmentColorThemeProvider} from "./3DcolorByQuality";
 
 const Molstar = props => {
 
@@ -38,35 +32,12 @@ const Molstar = props => {
     const parentRef = useRef(null);
     const canvasRef = useRef(null);
     const plugin = useRef(null);
-    // const [initialized, setInitialized] = useState(false);
-    // const [selectedNts, setSelectedNts] = useState([]);
-    const [selected, setSelected] = useState([]);
-    const [enableSelection, setEnableSelection] = useState(false);
     const [canColor, setCanColor] = useState(false);
 
-    const FragmentPreset = StructureRepresentationPresetProvider({
-        id: 'fragment-preset',
-        display: {
-            name: 'Fragment analysis preset',
-            description: 'A custom preset with a fragment analysis color theme',
-        },
-        params: () => ({}),
-        apply: async (ctx, structure, params) => {
-            const builder = plugin.current.builders.structure.representation;
-            const structureRepr = await builder.addRepresentation(
-                structure,
-                { type: 'cartoon', color: 'fragment-color' } // Use your custom color theme
-            );
-            return { components: [structure], representations: [structureRepr] };
-        },
-    });
-    //plugin.current.builders.structure.representation.preset.add(FragmentPreset);
-
      function changeNucleotideColors() {
-        console.info("Kolorowanie nukleotydow!");
 
         if (!plugin.current) {
-            console.warn("Plugin nie został zainicjalizowany!");
+            //console.warn("Plugin not initialized.");
             return;
         }
         plugin.current.representation.structure.themes.colorThemeRegistry.add(ClashScoreThemeProvider);
@@ -74,57 +45,6 @@ const Molstar = props => {
         plugin.current.representation.structure.themes.colorThemeRegistry.add(BadAnglesColorThemeProvider);
         plugin.current.representation.structure.themes.colorThemeRegistry.add(FragmentColorThemeProvider);
         setCanColor(true);
-        // setFragmentTheme();
-    }
-
-    useEffect(() => {
-        const selectAllRepresentations = async () => {
-            const state = plugin.current.state.data;
-
-            // Select all 3D structure representations
-            const representations = state.selectQ('*');
-            debugger;
-            if (representations.length === 0) {
-                console.warn('No representations found.');
-                return;
-            }
-
-            for (const repr of representations) {
-                const params = repr.params?.values;
-                if (!params) continue;
-
-                // Update the color theme for this representation
-                const updatedParams = {
-                    ...params,
-                    color: {
-                        name: 'quality-bad-angles-score',
-                        params: {} // Add any additional parameters for the theme if needed
-                    }
-                };
-
-                // Use the `applyState` method to update the representation
-                await plugin.current.state.data.applyState({
-                    state: repr.transform.state,
-                    transform: {
-                        ...repr.transform,
-                        params: updatedParams,
-                    },
-                });
-            }
-        };
-        if(canColor) {
-            // selectAllRepresentations();
-        }
-    }, [canColor]);
-
-    async function setFragmentTheme() {
-        if (!plugin || !plugin.current) {
-            console.warn("Plugin not initialized!");
-            return;
-        }
-        const structure = await plugin.current.builders.structure;
-        await plugin.current.builders.structure.representation.applyPreset(structure, FragmentPreset);
-        console.log('Custom fragment theme applied.');
     }
 
     useEffect(() => {
@@ -135,7 +55,7 @@ const Molstar = props => {
 
     useEffect(() => {
         if (plugin.current) {
-            console.log("Plugin already initialized");
+            //console.log("Plugin already initialized");
             return;
         } else {
             (async () => {
@@ -213,125 +133,13 @@ const Molstar = props => {
         }
     }, [showAxes])
 
-//Odczyt chains - wywołanie jednokrotne, tylko po otworzeniu komponentu
-//Zaznaczanie elementów na podstawie parametru selected w nucleotides
-    useEffect(() => {
-        setEnableSelection(false);
-        if (!plugin.current) return;
-        console.log("oDCZYT!")
-
-        const atomGroups = chains.flatMap(chain => chain.nucleotides.filter(nucleotide => nucleotide.selected === true).map(nucleotide => MS.struct.generator.atomGroups({
-            "residue-test": MS.core.rel.eq([MS.struct.atomProperty.macromolecular.label_seq_id(), nucleotide.index,]),
-        })));
-        console.log("atom groups", atomGroups);
-
-        const selectionQuery = StructureSelectionQuery("selected_nucleotides", MS.struct.combinator.merge(atomGroups));
-        console.log("Selectionquery", selectionQuery);
-
-        plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
-
-        const updateLoci = async () => {
-            const loci = await plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
-            console.log("Loci:", loci);
-            if (loci) {
-                plugin.current.managers.camera.focusLoci(loci);
-                plugin.current.managers.interactivity.lociSelects.select({loci});
-            } else {
-                console.warn("No loci found for the selection query");
-            }
-        };
-        console.log(updateLoci());
-
-    }, [plugin.current, chains]);
-
-//ZAPIS
-//Tworzenie tablicy indeksów elementów zaznaczonych na podstawie zmiany na widoku
-    useEffect(() => {
-        if (is3dEnabled) {
-            document.body.addEventListener('click', () => {
-                console.log("PLUGIN: ", plugin.current);
-
-                if (initialized && plugin.current && plugin.current.managers.structure) {
-
-                    console.log("przed subskrypcja")
-                    const subscription = plugin.current.behaviors?.interaction?.click.subscribe(async (event) => {
-
-                        const selections = Array.from(plugin.current.managers.structure.selection.entries.values());
-                        if (selections.length === 0) {
-                            console.log("Brak dostępnych selekcji!");
-                            return;
-                        }
-
-                        console.log("Selections:", selections);
-                        const localSelected = [];
-                        for (const {structure} of selections) {
-                            console.log("AAAAAAAAAa");
-                            if (!structure) continue;
-                            console.log("BBBBBBBBBb");
-
-                            Structure.eachAtomicHierarchyElement(structure, {
-                                residue: (loc) => {
-                                    const position = StructureProperties.residue.label_seq_id(loc);
-                                    const auth_position = StructureProperties.residue.auth_seq_id(loc);
-                                    console.log(`Kliknięto pozycja: ${position}`, `auth_pos: ${auth_position}`);
-
-                                    localSelected.push({position});
-                                },
-                            });
-                        }
-
-                        setSelected(localSelected);
-                        setEnableSelection(true);
-                    })
-
-                    return () => {
-                        subscription?.unsubscribe();
-                    };
-
-                }
-            });
-        }
-    }, [initialized]);//set
-    // ,
-
-//Zapis do chains
-//Zmiana selected w nucleotides na podstawie tablicy selected
-    useEffect(() => {
-        console.log(enableSelection, typeof enableSelection);
-        if (enableSelection === true) {
-            console.log("Updated selected:", selected);
-            console.log("Updated chains in Mol*:", chains);
-
-            // Create a map for faster lookup of selected indices
-            const selectedIndices = new Set(selected.map((item) => item.position));
-
-            // Update chains immutably
-            const updatedChains = chains.map((chain) => {
-                const updatedNucleotides = chain.nucleotides.map((nucleotide) => ({
-                    ...nucleotide, // Spread existing nucleotide properties
-                    selected: selectedIndices.has(nucleotide.index),
-                }));
-
-                return {...chain, nucleotides: updatedNucleotides};
-            });
-
-            setChains(updatedChains);
-
-            console.log("Updated chains (after update):", updatedChains);
-
-        }
-
-    }, [selected, setChains, enableSelection]);
-
-    // Funkcja iterująca przez wszystkie nukleotydy i ustawiająca ich kolor w zależności od ID
-
     const loadStructure = async (pdbId, url, file = null, plugin) => {
-        console.log("FETCHUJE:", pdbId);
+        //console.log("Fetching:", pdbId);
         if (plugin) {
             plugin.clear();
             if (file) {
-                console.log(file)
-                console.log("FILE TYPE:", file.type);
+                //console.log(file)
+                //console.log("FILE TYPE:", file.type);
                 const data = await plugin.builders.data.rawData({
                     data: file //await file.text()
                 });
@@ -347,7 +155,7 @@ const Molstar = props => {
                 const traj = await plugin.builders.structure.parseTrajectory(data, extension);
                 await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
             }
-            console.log("Załadowano strukturę.");
+            //console.log("Structure loaded.");
         }
     }
 

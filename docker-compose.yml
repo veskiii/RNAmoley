@@ -36,7 +36,7 @@ services:
     #   - 3001:3001
     volumes:
       - user_data:/user_data
-    scale: 4
+    scale: 6
 
   tools:
     image: tools
