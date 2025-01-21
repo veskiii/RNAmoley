@@ -21,6 +21,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
 
             let downloadButton = document.getElementById("downloadButton") as HTMLElement;
             downloadButton.textContent = "✔ Files downloaded!";
+            downloadButton.style.color = "#000000";
             downloadButton.style.backgroundColor = Colors.beige;
 
             const blob = await response.blob();
@@ -42,9 +43,8 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
             id = "downloadButton"
             onClick={handleDownload}
             className={
-                "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors hover:bg-sky-400"
+                "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1"
             }
-            style={{backgroundColor: Colors.salmon}}
         >
             Download result files
         </button>

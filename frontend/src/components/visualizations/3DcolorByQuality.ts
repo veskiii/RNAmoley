@@ -13,7 +13,7 @@ import {TableLegend, ScaleLegend} from 'molstar/lib/mol-util/legend';
 import {ModelFormat} from 'molstar/lib/mol-model-formats/format';
 import {ParamDefinition as PD} from 'molstar/lib/mol-util/param-definition';
 import {getPaletteParams, getPalette} from 'molstar/lib/mol-util/color/palette';
-import {clashScoreColorMap, badBonesColorMap, badAnglesColorMap} from "../panels/summaryPanel";
+import {clashScoreColorMap, badBondsColorMap, badAnglesColorMap} from "../utils/types";
 
 
 const DefaultList = 'many-distinct';
@@ -142,13 +142,13 @@ export function BadBondsColorTheme(ctx: ThemeDataContext, props: PD.Values<Entit
         color = (location: Location): Color => {
             if (StructureElement.Location.is(location)) {
                 const atomIndex = StructureProperties.residue.label_seq_id(location); // Get the atom index directly
-                const colorStr = badBonesColorMap.get(atomIndex) ?? "0xFAFAFA"; // Map atom index to color
+                const colorStr = badBondsColorMap.get(atomIndex) ?? "0xFAFAFA"; // Map atom index to color
                 return Color.fromHexString(colorStr.replace('#', '0X'));
             } else if (Bond.isLocation(location)) {
                 l.unit = location.aUnit;
                 l.element = location.aUnit.elements[location.aIndex];
                 const atomId = StructureProperties.atom.id(l); // Get the atom index for the he atom index for the bond
-                const colorStr = badBonesColorMap.get(atomId) ?? "0xFAFAFA"; // Map atom index to color
+                const colorStr = badBondsColorMap.get(atomId) ?? "0xFAFAFA"; // Map atom index to color
                 return Color.fromHexString(colorStr.replace('#', '0X'));
             }
             return DefaultColor; // Fallback color
@@ -169,7 +169,7 @@ export function BadBondsColorTheme(ctx: ThemeDataContext, props: PD.Values<Entit
 
 export const BadBondsColorThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'quality-bad-bonds-score'> = {
     name: 'quality-bad-bonds-score',
-    label: 'Bad Bonds Score',
+    label: 'Bad Bonds',
     category: "Color by quality",
     factory: BadBondsColorTheme,
     getParams: getEntityIdColorThemeParams,
@@ -223,7 +223,7 @@ export function BadAnglesColorTheme(ctx: ThemeDataContext, props: PD.Values<Enti
 
 export const BadAnglesColorThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'quality-bad-angles-score'> = {
     name: 'quality-bad-angles-score',
-    label: 'Bad Angles Score',
+    label: 'Bad Angles',
     category: "Color by quality",
     factory: BadAnglesColorTheme,
     getParams: getEntityIdColorThemeParams,

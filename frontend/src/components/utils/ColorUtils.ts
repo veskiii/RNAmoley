@@ -1,11 +1,11 @@
-import {QualityScore, Residue} from "../panels/summaryPanel";
+import {QualityScore, Residue} from "./types";
 
 export const colorMapByRange: Map<number, string> = new Map([
-    [1, "#3fbf00"],
-    [2, "#c0f149"],
-    [3, "#E6DF00"],
-    [4, "#E6A100"],
-    [5, "#FF3636"],
+    [1, "#50982d"],
+    [2, "#8DC641"],
+    [3, "#ede468"],
+    [4, "#ed6f32"],
+    [5, "#dd2e35"],
 ]);
 
 interface Range {
@@ -65,5 +65,5 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
 
 export function getColor(residue: Residue, qualityScore: QualityScore): string {
     var n = getRange(residue, qualityScore)
-    return colorMapByRange.get(n) || "#3fbf00";
+    return colorMapByRange.get(n) || "#ffffff";
 }

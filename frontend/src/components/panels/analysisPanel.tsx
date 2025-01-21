@@ -222,7 +222,7 @@ const Panel: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-80 bg-neutral-200" style={{ background: Colors.backgroundBlue }}>
+      <div className="w-80 bg-neutral-200">
         <div className="flex pl-4 pt-4 h-[15%]">
           <Logo page="Analysis panel" />
           <HelpIcon />
@@ -309,6 +309,7 @@ const Panel: React.FC = () => {
                           <input id="radiusInput"
                             className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                             type="number"
+                                 defaultValue={5}
                           />
                         </label>
                       </div>
@@ -319,6 +320,7 @@ const Panel: React.FC = () => {
                           <input id="intervalInput"
                             className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                             type="number"
+                                 defaultValue={1}
                           />
                         </label>
                       </div>

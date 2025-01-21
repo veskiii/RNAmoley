@@ -68,3 +68,46 @@ export interface JobToPost {
     radius: number;
     interval: number;
 }
+
+export interface Metrics {
+    clashscore: string;
+    numbadbonds: string;
+    pct_badbonds: string;
+    numbadangles: string;
+    pct_badangles: string;
+}
+
+export type Residue = {
+    residue_number: number;
+    metrics: Metrics;
+};
+
+export interface SummaryJob {
+    id: number;
+    originalfilename: string;
+    name: string;
+    createdat: string;
+    updatedat: string;
+    annotation: Annotation[];
+    metadata: Metadata;
+    numeration: Numeration;
+    results: {
+        mode: string;
+        data: Residue[];
+    }
+    pdb_file_string: string;
+}
+
+export interface Metadata {
+    status: string;
+}
+
+export enum QualityScore {
+    CLASH_SCORE = "Clash Score",
+    BAD_ANGLES = "Bad Angles",
+    BAD_BONDS = "Bad Bonds",
+}
+
+export const clashScoreColorMap = new Map<number, string>()
+export const badAnglesColorMap = new Map<number, string>()
+export const badBondsColorMap = new Map<number, string>()

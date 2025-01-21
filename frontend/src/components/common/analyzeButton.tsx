@@ -12,9 +12,8 @@ const AnalyzeButton: React.FC<AnalyzeButtonProps> = ({onClick}) => {
             id="saveButton"
             onClick={onClick}
             className={
-                "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1 transition-colors bg-rose-400/80 hover:bg-sky-400"
+                "font-bold rounded-lg p-2 z-10 text-black flex justify-center items-center h-auto w-[90%] my-1"
             }
-            style={{backgroundColor: Colors.salmon}}
         >
             Analyze
         </button>
