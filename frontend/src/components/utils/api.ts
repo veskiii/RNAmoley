@@ -41,6 +41,7 @@ export async function fetchMyData(jobID: string | undefined) {
   console.log(`Sending request to ${API_URL}/jobs/${jobID}`);
   const response = await fetch(`${API_URL}/jobs/${jobID}`, {
     signal: AbortSignal.timeout(5000),
+    headers: new Headers({ "Content-Type": "application/json", "Connection": "Keep-Alive", "Keep-Alive": "timeout=600, max=200"  }),
   });
   console.log("Fetch data response: " + response.status);
   return response;
