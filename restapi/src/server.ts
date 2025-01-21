@@ -11,7 +11,8 @@ app.use(express.json());
 // expose public folder
 app.use(express.static('public'));
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+const HOST = process.env.HOST || 'localhost';
 
 app.use(cors(
     {
@@ -39,6 +40,8 @@ setInterval(() => {
 
 app.listen(
     PORT,
+    HOST,
     () => {
-        console.log(`Server is running on http://localhost:${PORT}`)
-    });
+        console.log(`Server is running at http://${HOST}:${PORT}`);
+    }
+);
