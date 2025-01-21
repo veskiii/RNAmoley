@@ -43,9 +43,7 @@ const Panel: React.FC = () => {
   const [maxId, setMaxId] = useState<string>('');
 
   useEffect(() => {
-  useEffect(() => {
     setSelectedChain(chainsState[0]?.name.slice(-1));
-  }, [myData]);
   }, [myData]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {

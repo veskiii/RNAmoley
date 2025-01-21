@@ -1,3 +1,4 @@
+import { Color } from "molstar/lib/mol-util/color";
 import { Colors } from "./colors";
 import Logo from "./logo";
 
@@ -10,7 +11,7 @@ const HelpPage = () => {
             <div className="flex min-h-screen flex-col items-center pb-16">
                 <div
                     className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-6 overflow-y-auto"
-                    style={{color: Colors.backgroundBeige}}
+                    style={{background: Colors.backgroundBeige}}
                 >
                     <h2 className="text-2xl font-bold mb-4" style={{color: Colors.blue}}>General information</h2>
                     <p>

@@ -4,7 +4,7 @@ import { Colors } from "./colors";
 const JobProcessing: React.FC = () => {
   return (
     <div>
-        <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px]">
+        {/* <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px]">
           <div className="flex flex-col">
             <div className="font-extrabold">
               <h1>RNA</h1>
@@ -14,8 +14,8 @@ const JobProcessing: React.FC = () => {
             </div>
           </div>
           <h1>| Processing</h1>
-        </div>
-        <Loading message="Your job is processing..." />
+        </div> */}
+        <Loading page="Processing" message="Your job is processing..." />
     </div>
   );
 };
