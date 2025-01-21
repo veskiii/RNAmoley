@@ -11,17 +11,15 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import AnalyzeButton from "../common/analyzeButton";
-import Box from '@mui/material/Box';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { Atom, Annotation, Numeration, Metadata, Job, Nucleotide, Chain, JobToPost } from "../utils/types";
+import { SelectChangeEvent } from '@mui/material/Select';
+import { Job, Chain, JobToPost } from "../utils/types";
 import { fetchJobData } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors"
 import HelpIcon from "../common/helpIcon";
 import Logo from "../common/logo";
+import ErrorPage from "../common/ErrorPage";
+import RangeSelecting from "../common/rangeSelecting";
 
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
@@ -39,8 +37,8 @@ const Panel: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<number>(1);
   const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>(chainsState[0]?.name.slice(-1) || "");
-  const [inputValueStart, setInputValueStart] = useState('');
-  const [inputValueEnd, setInputValueEnd] = useState('');
+  const [inputValueStart, setInputValueStart] = useState<string>('');
+  const [inputValueEnd, setInputValueEnd] = useState<string>('');
   const [minId, setMinId] = useState<string>('');
   const [maxId, setMaxId] = useState<string>('');
 
@@ -64,58 +62,6 @@ const Panel: React.FC = () => {
     setAnalyzeWholeStructure(e.target.checked);
   };
 
-  const handleSubmit = () => {
-    const start = parseInt(inputValueStart, 10);
-    const end = parseInt(inputValueEnd, 10);
-
-    if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
-      alert(`Invalid range: ${start} to ${end}`);
-      return;
-    }
-    if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
-      setChainsState(prevChains =>
-        prevChains.map(chain => {
-          if (chain.name.slice(-1) === selectedChain) {
-
-            return {
-              ...chain,
-              nucleotides: chain.nucleotides.map(nucleotide => ({
-                ...nucleotide,
-                selected: nucleotide.index >= start && nucleotide.index <= end,
-              })),
-            };
-          }
-          return chain;
-        }));
-    } else {
-      alert("Type valid range on selected chain");
-    }
-
-  };
-
-  //do placeholder z max i min original_id nukleotydów podanego chain
-  useEffect(() => {
-    chainsState.forEach((chain) => {
-      if (chain.name.slice(-1) === selectedChain) {
-        const indices = chain.nucleotides.map(nucleotide => nucleotide.index);
-        const min = Math.min(...indices);
-        const max = Math.max(...indices);
-
-        setMinId(min.toString());
-        setMaxId(max.toString());
-        setInputValueStart(min.toString());
-        setInputValueEnd(max.toString());
-      }
-
-    })
-  }, [selectedChain])
-
-  // useEffect(() => {
-  //   chainsState.forEach(chain => {
-  //     console.log("Chain z panelu:", chain)
-  //   })
-  // }, [chainsState]);
-
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
       const data = await fetchJobData(jobID, model);
@@ -127,7 +73,6 @@ const Panel: React.FC = () => {
       if (error instanceof Error) {
         setError(error.message);
       }
-      //TODO?: NotFound
     }
   }
 
@@ -215,11 +160,10 @@ const Panel: React.FC = () => {
     loadData(jobID, 1);
   }, [jobID]);
 
-  if (error) return <div>Error: {error}</div>;
+  if (error) return <ErrorPage errorMessage={error}/>;
   if (!myData) {
-    return <Loading />;
+    return <Loading page="Analysis panel"/>;
   }
-
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
       <div className="w-80 bg-neutral-200" style={{ background: Colors.backgroundBlue }}>
@@ -380,58 +324,23 @@ const Panel: React.FC = () => {
                     Switch view
                   </button>
                 </div>
-                <div className="flex items-center h-[auto] mx-4 space-x-4 z-0 text-xl font-semibold ">
-                  <Box sx={{ width: "80px", maxWidth: 120 }}>
-                    <FormControl fullWidth>
-                      <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
-                      <Select
-                        labelId="demo-simple-select-label"
-                        id="demo-simple-select"
-                        value={selectedChain || chainsState[0].name.slice(-1)}
-                        label="Chain"
-                        onChange={handleChange}
-                        className="p-0"
-                      >
-                        {chainsState.map((chain) => (
-                          <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Box>
-                  <div className="flex flex-row items-baseline mx-6 mt-0">
-                    <label htmlFor="range_start" className="text-xl font-medium mr-4">From</label>
-                    <input
-                      id="range_start"
-                      type="number"
-                      min={minId}
-                      max={maxId}
-                      defaultValue={minId}
-                      onChange={handleInputChangeStart}
-                      placeholder={minId}
-                      className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                <RangeSelecting
+                  chains={chainsState}
+                  selectedChain={selectedChain}
+                  minId={minId}
+                  maxId={maxId}
+                  inputValueStart={inputValueStart}
+                  inputValueEnd={inputValueEnd}
+                  setChainsState={setChainsState}
+                  setMinId={setMinId}
+                  setMaxId={setMaxId}
+                  setInputValueStart={setInputValueStart}
+                  setInputValueEnd={setInputValueEnd}
+                  handleChange={handleChange}
+                  handleInputChangeStart={handleInputChangeStart}
+                  handleInputChangeEnd={handleInputChangeEnd}
+                />
 
-                    <label htmlFor="range_end" className="text-xl font-medium  mr-4">To</label>
-                    <input
-                      id="range_end"
-                      type="number"
-                      min={minId}
-                      max={maxId}
-                      defaultValue={maxId}
-                      onChange={handleInputChangeEnd}
-                      placeholder={maxId}
-                      className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-
-                    <button
-                      id="select_button"
-                      onClick={handleSubmit}
-                      className="p-0 m-0"
-                    >
-                      Select
-                    </button>
-                  </div>
-                </div>
               </div>
               {is3Dview && (
                 <Molstar

@@ -28,14 +28,24 @@ const FornaComponent = ({
   setHybridizedName: Dispatch<SetStateAction<string[]>>;
 }) => {
   const error = null;
+  const [width, setWidth] = useState(window.innerWidth);
+  const [height, setHeight] = useState(window.innerHeight);
 
   useEffect(() => {
+    console.log("RESIZING");
+    const handleResize = () => {setWidth(window.innerWidth);setHeight(window.innerHeight) };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+
+  }, []);
+  useEffect(() => {
+    
 
     const container = new fornac.FornaContainer("#rna_ss", {
       animation: setAnimation,
       zoomable: true,
       labelInterval: labelInterval,
-      initialSize: [1300, 900],
+      initialSize: [width, (height+150)],
       numbering: numbering,
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
@@ -171,7 +181,8 @@ const FornaComponent = ({
   ]);
 
   return (
-    <div className="absolute bottom-0 h-[85%] flex-grow w-full bg-transparent">
+    <div >
+      {/* className="absolute bottom-0 h-[85%] flex-grow w-full bg-transparent" */}
       {error ? (
         <div className="text-red-500 p-4 bg-red-100 border border-red-300 rounded">
           <p>${error}</p>

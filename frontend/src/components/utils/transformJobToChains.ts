@@ -2,7 +2,7 @@ import { Chain, Job, Nucleotide } from "./types";
 
 export function transformJobToChains(job: Job): Chain[] {
     const chains: Chain[] = [];
-  
+    
     if (!job.annotation || job.annotation.length === 0) {
       throw new Error("Annotation is undefined or empty.");
     }
@@ -36,10 +36,10 @@ export function transformJobToChains(job: Job): Chain[] {
             selected: false,
           };
           chain.nucleotides.push(nucleotide);
-          console.log("Dodano nukleotyd: ", nucleotide);
+          // console.log("Dodano nukleotyd: ", nucleotide);
         }
-        console.log("id:", id);
-        console.log("Dlugość sekwencji: ", annotation.sequnece.length);
+        // console.log("id:", id);
+        // console.log("Dlugość sekwencji: ", annotation.sequnece.length);
         id++;
   
       }
@@ -47,7 +47,7 @@ export function transformJobToChains(job: Job): Chain[] {
         throw new Error("Number of nucleotides do not match length of the sequence.");
       }
       chains.push(chain);
-      console.log("Dodano łańcuch:", chain.name, chain.sequence, chain.dotBracket, chain.nucleotides);
+      // console.log("Dodano łańcuch:", chain.name, chain.sequence, chain.dotBracket, chain.nucleotides);
     });
   
     return chains;

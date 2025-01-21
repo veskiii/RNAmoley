@@ -282,11 +282,11 @@ const Molstar = props => {
     };
   }, []);
   const width = "100%";
-  const height = "85%";
+  const height = "83%";
 
   if (useInterface) {
     return (
-      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "15%", "zIndex":"1000" }}>
+      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "17%", "zIndex":"1000" }}>
         <div ref={parentRef} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} />
       </div>
     )

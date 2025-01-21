@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transformJobToChains } from '../../../components/panels/analysisPanel';
+import { transformJobToChains } from '../../../components/utils/transformJobToChains';
 
 describe('transformJobToChains', () => {
   it('poprawne łańcuchy na podstawie danych wejściowych', () => {
