@@ -21,13 +21,13 @@ services:
     # secrets:
     #   - db-password
 
-  adminer:
-    image: adminer
-    restart: always
-    depends_on:
-      - db
-    ports:
-      - 8080:8080
+  # adminer:
+  #   image: adminer
+  #   restart: always
+  #   depends_on:
+  #     - db
+  #   ports:
+  #     - 8080:8080
 
   molprobity:
     image: dawidgrajek1/molprobity:latest
@@ -59,8 +59,8 @@ services:
       NODE_ENV: production
     env_file:
       - ./restapi/.env
-    # ports:
-    #   - 3000:3000
+    expose:
+      - 3001
     volumes:
       - user_data:/usr/src/app/public/jobs
     depends_on:
