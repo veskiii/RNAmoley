@@ -155,12 +155,12 @@ const Panel: React.FC = () => {
 
     var jobToPost: JobToPost = { id: '', residues: [], modelNumber: 0, radius: 0, interval: 0 };
     if (analyzeWholeStructure) {
-      API_URL = "http://localhost:3001/api/v1/jobs/analyzeStructure";
+      API_URL = "http://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeStructure";
       const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
       const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
       jobToPost = { id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval }
     } else {
-      API_URL = "http://localhost:3001/api/v1/jobs/analyzeFragment";
+      API_URL = "http://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeFragment";
       idList = chainsState.flatMap((chain) =>
         chain.nucleotides
           .filter((nucleotide) => nucleotide.selected)
@@ -174,7 +174,7 @@ const Panel: React.FC = () => {
         method: "POST",
         body: JSON.stringify(jobToPost),
         headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3001",
+          "Access-Control-Allow-Origin": "*",
           "Content-Type": "application/json",
         },
       });

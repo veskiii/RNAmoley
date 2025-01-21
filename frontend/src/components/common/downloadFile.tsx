@@ -8,7 +8,7 @@ type DownloadButtonProps = {
 const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
     const handleDownload = async () => {
         try {
-            const response = await fetch(`http://localhost:3001/api/v1/jobs/${id}/download`, {
+            const response = await fetch(`http://rnamoley.cs.put.poznan.pl/api/v1/jobs/${id}/download`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
