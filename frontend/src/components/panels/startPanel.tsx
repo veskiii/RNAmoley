@@ -9,6 +9,7 @@ import { isFileValid } from "../utils/fileValidation";
 import { isInputValid } from "../utils/inputValidation";
 import { IoIosHelpCircleOutline } from "react-icons/io";
 import HelpIcon from "../common/helpIcon";
+import Logo from "../common/logo";
 
 const Dashboard: React.FC = () => {
   const [jobName, setJobName] = useState<string>("");
@@ -84,27 +85,19 @@ const Dashboard: React.FC = () => {
   const isButtonEnabled = isInputValid(rnaFile, pdbCode, radiobutton);
 
   return (
-    <div className="w-full h-full" style={{color: "black"}}>
-      <div className="flex h-[90vh] flex-col items-center px-[10vw] pt-0">
-        <div className="flex flex-row text-3xl font-medium items-center self-start my-4">
-          <div className="flex flex-col">
-            <div className="font-extrabold">
-              <h1>RNA</h1>
-            </div>
-            <div className="font-semibold" style={{color: Colors.blue}}>
-              <h1>MOLEY</h1>
-            </div>
-          </div>
-          <h1 className="pl-2">| Submition panel</h1>
-        </div>
-
+    <div className="w-full h-full" style={{ color: "black" }}>
+      <div className="flex flex-row pl-[10vw]">
+        <Logo />
+        <HelpIcon />
+      </div>
+      <div className="flex flex-col items-center px-[10vw] pt-0">
         <form onSubmit={handleSubmit}>
-          <div className="grid p-4 items-start content-center justify-items-center h-[75vh] w-[80vw] bg-neutral-200 p-24 rounded-xl font-semibold text-lg shadow-md"
-          style={{color: "black"}}
+          <div className="grid p-4 items-start content-center justify-items-center h-[75vh] w-[80vw] bg-teal-100 p-24 rounded-xl text-teal-600 font-semibold text-lg shadow-md"
+            style={{ background: Colors.backgroundBlue, color: "black" }}
           >
-            <div className="w-full  p-4 rounded-md text-center mb-6"> 
+            <div className="w-full  p-4 rounded-md text-center mb-6">
               {/* text-teal-800 */}
-              <h2 className="text-xl font-bold mb-2" style={{color: Colors.blue}} >Welcome to RNAmoley!</h2>
+              <h2 className="text-xl font-bold mb-2" >Welcome to RNAmoley!</h2>
               <p>
                 The webserver analyzes RNA 3D structures to assess their quality by examining structural elements. You can upload PDB/mmCIF files, fetch data by PDB ID or use pre-selected samples.
               </p>
@@ -166,13 +159,6 @@ const Dashboard: React.FC = () => {
                   >
                     No file selected
                   </label>
-                  {/* {isUploadedFile === false && (
-                  <label
-                    className="cursor-pointer text-2xl text-black flex justify-center items-center h-10 mt-2 bg-rose-300 w-40 rounded-lg text-center transition-colors hover:bg-teal-600"
-                    htmlFor="inputFile"
-                  >
-
-                    Upload{''} */}
                   <input
                     id="inputFile"
                     type="file"
@@ -180,17 +166,6 @@ const Dashboard: React.FC = () => {
                     onChange={handleFileChange}
                     hidden
                   />
-                  {/* </label>
-                )}
-                {isUploadedFile && (
-                  <label
-                    className="cursor-pointer text-2xl text-black flex justify-center items-center h-10 mt-2 bg-rose-300 w-40 rounded-lg text-center transition-colors hover:bg-teal-600"
-                    htmlFor="inputFile"
-                    onClick={removeFile}
-                  >
-                    Remove{''}
-                  </label>
-                )} */}
 
                 </div>
               )}
@@ -225,13 +200,11 @@ const Dashboard: React.FC = () => {
                   </span> :
                   "Run >"
                 }
-
               </button>
             </div>
           </div>
         </form>
       </div >
-      <HelpIcon/>
     </div>
   );
 };
