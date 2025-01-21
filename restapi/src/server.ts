@@ -26,7 +26,7 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Hello World! Rest API is running');
 });
 
-app.use('/api/v1/jobs', jobRoutes);
+app.use('/v1/jobs', jobRoutes);
 
 await runDbMigrations();
 
