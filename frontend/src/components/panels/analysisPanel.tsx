@@ -155,12 +155,12 @@ const Panel: React.FC = () => {
 
     var jobToPost: JobToPost = { id: '', residues: [], modelNumber: 0, radius: 0, interval: 0 };
     if (analyzeWholeStructure) {
-      API_URL = "http://localhost:3000/api/v1/jobs/analyzeStructure";
+      API_URL = "http://localhost:3001/api/v1/jobs/analyzeStructure";
       const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
       const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
       jobToPost = { id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval }
     } else {
-      API_URL = "http://localhost:3000/api/v1/jobs/analyzeFragment";
+      API_URL = "http://localhost:3001/api/v1/jobs/analyzeFragment";
       idList = chainsState.flatMap((chain) =>
         chain.nucleotides
           .filter((nucleotide) => nucleotide.selected)
@@ -174,7 +174,7 @@ const Panel: React.FC = () => {
         method: "POST",
         body: JSON.stringify(jobToPost),
         headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
+          "Access-Control-Allow-Origin": "http://localhost:3001",
           "Content-Type": "application/json",
         },
       });
@@ -309,7 +309,7 @@ const Panel: React.FC = () => {
                           <input id="radiusInput"
                             className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                             type="number"
-                                 defaultValue={5}
+                            defaultValue={5}
                           />
                         </label>
                       </div>
@@ -320,7 +320,7 @@ const Panel: React.FC = () => {
                           <input id="intervalInput"
                             className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                             type="number"
-                                 defaultValue={1}
+                            defaultValue={1}
                           />
                         </label>
                       </div>

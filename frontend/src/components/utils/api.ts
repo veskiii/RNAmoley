@@ -1,14 +1,13 @@
 import { Job } from "./types";
 
-// const API_URL = "http://localhost:3000/api/v1";
-const API_URL = "http://restapi:3001/api/v1";
+const API_URL = "http://localhost:3001/api/v1";
+// const API_URL = "http://restapi:3001/api/v1";
 
 export const createJob = async (formData: FormData): Promise<any> => {
   const response = await fetch(`${API_URL}/jobs`, {
     method: "POST",
     body: formData,
     headers: {
-      "Access-Control-Allow-Origin": "*",
     },
   });
   if (!response.ok) {
@@ -23,7 +22,6 @@ export async function fetchJobData(jobID: string | undefined, model: number = 1)
     const response = await fetch(`${API_URL}/jobs/${jobID}/${model}`, {
       method: "GET",
       headers: {
-        "Access-Control-Allow-Origin": "*",
       },
     }
     );
@@ -40,8 +38,8 @@ export async function fetchJobData(jobID: string | undefined, model: number = 1)
 }
 
 export async function fetchMyData(jobID: string | undefined) {
-  console.log(`Sending request to /api/v1/jobs/${jobID}`);
-  const response = await fetch(`http://localhost:3000/api/v1/jobs/${jobID}`, {
+  console.log(`Sending request to ${API_URL}/jobs/${jobID}`);
+  const response = await fetch(`${API_URL}/jobs/${jobID}`, {
     signal: AbortSignal.timeout(5000),
   });
   console.log("Fetch data response: " + response.status);

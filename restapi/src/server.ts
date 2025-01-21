@@ -13,7 +13,13 @@ app.use(express.static('public'));
 
 const PORT = process.env.PORT;
 
-app.use(cors());
+app.use(cors(
+    {
+        origin: '*',
+        methods: ['GET', 'POST', 'DELETE', 'PATCH', 'PUT'],
+        allowedHeaders: '*',
+    }
+));
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello World! Rest API is running');

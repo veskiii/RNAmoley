@@ -33,7 +33,7 @@ services:
     image: dawidgrajek1/molprobity:latest
     restart: always
     # ports:
-    #   - 3001:3001
+    #   - 3004:3004
     volumes:
       - user_data:/user_data
     scale: 6
@@ -45,7 +45,7 @@ services:
     environment:
       NODE_ENV: production
     # ports:
-    #   - 3002:3002
+    #   - 3003:3003
     volumes:
       - user_data:/usr/src/app/user_data
     scale: 1
@@ -59,8 +59,8 @@ services:
       NODE_ENV: production
     env_file:
       - ./restapi/.env
-    expose:
-      - 3001
+    ports:
+      - 3001:3001
     volumes:
       - user_data:/usr/src/app/public/jobs
     depends_on:
