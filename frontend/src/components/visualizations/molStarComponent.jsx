@@ -32,7 +32,7 @@ const Molstar = props => {
     } else {
       (async () => {
         if (useInterface) {
-          
+
           const spec = DefaultPluginUISpec();
           spec.layout = {
 
@@ -48,15 +48,15 @@ const Molstar = props => {
             },
           };
 
-          spec.config =[
-            [PluginConfig.VolumeStreaming.Enabled               , true],
-            [PluginConfig.Viewport       .ShowSelectionMode     , true],
-            [PluginConfig.Viewport       .ShowSettings          , true],
-            [PluginConfig.Viewport       .ShowAnimation         , true],
-            [PluginConfig.Viewport       .ShowTrajectoryControls, true],
-            [PluginConfig.Viewport       .ShowControls, true],
-        ];
-        
+          spec.config = [
+            [PluginConfig.VolumeStreaming.Enabled, true],
+            [PluginConfig.Viewport.ShowSelectionMode, true],
+            [PluginConfig.Viewport.ShowSettings, true],
+            [PluginConfig.Viewport.ShowAnimation, true],
+            [PluginConfig.Viewport.ShowTrajectoryControls, true],
+            [PluginConfig.Viewport.ShowControls, true],
+          ];
+
           plugin.current = await createPluginUI({
             target: parentRef.current,
             spec: spec,
@@ -64,11 +64,8 @@ const Molstar = props => {
           });
 
         } else {
-
           plugin.current = new PluginContext(DefaultPluginSpec());
           plugin.current.initViewer(canvasRef.current, parentRef.current);
-
-
         }
         if (!showAxes) {
           plugin.current.canvas3d?.setProps({
@@ -77,7 +74,7 @@ const Molstar = props => {
             }
           });
         }
-        await loadStructure(pdbId, url, file, plugin.current);
+        await loadStructure(plugin.current, file);
         setInitialized(true);
       })()
     };
@@ -92,7 +89,7 @@ const Molstar = props => {
   useEffect(() => {
     if (!initialized) return;
     (async () => {
-      await loadStructure(pdbId, url, file, plugin.current);
+      await loadStructure(plugin.current, file);
     })();
   }, [pdbId, url, file])
 
@@ -141,21 +138,6 @@ const Molstar = props => {
 
     plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
 
-    const updateLoci = async () => {
-      const loci = await plugin.current.managers.structure.selection.fromSelectionQuery(
-        "set",
-        selectionQuery
-      );
-      console.log("Loci:", loci);
-      if (loci) {
-        // plugin.current.managers.camera.focusLoci(loci);
-        plugin.current.managers.interactivity.lociSelects.select({ loci });
-      } else {
-        console.warn("No loci found for the selection query");
-      }
-    };
-    console.log(updateLoci());
-
   }, [plugin.current, chains]);
 
   //ZAPIS
@@ -202,11 +184,7 @@ const Molstar = props => {
   //Zapis do chains
   //Zmiana selected w nucleotides na podstawie tablicy selected
   useEffect(() => {
-    console.log(enableSelection, typeof enableSelection);
     if (enableSelection === true) {
-      console.log("Updated selected:", selected);
-      console.log("Updated chains in Mol*:", chains);
-
       // Create a map for faster lookup of selected indices
       const selectedIndices = new Set(selected.map((item) => item.position));
 
@@ -221,39 +199,21 @@ const Molstar = props => {
       });
 
       setChains(updatedChains);
-
-      console.log("Updated chains (after update):", updatedChains);
-
     }
 
   }, [selected, setChains, enableSelection]);
 
-  const loadStructure = async (pdbId, url, file = null, plugin) => {
-    console.log("FETCHUJE:", pdbId);
+  const loadStructure = async (plugin, file = null) => {
     if (plugin) {
       plugin.clear();
       if (file) {
-        console.log(file)
-        console.log("FILE TYPE:", file.type);
         const data = await plugin.builders.data.rawData({
-          data: file //await file.text()
+          data: file
         });
         const traj = await plugin.builders.structure.parseTrajectory(data, "pdb");
         await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
 
-      } else {
-        const structureUrl = url ? url : pdbId ? `https://files.rcsb.org/view/${pdbId}.cif` : null;
-        if (!structureUrl) return;
-        const data = await plugin.builders.data.download(
-          { url: structureUrl }, { state: { isGhost: true } }
-        );
-        let extension = structureUrl.split(".").pop().replace("cif", "mmcif");
-        if (extension.includes("?"))
-          extension = extension.substring(0, extension.indexOf("?"));
-        const traj = await plugin.builders.structure.parseTrajectory(data, extension);
-        await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
       }
-      console.log("Załadowano strukturę.");
     }
   }
   const hideOptions = () => {
@@ -262,8 +222,8 @@ const Molstar = props => {
       ...document.querySelectorAll('[title="Plugin State"]'),
       ...document.querySelectorAll('[title="Remove All"]'),
       ...document.querySelectorAll('[class="msp-btn msp-btn-icon-small msp-btn-link-toggle-off"]'),
-      
-      
+
+
     ];
     options.forEach(option => {
       option.style.visibility = 'hidden';
@@ -282,11 +242,11 @@ const Molstar = props => {
     };
   }, []);
   const width = "100%";
-  const height = "85%";
+  const height = "83%";
 
   if (useInterface) {
     return (
-      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "15%", "zIndex":"1000" }}>
+      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "17%", "zIndex": "1000" }}>
         <div ref={parentRef} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} />
       </div>
     )

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Loading from "../common/loading";
 import clsx from "clsx";
 import { setColor, updateFornacSelection } from "../common/fornaMethods";
-import {showGraphTooltip, hideTooltip, showTooltip} from "../common/fornaMethods";
+import { showGraphTooltip, hideTooltip, showTooltip } from "../common/fornaMethods";
 import { Nucleotide, Chain } from "../utils/types";
 import Fornac from "./fornac";
 
@@ -31,7 +31,6 @@ const FornacWrapper = ({
   setAnimation: boolean;
   selectedChain: string;
 }) => {
-  // const selectedChain = chains[0]?.name.slice(-1) || "";
   const error = null;
   const [hoveredIndex, setHoveredIndex] = useState<number>();
   const [hybridizedName, setHybridizedName] = useState<string[]>([]);
@@ -42,7 +41,6 @@ const FornacWrapper = ({
   const debounceTimeout = useRef(null);
 
   useEffect(() => {
-    console.log("isDragging: ", isDragging);
     let observer: MutationObserver | null = null;
     let globalObserver: MutationObserver | null = null;
 
@@ -58,17 +56,13 @@ const FornacWrapper = ({
         const nodeNumAttr = node.getAttribute("num");
         const nodeNameAttr = node.getAttribute("struct_name");
         if (nodeNumAttr) {
-          console.log(nodeNumAttr, nodeNameAttr)
           const numIndex = parseInt(nodeNumAttr.slice(1), 10);
           let found_chain = chains.find(chain => chain.name === nodeNameAttr);
           if (found_chain) {
-            console.log(found_chain);
-
             const found_nucleotide = found_chain.nucleotides[numIndex - 1];
 
             if (found_nucleotide) {
               selectedIndices.add(found_nucleotide.index);
-              console.log(found_nucleotide);
             }
           } else if (nodeNameAttr && hybridizedName.includes(nodeNameAttr)) {
             found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2));
@@ -77,7 +71,6 @@ const FornacWrapper = ({
 
               if (found_nucleotide) {
                 selectedIndices.add(found_nucleotide.index);
-                console.log(found_nucleotide);
               } else {
                 found_chain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-1));
                 let prevChain = chains.find(chain => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2));
@@ -85,7 +78,6 @@ const FornacWrapper = ({
                   found_nucleotide = found_chain.nucleotides[numIndex - (prevChain.sequence.length) - 1];
                 if (found_nucleotide) {
                   selectedIndices.add(found_nucleotide.index);
-                  console.log(found_nucleotide);
                 }
               }
             }
@@ -169,7 +161,6 @@ const FornacWrapper = ({
 
     // Obserwuj zmiany w grafie
     const observer = new MutationObserver(() => {
-      console.log("Mutacja w grafie wykryta");
       updateFornacSelection(chains, hybridizedName);
     });
 
@@ -199,7 +190,7 @@ const FornacWrapper = ({
   return (
     <div className="absolute bottom-0 h-[85%] flex-grow w-full bg-transparent">
       <div
-        className="text-xl font-semibold pb-2 break-words shadow-sm"
+        className="text-xl font-semibold py-2 break-words shadow-sm"
       >
         {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain => (
           <div className="whitespace-nowrap overflow-x-auto cursor-pointer ml-2" key={chain.name}>

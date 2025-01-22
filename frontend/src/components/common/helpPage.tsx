@@ -1,3 +1,4 @@
+import { Color } from "molstar/lib/mol-util/color";
 import { Colors } from "./colors";
 import Logo from "./logo";
 
@@ -9,9 +10,10 @@ const HelpPage = () => {
             </div>
             <div className="flex min-h-screen flex-col items-center pb-16">
                 <div
-                    className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-6 overflow-y-auto bg-neutral-200"
+                    className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-6 overflow-y-auto"
+                    style={{ background: Colors.backgroundBeige }}
                 >
-                    <h2 className="text-2xl font-bold mb-4" style={{color: Colors.blue}}>General information</h2>
+                    <h2 className="text-2xl font-bold mb-4" style={{ color: Colors.blue }}>General information</h2>
                     <p>
                         RNAmoley is an application designed for RNA analysis, enabling users to upload data and
                         view results through RNA structure visualizations in 2D and 3D. The application supports file
@@ -20,7 +22,7 @@ const HelpPage = () => {
                         and advanced visualization tools.
                     </p>
 
-                    <h2 className="text-2xl font-bold mt-6 mb-4" style={{color: Colors.blue}}>RNAmoley workflow</h2>
+                    <h2 className="text-2xl font-bold mt-6 mb-4" style={{ color: Colors.blue }}>RNAmoley workflow</h2>
                     <p>
                         After uploading data, the application follows these steps:
                     </p>
@@ -30,7 +32,7 @@ const HelpPage = () => {
                         <li>Result generation: Displays the uploaded RNA structure and enables further analysis.</li>
                     </ol>
 
-                    <h2 className="text-2xl font-bold mt-6 mb-4" style={{color: Colors.blue}}>Input data preprocessing</h2>
+                    <h2 className="text-2xl font-bold mt-6 mb-4" style={{ color: Colors.blue }}>Input data preprocessing</h2>
                     <p>
                         RNAmoley applies the following rules during input data processing:
                     </p>
@@ -46,7 +48,7 @@ const HelpPage = () => {
                         <li>Malformed data results in task rejection.</li>
                     </ul>
 
-                    <h2 className="text-2xl font-bold mt-6 mb-4" style={{color: Colors.blue}}>How to use RNAmoley</h2>
+                    <h2 className="text-2xl font-bold mt-6 mb-4" style={{ color: Colors.blue }}>How to use RNAmoley</h2>
                     <h3 className="text-xl font-bold mt-5 mb-4">Upload the structure</h3>
                     {/*<p>*/}
                     {/*    To use RNAmoley:*/}
@@ -141,9 +143,9 @@ const HelpPage = () => {
                         </li>
                         <li><strong>3D structure:</strong> For the full structure analysis choose <i>Toggle Controls
                             Panel</i> (key icon in Mol* Viewer UI in top-right corner) -&gt; <i>Polymer
-                            actions</i> (three dots in bottom-right
+                                actions</i> (three dots in bottom-right
                             corner) -&gt; <i>Set coloring</i> -&gt; <i>Color by quality</i> -&gt; <i>Chosen
-                                measure</i>. <br/>
+                                measure</i>. <br />
                             For the structure fragment analysis coloring is called the same way, only in this case
                             choose <i>Set coloring</i> -&gt; <i>Color by fragment</i>.
                         </li>

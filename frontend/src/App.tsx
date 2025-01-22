@@ -39,7 +39,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/panel" element={<Panel />} />
+          <Route path="/analysisPanel/:jobId" element={<Panel />} />
           <Route path="/summary/:jobId" element={<SummaryPanel />} />
           <Route path="/jobProcessing" element={<JobProcessing />} />
           <Route path="/errorPage" element={<ErrorPage />} />

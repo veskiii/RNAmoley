@@ -1,4 +1,4 @@
-import { isInputValid } from "../../../components/panels/startPanel";
+import { isInputValid } from "../../../components/utils/inputValidation";
 import { describe, test, expect } from 'vitest';
 
 // describe.concurrent("returns true if only one condition is met", () => {

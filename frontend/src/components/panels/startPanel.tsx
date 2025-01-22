@@ -7,7 +7,6 @@ import { Colors } from "../common/colors";
 import { createJob } from "../utils/api";
 import { isFileValid } from "../utils/fileValidation";
 import { isInputValid } from "../utils/inputValidation";
-import { IoIosHelpCircleOutline } from "react-icons/io";
 import HelpIcon from "../common/helpIcon";
 import Logo from "../common/logo";
 
@@ -44,23 +43,17 @@ const Dashboard: React.FC = () => {
     formData.append("radioButton", radiobutton || "None");
     try {
       const response = await createJob(formData);
-      if (context) context.setId(response.id);
-      navigate("/Panel");
-    } catch (error) {
+      if (context) {
+        context.setId(response.id);
+        navigate(`/analysisPanel/${response.id}`);
+      }
+    } catch (error: any) {
       setIsSubmitting(false);
-      alert("Failed to create job");
+      alert(`Failed to create job\n${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const removeFile = () => {
-    setRnaFile(null);
-    setIsUploadedFile(false);
-    let fileLabel = document.getElementById("fileLabel");
-    if (fileLabel) {
-      fileLabel.style.color = "";
-      fileLabel.textContent = "No file selected";
-    }
-  }
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     let file = e.target.files?.[0] || null;
@@ -92,12 +85,11 @@ const Dashboard: React.FC = () => {
       </div>
       <div className="flex flex-col items-center px-[10vw] pt-0">
         <form onSubmit={handleSubmit}>
-          <div className="grid p-4 items-start content-center justify-items-center h-[75vh] w-[80vw] bg-neutral-200 p-24 rounded-xl text-teal-600 font-semibold text-lg shadow-md"
-            style={{ color: "black" }}
+          <div className="grid p-4 items-start content-center justify-items-center h-[75vh] sm:h-[auto] w-[80vw] bg-teal-100 p-24 rounded-xl text-teal-600 font-semibold text-lg shadow-md"
+            style={{ background: Colors.backgroundBeige, color: "black" }}
           >
             <div className="w-full  p-4 rounded-md text-center mb-6">
-              {/* text-teal-800 */}
-              <h2 className="text-xl font-bold mb-2" style={{color: Colors.blue}}>Welcome to RNAmoley!</h2>
+              <h2 className="text-xl font-bold mb-2" style={{ color: Colors.blue }}>Welcome to RNAmoley!</h2>
               <p>
                 The webserver analyzes RNA 3D structures to assess their quality by examining structural elements. You can upload PDB/mmCIF files, fetch data by PDB ID or use pre-selected samples.
               </p>
@@ -153,7 +145,7 @@ const Dashboard: React.FC = () => {
                 <div className="w-[300px]">
                   <p>Choose from file:</p>
                   <label
-                    className="cursor-pointer w-[300px] flex justify-center bg-white border-dashed py-2 dark:border-neutral-800  rounded-md lg:border "
+                    className="cursor-pointer w-[300px] flex justify-center bg-white border-dashed py-2 border-neutral-800  rounded-md border "
                     id="fileLabel"
                     htmlFor="inputFile"
                   >
