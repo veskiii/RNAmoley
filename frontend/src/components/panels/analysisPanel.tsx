@@ -139,12 +139,12 @@ const Panel: React.FC = () => {
 
     var jobToPost: JobToPost = { id: '', residues: [], modelNumber: 0, radius: 0, interval: 0 };
     if (analyzeWholeStructure) {
-      API_URL = "http://localhost:3000/api/v1/jobs/analyzeStructure";
+      API_URL = "http://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeStructure";
       const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
       const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
       jobToPost = { id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval }
     } else {
-      API_URL = "http://localhost:3000/api/v1/jobs/analyzeFragment";
+      API_URL = "http://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeFragment";
       jobToPost = { id: jobID, modelNumber: 0, residues: selectedList, radius: 0, interval: 0 }
     }
 
@@ -153,7 +153,7 @@ const Panel: React.FC = () => {
         method: "POST",
         body: JSON.stringify(jobToPost),
         headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
+          "Access-Control-Allow-Origin": "rnamoley.cs.put.poznan.pl",
           "Content-Type": "application/json",
         },
       });
@@ -373,7 +373,7 @@ const Panel: React.FC = () => {
                   </label>
                   <button
                     id="switchViewButton"
-                    onClick={() => {setIs3Dview(!is3Dview); setIsViewInitialized(false);}}
+                    onClick={() => { setIs3Dview(!is3Dview); setIsViewInitialized(false); }}
                     disabled={!isViewInitialized}
                     className="font-medium absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1"
                   >
@@ -398,17 +398,17 @@ const Panel: React.FC = () => {
                 />
 
               </div>
-                { is3Dview && (
-                  <Molstar
-                    useInterface={true}
-                    file={myData.pdb_file_string}
-                    chains={chainsState}
-                    setChains={setChainsState}
-                    initialized={initialized}
-                    setInitialized={setInitialized}
-                    setIsViewInitialized={setIsViewInitialized}
-                  />
-                )}
+              {is3Dview && (
+                <Molstar
+                  useInterface={true}
+                  file={myData.pdb_file_string}
+                  chains={chainsState}
+                  setChains={setChainsState}
+                  initialized={initialized}
+                  setInitialized={setInitialized}
+                  setIsViewInitialized={setIsViewInitialized}
+                />
+              )}
               {!is3Dview && (
                 <FornaComponent
                   chains={chainsState}
