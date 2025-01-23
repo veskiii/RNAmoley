@@ -18,15 +18,17 @@ import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/st
 
 const Molstar = props => {
 
-  const { useInterface, pdbId, url, file, className, showControls, showAxes, initialized, setInitialized, chains, setChains } = props;
+  const { useInterface, pdbId, url, file, className, showControls, showAxes, initialized, setInitialized, chains, setChains, setIsViewInitialized } = props;
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
   const [selected, setSelected] = useState([]);
   const [enableSelection, setEnableSelection] = useState(false);
-
+useEffect(()=>{
+  console.log(plugin.initialized)
+},[plugin.initialized])
   useEffect(() => {
-    if (plugin.current) {
+    if (plugin.current || plugin.initialized) {
       console.log("Plugin already initialized");
       return;
     } else {
@@ -76,6 +78,7 @@ const Molstar = props => {
         }
         await loadStructure(plugin.current, file);
         setInitialized(true);
+        setIsViewInitialized(true);
       })()
     };
     return () => {
@@ -84,7 +87,6 @@ const Molstar = props => {
       setInitialized(false);
     };
   }, [])
-
 
   useEffect(() => {
     if (!initialized) return;
@@ -293,6 +295,7 @@ Molstar.propTypes = {
   setChains: PropTypes.func,
   initialized: PropTypes.bool,
   setInitialized: PropTypes.func,
+  setIsViewInitialized: PropTypes.func,
 };
 
 export default Molstar;

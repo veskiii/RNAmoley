@@ -40,6 +40,7 @@ const Panel: React.FC = () => {
   const [minId, setMinId] = useState<string>('');
   const [maxId, setMaxId] = useState<string>('');
   const [selectedList, setSelectedList] = useState<number[]>([]);
+  const [isViewInitialized, setIsViewInitialized] = useState<boolean>(true)
   const { jobId } = useParams();
   const jobID = jobId;
   const navigate = useNavigate();
@@ -63,6 +64,58 @@ const Panel: React.FC = () => {
   const handleAnalyzeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAnalyzeWholeStructure(e.target.checked);
   };
+
+  const handleSubmit = () => {
+    const start = parseInt(inputValueStart, 10);
+    const end = parseInt(inputValueEnd, 10);
+
+    if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
+      alert(`Invalid range: ${start} to ${end}`);
+      return;
+    }
+    if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
+      setChainsState(prevChains =>
+        prevChains.map(chain => {
+          if (chain.name.slice(-1) === selectedChain) {
+
+            return {
+              ...chain,
+              nucleotides: chain.nucleotides.map(nucleotide => ({
+                ...nucleotide,
+                selected: nucleotide.index >= start && nucleotide.index <= end,
+              })),
+            };
+          }
+          return chain;
+        }));
+    } else {
+      alert("Type valid range on selected chain");
+    }
+
+  };
+
+  //do placeholder z max i min original_id nukleotydów podanego chain
+  useEffect(() => {
+    chainsState.forEach((chain) => {
+      if (chain.name.slice(-1) === selectedChain) {
+        const indices = chain.nucleotides.map(nucleotide => nucleotide.index);
+        const min = Math.min(...indices);
+        const max = Math.max(...indices);
+
+        setMinId(min.toString());
+        setMaxId(max.toString());
+        setInputValueStart(min.toString());
+        setInputValueEnd(max.toString());
+      }
+
+    })
+  }, [selectedChain])
+
+  // useEffect(() => {
+  //   chainsState.forEach(chain => {
+  //     console.log("Chain z panelu:", chain)
+  //   })
+  // }, [chainsState]);
 
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
@@ -320,7 +373,8 @@ const Panel: React.FC = () => {
                   </label>
                   <button
                     id="switchViewButton"
-                    onClick={() => setIs3Dview(!is3Dview)}
+                    onClick={() => {setIs3Dview(!is3Dview); setIsViewInitialized(false);}}
+                    disabled={!isViewInitialized}
                     className="font-medium absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1"
                   >
                     Switch view
@@ -344,16 +398,17 @@ const Panel: React.FC = () => {
                 />
 
               </div>
-              {is3Dview && (
-                <Molstar
-                  useInterface={true}
-                  file={myData.pdb_file_string}
-                  chains={chainsState}
-                  setChains={setChainsState}
-                  initialized={initialized}
-                  setInitialized={setInitialized}
-                />
-              )}
+                { is3Dview && (
+                  <Molstar
+                    useInterface={true}
+                    file={myData.pdb_file_string}
+                    chains={chainsState}
+                    setChains={setChainsState}
+                    initialized={initialized}
+                    setInitialized={setInitialized}
+                    setIsViewInitialized={setIsViewInitialized}
+                  />
+                )}
               {!is3Dview && (
                 <FornaComponent
                   chains={chainsState}
@@ -366,9 +421,9 @@ const Panel: React.FC = () => {
                   directionArrows={directionArrows}
                   setAnimation={animation}
                   selectedChain={selectedChain}
+                  setIsViewInitialized={setIsViewInitialized}
                 />
               )}
-
             </div>
           ) : (
             <Loading />

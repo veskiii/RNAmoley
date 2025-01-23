@@ -19,6 +19,7 @@ const FornacWrapper = ({
   directionArrows,
   setAnimation,
   selectedChain,
+  setIsViewInitialized,
 }: {
   chains: Chain[];
   setChains: React.Dispatch<React.SetStateAction<Chain[]>>;
@@ -30,10 +31,15 @@ const FornacWrapper = ({
   directionArrows: boolean;
   setAnimation: boolean;
   selectedChain: string;
+  setIsViewInitialized: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const error = null;
   const [hoveredIndex, setHoveredIndex] = useState<number>();
   const [hybridizedName, setHybridizedName] = useState<string[]>([]);
+
+  useEffect(()=>{
+    setIsViewInitialized(true);
+  },[])
 
   // Zapis do chains
   // Jeśli nastąpi zmiana na grafie zmieniany jest parametr selected w nucleotides
@@ -185,7 +191,7 @@ const FornacWrapper = ({
       .on("mousemove", function () {
       })
       .on("mouseout", hideTooltip);
-  }, [setAnimation]);
+  }, [setAnimation, numbering, labelInterval, links, nodeOutline, nodeLabel]);
 
   return (
     <div className="absolute bottom-0 h-[85%] flex-grow w-full bg-transparent">
