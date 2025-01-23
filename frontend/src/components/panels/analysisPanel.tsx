@@ -10,8 +10,8 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import { SelectChangeEvent } from '@mui/material/Select';
-import { Job, Chain, JobToPost } from "../utils/types";
-import { fetchJobData } from "../utils/api";
+import { Job, Chain} from "../utils/types";
+import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors"
 import HelpIcon from "../common/helpIcon";
@@ -81,7 +81,7 @@ const Panel: React.FC = () => {
 
     })
   }, [selectedChain])
-  
+
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
       const data = await fetchJobData(jobID, model);
@@ -95,50 +95,8 @@ const Panel: React.FC = () => {
     }
   }
 
-  async function sendDataToAnalyze() {
-    var API_URL = '';
-
-    if (!jobID) {
-      throw new Error("jobID is required");
-    }
-
-    var jobToPost: JobToPost = { id: '', residues: [], modelNumber: 0, radius: 0, interval: 0 };
-    if (analyzeWholeStructure) {
-      API_URL = "http://localhost:3000/api/v1/jobs/analyzeStructure";
-      const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
-      const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
-      jobToPost = { id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval }
-    } else {
-      API_URL = "http://localhost:3000/api/v1/jobs/analyzeFragment";
-      jobToPost = { id: jobID, modelNumber: 0, residues: selectedList, radius: 0, interval: 0 }
-    }
-
-    try {
-      const response = await fetch(`${API_URL}`, {
-        method: "POST",
-        body: JSON.stringify(jobToPost),
-        headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
-          "Content-Type": "application/json",
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Data posted successfully:", data.id);
-      } else {
-        let errorData = await response.json();
-        console.error("Error creating job:", errorData);
-        const errorMessage = errorData?.message || "Unknown error";
-        alert("Failed to create job: " + errorMessage);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Failed to create job");
-    }
-  }
-
   function handleNavigate() {
-    sendDataToAnalyze();
+    sendDataToAnalyze(analyzeWholeStructure, jobID, selectedModel, selectedList);
     navigate(`/summary/${jobID}`);
   }
 
