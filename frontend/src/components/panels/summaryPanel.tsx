@@ -41,7 +41,7 @@ const SummaryPanel: React.FC = () => {
 
     const colorGnodes = () => {
         if (!myData || !myData.results || !myData.results.data) {
-            //console.warn("No data in myData.results.data");
+            console.warn("No data in myData.results.data");
             return <ErrorPage/>
         }
         if (myData.results.mode === "fragment") {
@@ -177,14 +177,14 @@ const SummaryPanel: React.FC = () => {
     useEffect(() => {
         let interval: NodeJS.Timeout; // Declare interval variable
         async function fetchData() {
-            console.log("Start to fetch data");
+            //console.log("Start to fetch data");
             try {
                 const response = await fetchMyData(jobId);
                 const data = await response.json();
                 if (!response.ok) {
-                    console.log(
-                        `Error during fetching data. Message: ${data.error} Status code: ${response.status}`
-                    );
+                    // console.log(
+                    //     `Error during fetching data. Message: ${data.error} Status code: ${response.status}`
+                    // );
                     setMyError({
                         errorMessage: data.error,
                         statusCode: response.status.toString(),
@@ -195,7 +195,7 @@ const SummaryPanel: React.FC = () => {
                     setMyData(data);
                     const chains = transformJobToChains(data);
                     setChainsState(chains);
-                    console.log("data:", data);
+                    //console.log("data:", data);
 
                     if (data.metadata.status === "completed") {
                         clearInterval(interval); // Stop the interval loop
