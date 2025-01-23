@@ -139,12 +139,12 @@ const Panel: React.FC = () => {
 
     var jobToPost: JobToPost = { id: '', residues: [], modelNumber: 0, radius: 0, interval: 0 };
     if (analyzeWholeStructure) {
-      API_URL = "http://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeStructure";
+      API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeStructure";
       const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
       const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
       jobToPost = { id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval }
     } else {
-      API_URL = "http://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeFragment";
+      API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeFragment";
       jobToPost = { id: jobID, modelNumber: 0, residues: selectedList, radius: 0, interval: 0 }
     }
 

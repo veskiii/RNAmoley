@@ -1,5 +1,5 @@
 import React from "react";
-import {Colors} from "./colors";
+import { Colors } from "./colors";
 
 type DownloadButtonProps = {
     id?: string; // Definiujemy, że id musi być stringiem
@@ -8,7 +8,7 @@ type DownloadButtonProps = {
 const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
     const handleDownload = async () => {
         try {
-            const response = await fetch(`http://rnamoley.cs.put.poznan.pl/api/v1/jobs/${id}/download`, {
+            const response = await fetch(`https://rnamoley.cs.put.poznan.pl/api/v1/jobs/${id}/download`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -40,7 +40,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
 
     return (
         <button
-            id = "downloadButton"
+            id="downloadButton"
             onClick={handleDownload}
             className={
                 "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1"

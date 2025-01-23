@@ -1,6 +1,6 @@
 import { Job } from "./types";
 
-const API_URL = "http://rnamoley.cs.put.poznan.pl/api/v1";
+const API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1";
 // const API_URL = "http://restapi/api/v1";
 
 export const createJob = async (formData: FormData): Promise<any> => {
