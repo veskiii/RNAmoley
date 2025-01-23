@@ -11,15 +11,22 @@ app.use(express.json());
 // expose public folder
 app.use(express.static('public'));
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+const HOST = process.env.HOST || 'localhost';
 
-app.use(cors());
+app.use(cors(
+    {
+        origin: '*',
+        methods: ['GET', 'POST', 'DELETE', 'PATCH', 'PUT'],
+        allowedHeaders: '*',
+    }
+));
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello World! Rest API is running');
 });
 
-app.use('/api/v1/jobs', jobRoutes);
+app.use('/v1/jobs', jobRoutes);
 
 await runDbMigrations();
 
@@ -33,6 +40,8 @@ setInterval(() => {
 
 app.listen(
     PORT,
+    HOST,
     () => {
-        console.log(`Server is running on http://localhost:${PORT}`)
-    });
+        console.log(`Server is running at http://${HOST}:${PORT}`);
+    }
+);
