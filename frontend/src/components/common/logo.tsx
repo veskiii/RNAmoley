@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { Colors } from "./colors";
 
 export interface LogoProps {
     page?: string;
@@ -17,7 +18,7 @@ const Logo: React.FC<LogoProps> = ({ page = "Submition panel" }) => {
                 <div className="font-bold">
                     <h1>RNA</h1>
                 </div>
-                <div className="font-semibold text-teal-600 ">
+                <div className="font-semibold" style={{color: Colors.blue}}>
                     <h1>MOLEY</h1>
                 </div>
             </div>

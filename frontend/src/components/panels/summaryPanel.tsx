@@ -11,7 +11,6 @@ import DownloadFile from "../common/downloadFile";
 import ErrorPage, {ErrorPageProps} from "../common/ErrorPage";
 import {colorMapByRange, getColor} from "../utils/ColorUtils";
 import JobProcessing from "../common/JobProcessing";
-import { useNavigate } from "react-router-dom";
 import HelpIcon from "../common/helpIcon";
 import {transformJobToChains} from '../utils/transformJobToChains';
 import {fetchMyData} from "../utils/api";
@@ -37,7 +36,6 @@ const SummaryPanel: React.FC = () => {
     const [chainsState, setChainsState] = useState<Chain[]>([]);
     const devColor = "#f3f4f6"
     const selectedBorderColor = Colors.salmon;
-    const navigate = useNavigate();
 
     const colorGnodes = () => {
         if (!myData || !myData.results || !myData.results.data) {
@@ -440,16 +438,6 @@ const SummaryPanel: React.FC = () => {
         <div className="flex flex-col h-screen w-screen">
             <div className="flex flex-row w-full justify-between">
                 <div className="flex flex-row font-medium items-center self-start ml-[30px] cursor-pointer">
-                    {/*//  onClick={() => navigate("/")}>*/}
-                    {/*// <div className="flex flex-col text-3xl">*/}
-                    {/*//     <div className="font-extrabold">*/}
-                    {/*//         <h1>RNA</h1>*/}
-                    {/*//     </div>*/}
-                    {/*//     <div className="font-semibold pr-5 text-{#526969}">*/}
-                    {/*//         <h1 style={{color: Colors.blue}}>MOLEY</h1>*/}
-                    {/*//     </div>*/}
-                    {/*// </div>*/}
-                    {/*// <h1 className="text-3xl">| Result Panel</h1>*/}
                     <Logo page="Result panel"/>
                     <div className="ml-2"> <HelpIcon/> </div>
                 </div>
