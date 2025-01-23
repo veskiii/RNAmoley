@@ -7,12 +7,10 @@ export const createJob = async (formData: FormData): Promise<any> => {
   const response = await fetch(`${API_URL}/jobs`, {
     method: "POST",
     body: formData,
-    headers: {
-    },
   });
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Unknown error");
+    const errorData = await response.text();
+    throw new Error(errorData || "Unknown error");
   }
   return response.json();
 };

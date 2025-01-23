@@ -1,27 +1,23 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import Loading from "../common/loading";
 import "../../App.css";
-import { NameContext } from "../../App";
 import Molstar from "../visualizations/molStarComponent";
 import FornaComponent from "../visualizations/fornacWrapper";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import FornaControls from "../common/fornaControls";
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
-import AnalyzeButton from "../common/analyzeButton";
-import Box from '@mui/material/Box';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { Atom, Annotation, Numeration, Metadata, Job, Nucleotide, Chain, JobToPost } from "../utils/types";
+import { SelectChangeEvent } from '@mui/material/Select';
+import { Job, Chain, JobToPost } from "../utils/types";
 import { fetchJobData } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors"
 import HelpIcon from "../common/helpIcon";
 import Logo from "../common/logo";
+import ErrorPage from "../common/ErrorPage";
+import RangeSelecting from "../common/rangeSelecting";
 
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
@@ -37,15 +33,20 @@ const Panel: React.FC = () => {
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [selectedModel, setSelectedModel] = useState<number>(1);
-  const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(false);
+  const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(true);
   const [selectedChain, setSelectedChain] = useState<string>(chainsState[0]?.name.slice(-1) || "");
-  const [inputValueStart, setInputValueStart] = useState('');
-  const [inputValueEnd, setInputValueEnd] = useState('');
+  const [inputValueStart, setInputValueStart] = useState<string>('');
+  const [inputValueEnd, setInputValueEnd] = useState<string>('');
   const [minId, setMinId] = useState<string>('');
   const [maxId, setMaxId] = useState<string>('');
+  const [selectedList, setSelectedList] = useState<number[]>([]);
+  const [isViewInitialized, setIsViewInitialized] = useState<boolean>(true)
+  const { jobId } = useParams();
+  const jobID = jobId;
+  const navigate = useNavigate();
 
   useEffect(() => {
-    setSelectedChain(chainsState[0]?.name.slice(-1));
+    setSelectedChain(chainsState[0]?.name.slice(-1) || "");
   }, [myData]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
@@ -122,31 +123,14 @@ const Panel: React.FC = () => {
       setMyData(data);
       const chains = transformJobToChains(data);
       setChainsState(chains);
-      console.log("data:", data);
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
       }
-      //TODO?: NotFound
     }
   }
 
-
-  function toggle() {
-    setIs3Dview((is3Dview) => {
-      is3Dview = !is3Dview;
-      let viewLabel = document.getElementById("viewLabel") as HTMLElement;
-      if (is3Dview) {
-        viewLabel.textContent = "3D view";
-      } else {
-        viewLabel.textContent = "2D view";
-      }
-      return is3Dview;
-    });
-  }
-
   async function sendDataToAnalyze() {
-    var idList: number[] = [];
     var API_URL = '';
 
     if (!jobID) {
@@ -198,15 +182,12 @@ const Panel: React.FC = () => {
     navigate(`/summary/${jobID}`);
   }
 
-  const navigate = useNavigate();
   const handleSetSelectedModel = (e: SelectChangeEvent) => {
     setSelectedModel(parseInt(e.target.value));
   }
 
-  const context = useContext(NameContext);
-  const jobID = context?.jobID;
   const changeModel = (model: number) => {
-    if (!jobID) return;
+    if (!jobID || model === selectedModel) return;
     loadData(jobID, model);
   }
 
@@ -215,14 +196,22 @@ const Panel: React.FC = () => {
     loadData(jobID, 1);
   }, [jobID]);
 
-  if (error) return <div>Error: {error}</div>;
-  if (!myData) {
-    return <Loading />;
-  }
+  useEffect(() => {
+    const idList: number[] = chainsState.flatMap((chain) =>
+      chain.nucleotides
+        .filter((nucleotide) => nucleotide.selected)
+        .map((nucleotide) => nucleotide.index)
+    );
+    setSelectedList(idList);
+  }, [chainsState])
 
+  if (error) return <ErrorPage errorMessage={error} />;
+  if (!myData) {
+    return <Loading page="Analysis panel" />;
+  }
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-80 bg-neutral-200">
+      <div className="w-80 bg-neutral-200" style={{ background: Colors.backgroundBeige }}>
         <div className="flex pl-4 pt-4 h-[15%]">
           <Logo page="Analysis panel" />
           <HelpIcon />
@@ -303,27 +292,33 @@ const Panel: React.FC = () => {
                         >Change model</button>
                       </div>
 
-                      <div >
-                        <label className="options">
-                          Radius{''}
-                          <input id="radiusInput"
-                            className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                            type="number"
-                            defaultValue={5}
-                          />
-                        </label>
-                      </div>
+                      {analyzeWholeStructure && (
+                        <div>
+                          <div >
+                            <label className="options">
+                              Radius{''}
+                              <input id="radiusInput"
+                                className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                                type="number"
+                                defaultValue={5}
+                              />
+                            </label>
+                          </div>
 
-                      <div>
-                        <label className="options">
-                          Interval{''}
-                          <input id="intervalInput"
-                            className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                            type="number"
-                            defaultValue={1}
-                          />
-                        </label>
-                      </div>
+                          <div>
+                            <label className="options">
+                              Interval{''}
+                              <input id="intervalInput"
+                                className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                                type="number"
+                                defaultValue={1}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )
+                      }
+
                     </div>
 
                   </div>
@@ -358,12 +353,19 @@ const Panel: React.FC = () => {
 
         </div>
         <div className="flex flex-col h-[20%] ml-4 mt-3">
-          <AnalyzeButton onClick={handleNavigate} />
+          <button
+            type="submit"
+            disabled={!(analyzeWholeStructure || selectedList.length > 0)}
+            className={`font-bold rounded-lg p-2 z-10 text-black flex justify-center items-center h-auto w-[90%] my-1 ${!(analyzeWholeStructure || selectedList.length > 0) ? "bg-gray-400 cursor-not-allowed" : ""
+              } transition-colors text-2xl text-black`}
+            onClick={handleNavigate}
+          >
+            Analyze
+          </button>
         </div>
       </div>
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
-
           {myData ? (
             <div id="container">
               <div className="absolute top-0 h-[15%] flex-grow w-full bg-transparent z-100">
@@ -372,79 +374,46 @@ const Panel: React.FC = () => {
                     id="viewLabel"
                     className="text-2xl font-medium place-self-center my-1"
                   >
-                    3D view
+                    {is3Dview ? "3D view" : "2D view"}
                   </label>
                   <button
                     id="switchViewButton"
-                    onClick={toggle}
+                    onClick={() => {setIs3Dview(!is3Dview); setIsViewInitialized(false);}}
+                    disabled={!isViewInitialized}
                     className="font-medium absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1"
                   >
                     Switch view
                   </button>
                 </div>
-                <div className="flex items-center h-[auto] mx-4 space-x-4 z-0 text-xl font-semibold ">
-                  <Box sx={{ width: "80px", maxWidth: 120 }}>
-                    <FormControl fullWidth>
-                      <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
-                      <Select
-                        labelId="demo-simple-select-label"
-                        id="demo-simple-select"
-                        value={selectedChain || chainsState[0].name.slice(-1)}
-                        label="Chain"
-                        onChange={handleChange}
-                        className="p-0"
-                      >
-                        {chainsState.map((chain) => (
-                          <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Box>
-                  <div className="flex flex-row items-baseline mx-6 mt-0">
-                    <label htmlFor="range_start" className="text-xl font-medium mr-4">From</label>
-                    <input
-                      id="range_start"
-                      type="number"
-                      min={minId}
-                      max={maxId}
-                      defaultValue={minId}
-                      onChange={handleInputChangeStart}
-                      placeholder={minId}
-                      className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-
-                    <label htmlFor="range_end" className="text-xl font-medium  mr-4">To</label>
-                    <input
-                      id="range_end"
-                      type="number"
-                      min={minId}
-                      max={maxId}
-                      defaultValue={maxId}
-                      onChange={handleInputChangeEnd}
-                      placeholder={maxId}
-                      className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-
-                    <button
-                      id="select_button"
-                      onClick={handleSubmit}
-                      className="p-0 m-0"
-                    >
-                      Select
-                    </button>
-                  </div>
-                </div>
-              </div>
-              {is3Dview && (
-                <Molstar
-                  useInterface={true}
-                  file={myData.pdb_file_string}
+                <RangeSelecting
                   chains={chainsState}
-                  setChains={setChainsState}
-                  initialized={initialized}
-                  setInitialized={setInitialized}
+                  selectedChain={selectedChain}
+                  minId={minId}
+                  maxId={maxId}
+                  inputValueStart={inputValueStart}
+                  inputValueEnd={inputValueEnd}
+                  setChainsState={setChainsState}
+                  setMinId={setMinId}
+                  setMaxId={setMaxId}
+                  setInputValueStart={setInputValueStart}
+                  setInputValueEnd={setInputValueEnd}
+                  handleChange={handleChange}
+                  handleInputChangeStart={handleInputChangeStart}
+                  handleInputChangeEnd={handleInputChangeEnd}
                 />
-              )}
+
+              </div>
+                { is3Dview && (
+                  <Molstar
+                    useInterface={true}
+                    file={myData.pdb_file_string}
+                    chains={chainsState}
+                    setChains={setChainsState}
+                    initialized={initialized}
+                    setInitialized={setInitialized}
+                    setIsViewInitialized={setIsViewInitialized}
+                  />
+                )}
               {!is3Dview && (
                 <FornaComponent
                   chains={chainsState}
@@ -457,9 +426,9 @@ const Panel: React.FC = () => {
                   directionArrows={directionArrows}
                   setAnimation={animation}
                   selectedChain={selectedChain}
+                  setIsViewInitialized={setIsViewInitialized}
                 />
               )}
-
             </div>
           ) : (
             <Loading />

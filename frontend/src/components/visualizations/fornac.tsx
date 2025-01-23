@@ -28,14 +28,22 @@ const FornaComponent = ({
   setHybridizedName: Dispatch<SetStateAction<string[]>>;
 }) => {
   const error = null;
+  const [width, setWidth] = useState(window.innerWidth);
+  const [height, setHeight] = useState(window.innerHeight);
 
   useEffect(() => {
+    const handleResize = () => { setWidth(window.innerWidth); setHeight(window.innerHeight) };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
 
+  }, []);
+  
+  useEffect(() => {
     const container = new fornac.FornaContainer("#rna_ss", {
       animation: setAnimation,
       zoomable: true,
       labelInterval: labelInterval,
-      initialSize: [1300, 900],
+      initialSize: [width, (height + 150)],
       numbering: numbering,
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
@@ -88,9 +96,7 @@ const FornaComponent = ({
             sequence: chain.sequence,
             name: chain.name,
           }
-          //console.log("Z forny: ", options.structure, options.sequence, options.name);
           container.addRNA(options.structure, options);
-          //console.log(Object.getOwnPropertyNames(container.options));
         }
       });
       hybridizedPairs.forEach(([chainA, chainB]) => {
@@ -171,7 +177,7 @@ const FornaComponent = ({
   ]);
 
   return (
-    <div className="absolute bottom-0 h-[85%] flex-grow w-full bg-transparent">
+    <div >
       {error ? (
         <div className="text-red-500 p-4 bg-red-100 border border-red-300 rounded">
           <p>${error}</p>
