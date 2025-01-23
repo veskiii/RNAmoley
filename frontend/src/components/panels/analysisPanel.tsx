@@ -10,8 +10,8 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import { SelectChangeEvent } from '@mui/material/Select';
-import { Job, Chain, JobToPost } from "../utils/types";
-import { fetchJobData } from "../utils/api";
+import { Job, Chain} from "../utils/types";
+import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors"
 import HelpIcon from "../common/helpIcon";
@@ -65,35 +65,6 @@ const Panel: React.FC = () => {
     setAnalyzeWholeStructure(e.target.checked);
   };
 
-  const handleSubmit = () => {
-    const start = parseInt(inputValueStart, 10);
-    const end = parseInt(inputValueEnd, 10);
-
-    if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
-      alert(`Invalid range: ${start} to ${end}`);
-      return;
-    }
-    if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
-      setChainsState(prevChains =>
-        prevChains.map(chain => {
-          if (chain.name.slice(-1) === selectedChain) {
-
-            return {
-              ...chain,
-              nucleotides: chain.nucleotides.map(nucleotide => ({
-                ...nucleotide,
-                selected: nucleotide.index >= start && nucleotide.index <= end,
-              })),
-            };
-          }
-          return chain;
-        }));
-    } else {
-      alert("Type valid range on selected chain");
-    }
-
-  };
-
   //do placeholder z max i min original_id nukleotydów podanego chain
   useEffect(() => {
     chainsState.forEach((chain) => {
@@ -110,12 +81,6 @@ const Panel: React.FC = () => {
 
     })
   }, [selectedChain])
-
-  // useEffect(() => {
-  //   chainsState.forEach(chain => {
-  //     console.log("Chain z panelu:", chain)
-  //   })
-  // }, [chainsState]);
 
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
@@ -173,7 +138,7 @@ const Panel: React.FC = () => {
   }
 
   function handleNavigate() {
-    sendDataToAnalyze();
+    sendDataToAnalyze(analyzeWholeStructure, jobID, selectedModel, selectedList);
     navigate(`/summary/${jobID}`);
   }
 
