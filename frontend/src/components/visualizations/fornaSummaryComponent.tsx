@@ -108,7 +108,7 @@ const FornacSummaryComponent = ({
             if(index <= job.results.data.length - 1) {
             d3.select(`circle.fornac-node[node_num="${index + 1}"]`)
                 .select("title")
-                .text(`Residue number: ${nucleotide.index}\nClash score: ${job.results.data[index].metrics.clashscore}\nBad angles: ${job.results.data[index].metrics.numbadangles}\nBad bonds: ${job.results.data[index].metrics.numbadbonds}`);
+                .text(`Residue number: ${nucleotide.index}\nClash score: ${job.results.data[index].metrics.clashscore}\nBad angles: ${job.results.data[index].metrics.pct_badangles}\nBad bonds: ${job.results.data[index].metrics.pct_badbonds}`);
 
 
             d3.selectAll("text.fornac-nodeLabel")

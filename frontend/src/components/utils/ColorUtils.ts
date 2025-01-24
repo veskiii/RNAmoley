@@ -29,17 +29,21 @@ export const rangeMap: Map<String, Range> = new Map([
 
 function getRange(residue: Residue, givenQualityScore: QualityScore): number {
     if (givenQualityScore === QualityScore.BAD_BONDS) {
-        var qualityScore = parseFloat(residue.metrics.numbadbonds)
-        if (qualityScore === 0) {
+        var qualityScore = parseFloat(residue.metrics.pct_badbonds)
+        if (qualityScore < 0.01) {
             return 1;
-        }  else {
+        }  else if(qualityScore >= 0.01 && qualityScore < 0.2) {
+            return 3;
+        }else{
             return 5;
         }
     } else if (givenQualityScore == QualityScore.BAD_ANGLES) {
-        var qualityScore = parseFloat(residue.metrics.numbadangles)
-        if (qualityScore === 0) {
+        var qualityScore = parseFloat(residue.metrics.pct_badangles)
+        if (qualityScore < 0.1) {
             return 1;
-        }  else {
+        }  else if(qualityScore >= 0.1 && qualityScore < 0.5) {
+            return 3;
+        }else{
             return 5;
         }
     } else {
