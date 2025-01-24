@@ -1,23 +1,24 @@
-import React, {useEffect, useState} from "react";
-import {useParams} from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import Loading from "../common/loading";
 import "../../App.css";
 import Molstar from "../visualizations/molStarSummaryComponent";
 import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
-import { Chain, SummaryJob, QualityScore, clashScoreColorMap, badAnglesColorMap, badBondsColorMap} from "../utils/types";
-import {Colors} from "../common/colors";
+import { Chain, SummaryJob, QualityScore, clashScoreColorMap, badAnglesColorMap, badBondsColorMap } from "../utils/types";
+import { Colors } from "../common/colors";
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
-import ErrorPage, {ErrorPageProps} from "../common/ErrorPage";
-import {colorMapByRange, getColor} from "../utils/ColorUtils";
+import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
+import { colorMapByRange, getColor } from "../utils/ColorUtils";
 import JobProcessing from "../common/JobProcessing";
 import HelpIcon from "../common/helpIcon";
-import {transformJobToChains} from '../utils/transformJobToChains';
-import {fetchMyData} from "../utils/api";
+import { transformJobToChains } from '../utils/transformJobToChains';
+import { fetchMyData } from "../utils/api";
 import Logo from "../common/logo";
+import HomeIcon from "../common/homeIcon";
 
 const SummaryPanel: React.FC = () => {
-    const {jobId} = useParams();
+    const { jobId } = useParams();
     const [myData, setMyData] = useState<SummaryJob>();
     const [myError, setMyError] = useState<ErrorPageProps | null>(null);
     const [labelInterval, setLabelInterval] = useState(10);
@@ -40,7 +41,7 @@ const SummaryPanel: React.FC = () => {
     const colorGnodes = () => {
         if (!myData || !myData.results || !myData.results.data) {
             //console.warn("No data in myData.results.data");
-            return <ErrorPage/>
+            return <ErrorPage />
         }
         if (myData.results.mode === "fragment") {
             //@ts-ignore
@@ -75,7 +76,7 @@ const SummaryPanel: React.FC = () => {
     const getColorMap = () => {
         if (!myData || !myData.results || !myData.results.data) {
             console.error("No data in myData.results.data");
-            return <ErrorPage/>
+            return <ErrorPage />
         }
 
         myData.results.data.forEach((residue) => {
@@ -104,7 +105,7 @@ const SummaryPanel: React.FC = () => {
         });
     }
 
-    function colorColumn (selectedScore: QualityScore = QualityScore.CLASH_SCORE)  {
+    function colorColumn(selectedScore: QualityScore = QualityScore.CLASH_SCORE) {
         const getEnumKeyByValue = (value: string): string | undefined => {
             return Object.keys(QualityScore).find(
                 (key) => QualityScore[key as keyof typeof QualityScore] === value
@@ -113,10 +114,10 @@ const SummaryPanel: React.FC = () => {
 
         const score = getEnumKeyByValue(selectedScore);
 
-        if(myData){
+        if (myData) {
             document.querySelectorAll(`td[class*="column-${score}"]`).forEach((cell, index) => {
                 const residue = myData.results.data[index];
-                if(residue){
+                if (residue) {
                     (cell as HTMLElement).style.backgroundColor = getColor(residue, selectedScore);
                 }
             });
@@ -198,7 +199,7 @@ const SummaryPanel: React.FC = () => {
                     if (data.metadata.status === "completed") {
                         clearInterval(interval); // Stop the interval loop
                         setIsLoading(false);
-                    }else if(data.metadata.status === "running"){
+                    } else if (data.metadata.status === "running") {
                         setIsLoading(false);
                     }
                 }
@@ -220,21 +221,21 @@ const SummaryPanel: React.FC = () => {
     }, [jobId]);
 
     if (isLoading) {
-        return <Loading/>;
+        return <Loading />;
     }
 
     if (myError) {
         var message = myError.errorMessage;
         var code = myError.statusCode;
-        return <ErrorPage errorMessage={message} statusCode={code}/>;
+        return <ErrorPage errorMessage={message} statusCode={code} />;
     }
 
     if (!myData) {
-        return <ErrorPage/>;
+        return <ErrorPage />;
     }
 
     if (myData.metadata.status !== "completed") {
-        return <JobProcessing/>;
+        return <JobProcessing />;
     }
 
     function makeTable(myData: SummaryJob) {
@@ -253,7 +254,7 @@ const SummaryPanel: React.FC = () => {
             original_indices.push(myData.numeration[index]?.[0]);
         });
 
-        {{colorGnodes()}}
+        { { colorGnodes() } }
 
         if (myData.results.mode === "fragment") {
             const clashscore = myData.results.data?.[0].metrics.clashscore;
@@ -263,39 +264,39 @@ const SummaryPanel: React.FC = () => {
                 <div className="max-h-[60vh] overflow-y-auto">
                     <table>
                         <tbody className="w-full">
-                        <tr>
-                            <th className="border border-neutral-300 bg-gray-100 w-[70%] p-3 text-2xl font-semibold">
-                                Residue numbers range
-                            </th>
-                            <td className="border border-neutral-300 bg-gray-100 w-[30%] text-2xl text-center">
-                                {original_indices[0]} -{" "}
-                                {original_indices[original_indices.length - 1]}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-                                Clash score
-                            </th>
-                            <td className="border border-neutral-300 bg-white text-2xl text-center">
-                                {clashscore}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th className="border border-neutral-300 bg-gray-100 p-3 text-2xl font-semibold">
-                                Bad angles
-                            </th>
-                            <td className="border border-neutral-300 bg-gray-100 text-2xl text-center">
-                                {numbadangles}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-                                Bad bonds
-                            </th>
-                            <td className="border border-neutral-300 bg-white text-2xl text-center">
-                                {numbadbonds}
-                            </td>
-                        </tr>
+                            <tr>
+                                <th className="border border-neutral-300 bg-gray-100 w-[70%] p-3 text-2xl font-semibold">
+                                    Residue numbers range
+                                </th>
+                                <td className="border border-neutral-300 bg-gray-100 w-[30%] text-2xl text-center">
+                                    {original_indices[0]} -{" "}
+                                    {original_indices[original_indices.length - 1]}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
+                                    Clash score
+                                </th>
+                                <td className="border border-neutral-300 bg-white text-2xl text-center">
+                                    {clashscore}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th className="border border-neutral-300 bg-gray-100 p-3 text-2xl font-semibold">
+                                    Bad angles
+                                </th>
+                                <td className="border border-neutral-300 bg-gray-100 text-2xl text-center">
+                                    {numbadangles}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
+                                    Bad bonds
+                                </th>
+                                <td className="border border-neutral-300 bg-white text-2xl text-center">
+                                    {numbadbonds}
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -303,39 +304,39 @@ const SummaryPanel: React.FC = () => {
         } else if (myData.results.mode === "full") {
             return <table className="text-center min-w-full text-wrap">
                 <thead className="sticky top-0">
-                <tr className="bg-gray-100 font-semibold">
-                    <th className="border border-neutral-300 text-center py-2 px-1">
-                        <div className="text-sm whitespace-normal">Residue numbers</div>
-                    </th>
-                    <th id="tableClashscore" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                        style={{borderColor: selectedBorderColor, borderWidth: "3px"}}
-                        onClick={(event) => handleClick(QualityScore.CLASH_SCORE, event)}>
-                        <div className="text-sm whitespace-normal">Clash score</div>
-                    </th>
-                    <th id="tableBadAngles" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                        onClick={(event) => handleClick(QualityScore.BAD_ANGLES, event)}>
-                        <div className="text-sm whitespace-normal">Bad angles</div>
-                    </th>
-                    <th id="tableBadBonds" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                        onClick={(event) => handleClick(QualityScore.BAD_BONDS, event)}>
-                        <div className="text-sm whitespace-normal">Bad bonds</div>
-                    </th>
-                </tr>
+                    <tr className="bg-gray-100 font-semibold">
+                        <th className="border border-neutral-300 text-center py-2 px-1">
+                            <div className="text-sm whitespace-normal">Residue numbers</div>
+                        </th>
+                        <th id="tableClashscore" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
+                            style={{ borderColor: selectedBorderColor, borderWidth: "3px" }}
+                            onClick={(event) => handleClick(QualityScore.CLASH_SCORE, event)}>
+                            <div className="text-sm whitespace-normal">Clash score</div>
+                        </th>
+                        <th id="tableBadAngles" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
+                            onClick={(event) => handleClick(QualityScore.BAD_ANGLES, event)}>
+                            <div className="text-sm whitespace-normal">Bad angles</div>
+                        </th>
+                        <th id="tableBadBonds" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
+                            onClick={(event) => handleClick(QualityScore.BAD_BONDS, event)}>
+                            <div className="text-sm whitespace-normal">Bad bonds</div>
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
-                {myData.results.data.map((residue, index) => (
-                    <tr key={residue.residue_number}
-                        className={residue.residue_number % 2 === 0 ? "bg-gray-100" : "bg-white"}>
-                        <td className="border border-neutral-300">{original_indices[index]}</td>
-                        <td className="border border-neutral-300 column-CLASH_SCORE">{residue.metrics.clashscore}</td>
-                        <td className="border border-neutral-300 column-BAD_ANGLES">{residue.metrics.numbadangles}</td>
-                        <td className="border border-neutral-300 column-BAD_BONDS">{residue.metrics.numbadbonds}</td>
-                    </tr>
-                ))}
+                    {myData.results.data.map((residue, index) => (
+                        <tr key={residue.residue_number}
+                            className={residue.residue_number % 2 === 0 ? "bg-gray-100" : "bg-white"}>
+                            <td className="border border-neutral-300">{original_indices[index]}</td>
+                            <td className="border border-neutral-300 column-CLASH_SCORE">{residue.metrics.clashscore}</td>
+                            <td className="border border-neutral-300 column-BAD_ANGLES">{residue.metrics.numbadangles}</td>
+                            <td className="border border-neutral-300 column-BAD_BONDS">{residue.metrics.numbadbonds}</td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
         } else {
-            return <ErrorPage/>;
+            return <ErrorPage />;
         }
     }
 
@@ -346,26 +347,26 @@ const SummaryPanel: React.FC = () => {
                     <h2><b> Clash score </b></h2>
                     <div className="ml-4">
                         <div className="mb-1">
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(1)}}>&nbsp; Clash score  &lt; 10 &nbsp;<br/></span>
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(2)}}>&nbsp; 10 &lt; Clash score  &lt; 40 &nbsp;<br/></span>
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(3)}}>&nbsp; 40 &lt; Clash score  &lt; 70 &nbsp;<br/></span>
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(4)}}>&nbsp; 70 &lt; Clash score  &lt; 100 &nbsp;<br/></span>
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(5)}}>&nbsp; Clash score &gt; 100 &nbsp;<br/></span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(1) }}>&nbsp; Clash score  &lt; 10 &nbsp;<br /></span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(2) }}>&nbsp; 10 &lt; Clash score  &lt; 40 &nbsp;<br /></span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(3) }}>&nbsp; 40 &lt; Clash score  &lt; 70 &nbsp;<br /></span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(4) }}>&nbsp; 70 &lt; Clash score  &lt; 100 &nbsp;<br /></span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(5) }}>&nbsp; Clash score &gt; 100 &nbsp;<br /></span>
 
                         </div>
                     </div>
                     <h2><b> Bad bonds </b></h2>
                     <div className="ml-4">
                         <div className="mb-1">
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(1)}}>&nbsp; Bad bonds = 0 &nbsp;<br/> </span>
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(5)}}>&nbsp; Bad bonds &gt; 0 &nbsp;<br/> </span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(1) }}>&nbsp; Bad bonds = 0 &nbsp;<br /> </span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(5) }}>&nbsp; Bad bonds &gt; 0 &nbsp;<br /> </span>
                         </div>
                     </div>
                     <h2><b> Bad angles </b></h2>
                     <div className="ml-4">&nbsp;
                         <div className="mb-1">
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(1)}}>&nbsp; Bad angles = 0 &nbsp;<br/> </span>
-                            <span className="rounded" style={{backgroundColor: colorMapByRange.get(5)}}>&nbsp; Bad angles &gt; 0 &nbsp;<br/> </span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(1) }}>&nbsp; Bad angles = 0 &nbsp;<br /> </span>
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(5) }}>&nbsp; Bad angles &gt; 0 &nbsp;<br /> </span>
                         </div>
                     </div>
                 </div>
@@ -388,7 +389,7 @@ const SummaryPanel: React.FC = () => {
                 <div className="flex flex-col">
                     <label>
                         Label interval:
-                        <br/>
+                        <br />
                         <input
                             type="number"
                             value={labelInterval}
@@ -438,12 +439,15 @@ const SummaryPanel: React.FC = () => {
         <div className="flex flex-col h-screen w-screen">
             <div className="flex flex-row w-full justify-between">
                 <div className="flex flex-row font-medium items-center self-start ml-[30px] cursor-pointer">
-                    <Logo page="Result panel"/>
-                    <div className="ml-2"> <HelpIcon/> </div>
+                    <Logo page="Result panel" />
+                    <div className="flex flex-row gap-8 ml-8">
+                        <HomeIcon />
+                        <HelpIcon />
+                    </div>
                 </div>
                 <div className="my-auto">
-                    <span className="font-bold" style={{color: Colors.blue}}> Name of task: </span> {myData.name} <br/>
-                    <span className="font-bold" style={{color: Colors.blue}}> ID: </span> {myData.id}
+                    <span className="font-bold" style={{ color: Colors.blue }}> Name of task: </span> {myData.name} <br />
+                    <span className="font-bold" style={{ color: Colors.blue }}> ID: </span> {myData.id}
                 </div>
                 <div className="flex justify-center items-center h-full">
                     <button
@@ -461,8 +465,8 @@ const SummaryPanel: React.FC = () => {
                         {makeTable(myData)}
                         {colorColumn(selectedQualityScore)}
                     </div>
-                    <DownloadLink/>
-                    <DownloadFile id={jobId}/>
+                    <DownloadLink />
+                    <DownloadFile id={jobId} />
                 </div>
                 <div className="flex flex-grow bg-white">
                     <div className="relative w-full h-full border-2 rounded-lg border-neutral-200">
@@ -493,8 +497,8 @@ const SummaryPanel: React.FC = () => {
                                         </div>)}
 
                                 </div>
-                                <div style={{display: is3Dview ? "none" : "block"}}
-                                     className="z-40 absolute bottom-2 left-60 border rounded-lg border-neutral-300 bg-white">
+                                <div style={{ display: is3Dview ? "none" : "block" }}
+                                    className="z-40 absolute bottom-2 left-60 border rounded-lg border-neutral-300 bg-white">
                                     {!showDisplayOptions && (
                                         <div>
                                             <button
@@ -520,8 +524,8 @@ const SummaryPanel: React.FC = () => {
                             </div>
                         }
                         {myData.results.mode === "fragment" &&
-                            <div style={{display: is3Dview ? "none" : "block"}}
-                                 className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
+                            <div style={{ display: is3Dview ? "none" : "block" }}
+                                className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
                                 {!showDisplayOptions && (
                                     <div>
                                         <button
@@ -545,8 +549,8 @@ const SummaryPanel: React.FC = () => {
                                     </div>)}
 
                             </div>}
-                        <div style={{display: is3Dview ? "none" : "block"}}
-                             className="absolute h-full w-full">
+                        <div style={{ display: is3Dview ? "none" : "block" }}
+                            className="absolute h-full w-full">
                             <FornacSummaryComponent
                                 structures={myData.annotation.map((a) => a.dotbracket)}
                                 sequences={myData.annotation.map((a) => a.sequnece)}
@@ -564,8 +568,8 @@ const SummaryPanel: React.FC = () => {
                             />
                             {/*{colorGnodes()}*/}
                         </div>
-                        <div style={{display: is3Dview ? "block" : "none"}}
-                             className="absolute h-full w-full">
+                        <div style={{ display: is3Dview ? "block" : "none" }}
+                            className="absolute h-full w-full">
                             {getColorMap()}
                             <Molstar
                                 useInterface={true}

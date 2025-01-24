@@ -9,6 +9,7 @@ import { isFileValid } from "../utils/fileValidation";
 import { isInputValid } from "../utils/inputValidation";
 import HelpIcon from "../common/helpIcon";
 import Logo from "../common/logo";
+import HomeIcon from "../common/homeIcon";
 
 const Dashboard: React.FC = () => {
   const [jobName, setJobName] = useState<string>("");
@@ -79,13 +80,14 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="w-full h-full" style={{ color: "black" }}>
-      <div className="flex flex-row pl-[10vw]">
+      <div className="flex flex-row pt-2 pl-[10vw] gap-8">
         <Logo />
+        {/* <HomeIcon /> */}
         <HelpIcon />
       </div>
-      <div className="flex flex-col items-center px-[10vw] pt-0">
+      <div className="flex flex-col items-center px-[10vw] pt-6">
         <form onSubmit={handleSubmit}>
-          <div className="grid p-4 items-start content-center justify-items-center h-[75vh] sm:h-[auto] w-[80vw] bg-teal-100 p-24 rounded-xl text-teal-600 font-semibold text-lg shadow-md"
+          <div className="grid p-4 items-start content-center justify-items-center h-[80vh] w-[80vw] bg-teal-100 p-24 rounded-xl text-teal-600 font-semibold text-lg shadow-md"
             style={{ background: Colors.backgroundBeige, color: "black" }}
           >
             <div className="w-full  p-4 rounded-md text-center mb-6">

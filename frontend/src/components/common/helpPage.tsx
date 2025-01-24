@@ -1,12 +1,14 @@
-import { Color } from "molstar/lib/mol-util/color";
 import { Colors } from "./colors";
 import Logo from "./logo";
+import HomeIcon from "./homeIcon";
 
 const HelpPage = () => {
     return (
         <div>
-            <div className="pl-[10vw]">
+            <div className="pl-[10vw] flex flex-row gap-8">
                 <Logo page="Help" />
+                <HomeIcon />
+
             </div>
             <div className="flex min-h-screen flex-col items-center pb-16">
                 <div

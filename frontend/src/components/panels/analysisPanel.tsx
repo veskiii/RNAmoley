@@ -10,7 +10,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import { SelectChangeEvent } from '@mui/material/Select';
-import { Job, Chain} from "../utils/types";
+import { Job, Chain } from "../utils/types";
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors"
@@ -18,6 +18,7 @@ import HelpIcon from "../common/helpIcon";
 import Logo from "../common/logo";
 import ErrorPage from "../common/ErrorPage";
 import RangeSelecting from "../common/rangeSelecting";
+import HomeIcon from "../common/homeIcon";
 
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
@@ -129,14 +130,19 @@ const Panel: React.FC = () => {
   }
   return (
     <div className="flex h-screen w-screen flex-row overflow-hidden">
-      <div className="w-80 bg-neutral-200" style={{ background: Colors.backgroundBeige }}>
-        <div className="flex pl-4 pt-4 h-[15%]">
-          <Logo page="Analysis panel" />
-          <HelpIcon />
+      <div className="w-80">
+        <div className="w-[700px] bg-white items-start">
+          <div className="h-[70px] flex flex-row gap-8 pl-4">
+            <Logo page="Analysis panel" />
+            <div className="flex flex-row gap-8">
+              <HomeIcon />
+              <HelpIcon />
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-col h-[65%] mx-4 mt-10 p-2">
-          <div className="rounded-scrollbar overflow-auto">
+        <div className="flex flex-col h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between" style={{ background: Colors.backgroundBeige }}>
+          <div className="rounded-scrollbar overflow-auto h-[70%]">
             {!is3Dview && (
               <Accordion>
                 <AccordionSummary
@@ -268,41 +274,42 @@ const Panel: React.FC = () => {
                 </AccordionDetails>
               </Accordion>)}
           </div>
+          <div className="flex flex-col h-[20%] ml-4 my-4">
+            <button
+              type="submit"
+              disabled={!(analyzeWholeStructure || selectedList.length > 0)}
+              className={`font-bold rounded-lg p-2 z-10 text-black flex justify-center items-center h-auto w-[90%] my-1 ${!(analyzeWholeStructure || selectedList.length > 0) ? "bg-gray-400 cursor-not-allowed" : ""
+                } transition-colors text-2xl text-black`}
+              onClick={handleNavigate}
+            >
+              Analyze
+            </button>
+          </div>
+        </div>
 
-        </div>
-        <div className="flex flex-col h-[20%] ml-4 mt-3">
-          <button
-            type="submit"
-            disabled={!(analyzeWholeStructure || selectedList.length > 0)}
-            className={`font-bold rounded-lg p-2 z-10 text-black flex justify-center items-center h-auto w-[90%] my-1 ${!(analyzeWholeStructure || selectedList.length > 0) ? "bg-gray-400 cursor-not-allowed" : ""
-              } transition-colors text-2xl text-black`}
-            onClick={handleNavigate}
-          >
-            Analyze
-          </button>
-        </div>
       </div>
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
           {myData ? (
             <div id="container">
-              <div className="absolute top-0 h-[15%] flex-grow w-full bg-transparent z-100">
-                <div className="grid relative mt-1.5 px-1.5">
-                  <label
+                              <div className="flex pt-1.5 pr-1.5 h-[70px]">
+                  {/* <label
                     id="viewLabel"
                     className="text-2xl font-medium place-self-center my-1"
                   >
                     {is3Dview ? "3D view" : "2D view"}
-                  </label>
+                  </label> */}
                   <button
                     id="switchViewButton"
-                    onClick={() => {setIs3Dview(!is3Dview); setIsViewInitialized(false);}}
+                    onClick={() => { setIs3Dview(!is3Dview); setIsViewInitialized(false); }}
                     disabled={!isViewInitialized}
-                    className="font-medium absolute right-2 rounded-lg p-4 text-2xl text-black flex justify-center items-center h-10 my-1"
+                    className="w-[auto] font-medium absolute right-2 rounded-lg text-2xl text-black flex justify-center items-center h-10 my-1 px-4"
                   >
-                    Switch view
+                    Switch to {is3Dview ? "3D " : "2D "} view
                   </button>
                 </div>
+              <div className="top-0 h-[20%] flex-grow bg-transparent z-100">
+
                 <RangeSelecting
                   chains={chainsState}
                   selectedChain={selectedChain}
@@ -321,17 +328,17 @@ const Panel: React.FC = () => {
                 />
 
               </div>
-                { is3Dview && (
-                  <Molstar
-                    useInterface={true}
-                    file={myData.pdb_file_string}
-                    chains={chainsState}
-                    setChains={setChainsState}
-                    initialized={initialized}
-                    setInitialized={setInitialized}
-                    setIsViewInitialized={setIsViewInitialized}
-                  />
-                )}
+              {is3Dview && (
+                <Molstar
+                  useInterface={true}
+                  file={myData.pdb_file_string}
+                  chains={chainsState}
+                  setChains={setChainsState}
+                  initialized={initialized}
+                  setInitialized={setInitialized}
+                  setIsViewInitialized={setIsViewInitialized}
+                />
+              )}
               {!is3Dview && (
                 <FornaComponent
                   chains={chainsState}
