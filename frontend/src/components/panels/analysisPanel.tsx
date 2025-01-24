@@ -292,22 +292,16 @@ const Panel: React.FC = () => {
         <div className="h-full">
           {myData ? (
             <div id="container">
-                              <div className="flex pt-1.5 pr-1.5 h-[70px]">
-                  {/* <label
-                    id="viewLabel"
-                    className="text-2xl font-medium place-self-center my-1"
-                  >
-                    {is3Dview ? "3D view" : "2D view"}
-                  </label> */}
-                  <button
-                    id="switchViewButton"
-                    onClick={() => { setIs3Dview(!is3Dview); setIsViewInitialized(false); }}
-                    disabled={!isViewInitialized}
-                    className="w-[auto] font-medium absolute right-2 rounded-lg text-2xl text-black flex justify-center items-center h-10 my-1 px-4"
-                  >
-                    Switch to {is3Dview ? "3D " : "2D "} view
-                  </button>
-                </div>
+              <div className="flex pt-1.5 pr-1.5 h-[70px]">
+                <button
+                  id="switchViewButton"
+                  onClick={() => { setIs3Dview(!is3Dview); setIsViewInitialized(false); }}
+                  disabled={!isViewInitialized}
+                  className="w-[auto] font-medium absolute right-2 rounded-lg text-2xl text-black flex justify-center items-center h-10 my-1 px-4"
+                >
+                  Switch to {is3Dview ? "2D " : "3D "} view
+                </button>
+              </div>
               <div className="top-0 h-[20%] flex-grow bg-transparent z-100">
 
                 <RangeSelecting
