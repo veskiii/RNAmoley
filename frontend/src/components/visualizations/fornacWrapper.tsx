@@ -196,7 +196,7 @@ const FornacWrapper = ({
   return (
     <div className="absolute bottom-0 h-[85%] flex-grow w-full bg-transparent">
       <div
-        className="text-xl font-semibold py-2 break-words shadow-sm"
+        className="text-xl font-semibold pt-4 break-words shadow-sm"
       >
         {chains.filter((chain) => chain.name.slice(-1) === selectedChain).map(chain => (
           <div className="whitespace-nowrap overflow-x-auto cursor-pointer ml-2" key={chain.name}>

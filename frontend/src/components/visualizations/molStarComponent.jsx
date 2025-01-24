@@ -24,12 +24,10 @@ const Molstar = props => {
   const plugin = useRef(null);
   const [selected, setSelected] = useState([]);
   const [enableSelection, setEnableSelection] = useState(false);
-useEffect(()=>{
-  console.log(plugin.initialized)
-},[plugin.initialized])
+
   useEffect(() => {
-    if (plugin.current || plugin.initialized) {
-      console.log("Plugin already initialized");
+    if (plugin.current) {
+      // console.log("Plugin already initialized");
       return;
     } else {
       (async () => {
@@ -244,11 +242,11 @@ useEffect(()=>{
     };
   }, []);
   const width = "100%";
-  const height = "83%";
+  const height = "80%";
 
   if (useInterface) {
     return (
-      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "17%", "zIndex": "1000" }}>
+      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "20%", "zIndex": "1000" }}>
         <div ref={parentRef} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} />
       </div>
     )

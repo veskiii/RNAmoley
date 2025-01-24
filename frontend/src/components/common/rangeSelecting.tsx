@@ -84,7 +84,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
         })
     }, [selectedChain])
     return (
-        <div className="flex items-center h-[auto] mx-4 space-x-4 z-0 text-xl font-semibold ">
+        <div className="flex items-center pl-6 h-[auto] z-0 text-xl font-semibold "> {/* justify-end */}
             <Box sx={{ width: "80px", maxWidth: 120 }}>
                 <FormControl fullWidth>
                     <InputLabel id="demo-simple-select-label" >Chain</InputLabel>
@@ -95,6 +95,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                         label="Chain"
                         onChange={handleChange}
                         className="p-0"
+                        sx={{ height: "40px", maxWidth: 120 }}
                     >
                         {chains.map((chain) => (
                             <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
@@ -112,7 +113,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                     defaultValue={minId}
                     onChange={handleInputChangeStart}
                     placeholder={minId}
-                    className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-[100px] h-[40px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
 
                 <label htmlFor="range_end" className="text-xl font-medium  mr-4">To</label>
@@ -124,7 +125,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                     defaultValue={maxId}
                     onChange={handleInputChangeEnd}
                     placeholder={maxId}
-                    className="w-[100px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-[100px] h-[40px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
 
                 <button

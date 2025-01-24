@@ -1,5 +1,6 @@
 import Logo from "./logo";
 import HelpIcon from "./helpIcon";
+import HomeIcon from "./homeIcon";
 
 export interface ErrorPageProps {
   errorMessage?: string;
@@ -9,8 +10,9 @@ export interface ErrorPageProps {
 const ErrorPage: React.FC<ErrorPageProps> = ({ errorMessage = "Something is wrong.", statusCode = "" }) => {
   return (
     <div>
-      <div className="flex pl-2">
+      <div className="flex flex-row pl-2 gap-8">
         <Logo page="Error" />
+        <HomeIcon />
         <HelpIcon />
       </div>
       <div className="flex min-h-screen flex-col items-center p-24 pt-0">
