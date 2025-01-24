@@ -66,35 +66,6 @@ const Panel: React.FC = () => {
     setAnalyzeWholeStructure(e.target.checked);
   };
 
-  const handleSubmit = () => {
-    const start = parseInt(inputValueStart, 10);
-    const end = parseInt(inputValueEnd, 10);
-
-    if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
-      alert(`Invalid range: ${start} to ${end}`);
-      return;
-    }
-    if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
-      setChainsState(prevChains =>
-        prevChains.map(chain => {
-          if (chain.name.slice(-1) === selectedChain) {
-
-            return {
-              ...chain,
-              nucleotides: chain.nucleotides.map(nucleotide => ({
-                ...nucleotide,
-                selected: nucleotide.index >= start && nucleotide.index <= end,
-              })),
-            };
-          }
-          return chain;
-        }));
-    } else {
-      alert("Type valid range on selected chain");
-    }
-
-  };
-
   //do placeholder z max i min original_id nukleotydów podanego chain
   useEffect(() => {
     chainsState.forEach((chain) => {
@@ -112,12 +83,6 @@ const Panel: React.FC = () => {
     })
   }, [selectedChain])
 
-  // useEffect(() => {
-  //   chainsState.forEach(chain => {
-  //     console.log("Chain z panelu:", chain)
-  //   })
-  // }, [chainsState]);
-
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
       const data = await fetchJobData(jobID, model);
@@ -131,50 +96,8 @@ const Panel: React.FC = () => {
     }
   }
 
-  async function sendDataToAnalyze() {
-    var API_URL = '';
-
-    if (!jobID) {
-      throw new Error("jobID is required");
-    }
-
-    var jobToPost: JobToPost = { id: '', residues: [], modelNumber: 0, radius: 0, interval: 0 };
-    if (analyzeWholeStructure) {
-      API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeStructure";
-      const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
-      const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
-      jobToPost = { id: jobID, modelNumber: selectedModel, residues: [], radius: radius, interval: interval }
-    } else {
-      API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1/jobs/analyzeFragment";
-      jobToPost = { id: jobID, modelNumber: 0, residues: selectedList, radius: 0, interval: 0 }
-    }
-
-    try {
-      const response = await fetch(`${API_URL}`, {
-        method: "POST",
-        body: JSON.stringify(jobToPost),
-        headers: {
-          "Access-Control-Allow-Origin": "rnamoley.cs.put.poznan.pl",
-          "Content-Type": "application/json",
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Data posted successfully:", data.id);
-      } else {
-        let errorData = await response.json();
-        console.error("Error creating job:", errorData);
-        const errorMessage = errorData?.message || "Unknown error";
-        alert("Failed to create job: " + errorMessage);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Failed to create job");
-    }
-  }
-
   function handleNavigate() {
-    sendDataToAnalyze();
+    sendDataToAnalyze(analyzeWholeStructure, jobID, selectedModel, selectedList);
     navigate(`/summary/${jobID}`);
   }
 
