@@ -279,7 +279,7 @@ const SummaryPanel: React.FC = () => {
                             </tr>
                             <tr>
                                 <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-                                    Clash score
+                                    Clashscore
                                 </th>
                                 <td className="border border-neutral-300 bg-white text-2xl text-center">
                                     {clashscore}
@@ -315,7 +315,7 @@ const SummaryPanel: React.FC = () => {
                         <th id="tableClashscore" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
                             style={{ borderColor: selectedBorderColor, borderWidth: "3px" }}
                             onClick={(event) => handleClick(QualityScore.CLASH_SCORE, event)}>
-                            <div className="text-sm whitespace-normal">Clash score</div>
+                            <div className="text-sm whitespace-normal">Clashscore</div>
                         </th>
                         <th id="tableBadAngles" className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
                             onClick={(event) => handleClick(QualityScore.BAD_ANGLES, event)}>
@@ -348,21 +348,21 @@ const SummaryPanel: React.FC = () => {
         return (
             <div>
                 <div>
-                    <h2><b>Clash score</b></h2>
+                    <h2><b>Clashscore</b></h2>
                     <div className="ml-4">
                         <div className="mb-1">
-                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(1) }}>&nbsp;Clash score  &lt; 10 &nbsp;
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(1) }}>&nbsp;Clashscore  &lt; 10 &nbsp;
                                 <br /></span>
                             <span className="rounded"
-                                style={{ backgroundColor: colorMapByRange.get(2) }}>&nbsp; 10 &le;Clash score  &lt; 40 &nbsp;
+                                style={{ backgroundColor: colorMapByRange.get(2) }}>&nbsp; 10 &le;Clashscore  &lt; 40 &nbsp;
                                 <br /></span>
                             <span className="rounded"
-                                style={{ backgroundColor: colorMapByRange.get(3) }}>&nbsp; 40 &le;Clash score  &lt; 70 &nbsp;
+                                style={{ backgroundColor: colorMapByRange.get(3) }}>&nbsp; 40 &le;Clashscore  &lt; 70 &nbsp;
                                 <br /></span>
                             <span className="rounded"
-                                style={{ backgroundColor: colorMapByRange.get(4) }}>&nbsp; 70 &le;Clash score  &lt; 100 &nbsp;
+                                style={{ backgroundColor: colorMapByRange.get(4) }}>&nbsp; 70 &le;Clashscore  &lt; 100 &nbsp;
                                 <br /></span>
-                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(5) }}>&nbsp;Clash score &gt; 100 &nbsp;
+                            <span className="rounded" style={{ backgroundColor: colorMapByRange.get(5) }}>&nbsp;Clashscore &gt; 100 &nbsp;
                                 <br /></span>
 
                         </div>

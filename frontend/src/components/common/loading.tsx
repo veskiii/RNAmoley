@@ -7,7 +7,7 @@ export default function Loading({ page = "Loading", message = "Loading..." }) {
   return (
     <div>
       <div className="flex flex-row pt-2 pl-4 gap-8">
-        <Logo />
+        <Logo page={page}/>
         <HomeIcon />
         <HelpIcon />
       </div>
