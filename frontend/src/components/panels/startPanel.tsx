@@ -24,7 +24,7 @@ const Dashboard: React.FC = () => {
 
   const options = [
     { id: "file", value: "file", label: "Upload file" },
-    { id: "PDBid", value: "PDBid", label: "Fetch by PDB id" },
+    { id: "PDBid", value: "PDBid", label: "Fetch by PDB ID" },
     { id: "sample", value: "sample", label: "Choose from samples" },
   ];
 
@@ -129,7 +129,7 @@ const Dashboard: React.FC = () => {
 
               {selectedInputType === "PDBid" && (
                 <div className="w-[300px]">
-                  <label>Fetch by PDB Code:{''}
+                  <label>Fetch by PDB ID:{''}
                     <input
                       type="text"
                       value={pdbCode}
@@ -138,7 +138,7 @@ const Dashboard: React.FC = () => {
                       onChange={(e) => setPdbCode(e.target.value)}
                       maxLength={4}
                       pattern="[A-Za-z0-9]{4}"
-                      placeholder="Enter PDB code"
+                      placeholder="Enter PDB ID"
                     />
                   </label>
                 </div>
