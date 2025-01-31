@@ -4,7 +4,7 @@ import { upload } from './utils.js';
 
 const router = Router();
 
-router.get('/', getJobs);
+// router.get('/', getJobs);
 router.post('/', upload.single('rnaFile'), createJob);
 router.get('/:id', getJobById);
 router.get('/:id/download', downloadJobFiles);

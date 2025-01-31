@@ -1,14 +1,16 @@
-import { Color } from "molstar/lib/mol-util/color";
 import { Colors } from "./colors";
 import Logo from "./logo";
+import HomeIcon from "./homeIcon";
 
 const HelpPage = () => {
     return (
         <div>
-            <div className="pl-[10vw]">
+            <div className="pl-[10vw] flex flex-row gap-8 pt-2">
                 <Logo page="Help" />
+                <HomeIcon />
+
             </div>
-            <div className="flex min-h-screen flex-col items-center pb-16">
+            <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
                 <div
                     className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
                     style={{ background: Colors.backgroundBeige }}
@@ -17,7 +19,7 @@ const HelpPage = () => {
                     <p>
                         RNAmoley is an application designed for RNA analysis, enabling users to upload data and
                         view results through RNA structure visualizations in 2D and 3D. The application supports file
-                        formats such as PDB (.pdb) and CIF (.mmCIF, .cif) as well as structure identifiers (PDB id).
+                        formats such as PDB (.pdb) and mmCIF (.mmCIF, .cif) as well as structure identifiers (PDB id).
                         The primary goal of RNAmoley is to facilitate working with RNA data via an intuitive interface
                         and advanced visualization tools.
                     </p>
@@ -27,7 +29,7 @@ const HelpPage = () => {
                         After uploading data, the application follows these steps:
                     </p>
                     <ol className="list-decimal list-inside ml-6">
-                        <li>Input validation: Verifies the correctness of uploaded files or entered PDB id codes.</li>
+                        <li>Input validation: Verifies the correctness of uploaded files or entered PDB ID.</li>
                         <li>RNA structure processing: Prepares the data for visualization in 2D and 3D formats.</li>
                         <li>Result generation: Displays the uploaded RNA structure and enables further analysis.</li>
                     </ol>
@@ -40,8 +42,8 @@ const HelpPage = () => {
                         <li>Only RNA structures are accepted. All other elements (e.g., proteins, water) are
                             discarded.
                         </li>
-                        <li>Supported file formats include PDB (.pdb) and CIF (.mmCIF, .cif).</li>
-                        <li>The PDB id code must be a 4-character alphanumeric string.</li>
+                        <li>Supported file formats include PDB (.pdb) and mmCIF (.mmCIF, .cif).</li>
+                        <li>The PDB ID must be a 4-character alphanumeric string.</li>
                         <li>In multi-model files, the first model is analyzed by default. Users can switch to another
                             model using options in the analysis panel
                         </li>
@@ -54,8 +56,8 @@ const HelpPage = () => {
                         <ol className="list-decimal list-inside ml-6">
                             <li>Choose one of the three data input methods:
                                 <ul className="list-disc list-inside ml-6">
-                                    <li><b>Upload file</b> – Upload an RNA file in PDB or CIF format.</li>
-                                    <li><b>Fetch by PDB id</b> – Enter a PDB structure identifier.</li>
+                                    <li><b>Upload file</b> – Upload an RNA file in PDB or mmCIF format.</li>
+                                    <li><b>Fetch by PDB ID</b> – Enter a PDB structure identifier.</li>
                                     <li><b>Choose from samples</b> – Select an RNA structure from provided examples.</li>
                                 </ul>
                             </li>
