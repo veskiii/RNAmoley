@@ -173,3 +173,13 @@ input[type="radio"]:checked+.button-label {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+#analyzeButtonTooltip{
+  transition: opacity 0.3s ease-in-out;
+  position: absolute;
+}
+
+#analyzeButton:disabled:hover{
+  background-color: #9CA3AF;
+  color: black;
+}

@@ -45,6 +45,8 @@ const Panel: React.FC = () => {
   const { jobId } = useParams();
   const jobID = jobId;
   const navigate = useNavigate();
+  const [isHovered, setIsHovered] = useState(false);
+  const isDisabled = !(analyzeWholeStructure || selectedList.length > 0);
 
   useEffect(() => {
     setSelectedChain(chainsState[0]?.name.slice(-1) || "");
@@ -127,7 +129,8 @@ const Panel: React.FC = () => {
   useEffect(() => {
     if (analyzeWholeStructure) {
       setSelectedList([]);
-      chainsState.forEach(chain => chain.nucleotides.forEach(nucleotide => nucleotide.selected = false));
+      // var tmp_chains: Chain[] = chainsState.forEach(chain => chain.nucleotides.forEach(nucleotide => nucleotide.selected = false));
+      // setChainsState(tmp_chains);
     }
   }, [analyzeWholeStructure]);
 
@@ -148,12 +151,13 @@ const Panel: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between" style={{ background: Colors.backgroundBeige }}>
+        <div className="flex flex-col h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
+             style={{background: Colors.backgroundBeige}}>
           <div className="rounded-scrollbar overflow-auto h-[70%]">
             <Accordion defaultExpanded>
               <AccordionSummary
-                aria-controls="panel2-content"
-                id="panel2-header"
+                  aria-controls="panel2-content"
+                  id="panel2-header"
               >
                 <Typography>Analyze structure</Typography>
               </AccordionSummary>
@@ -162,10 +166,10 @@ const Panel: React.FC = () => {
                   <div>
                     <label className="options">
                       <input
-                        type="checkbox"
-                        id="analyze_whole_structure"
-                        checked={analyzeWholeStructure}
-                        onChange={handleAnalyzeChange}
+                          type="checkbox"
+                          id="analyze_whole_structure"
+                          checked={analyzeWholeStructure}
+                          onChange={handleAnalyzeChange}
                       />{" "}
                       Analyze whole structure
                     </label>
@@ -174,45 +178,46 @@ const Panel: React.FC = () => {
                         <label className="options">
                           Model{''}
                           <input
-                            className="mx-5 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                            type="number"
-                            min="1"
-                            max={myData.metadata.model_count}
-                            value={selectedModel}
-                            onChange={handleSetSelectedModel}
+                              className="mx-5 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                              type="number"
+                              min="1"
+                              max={myData.metadata.model_count}
+                              value={selectedModel}
+                              onChange={handleSetSelectedModel}
                           />
                         </label>
 
                         <button
-                          className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1"
-                          onClick={() => changeModel(selectedModel)}
-                        >Change model</button>
+                            className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1"
+                            onClick={() => changeModel(selectedModel)}
+                        >Change model
+                        </button>
                       </div>
 
                       {analyzeWholeStructure && (
-                        <div>
-                          <div >
-                            <label className="options">
-                              Radius{''}
-                              <input id="radiusInput"
-                                className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                                type="number"
-                                defaultValue={5}
-                              />
-                            </label>
-                          </div>
-
                           <div>
-                            <label className="options">
-                              Interval{''}
-                              <input id="intervalInput"
-                                className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                                type="number"
-                                defaultValue={1}
-                              />
-                            </label>
+                            <div>
+                              <label className="options">
+                                Radius{''}
+                                <input id="radiusInput"
+                                       className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                                       type="number"
+                                       defaultValue={5}
+                                />
+                              </label>
+                            </div>
+
+                            <div>
+                              <label className="options">
+                                Interval{''}
+                                <input id="intervalInput"
+                                       className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
+                                       type="number"
+                                       defaultValue={1}
+                                />
+                              </label>
+                            </div>
                           </div>
-                        </div>
                       )
                       }
 
@@ -256,37 +261,52 @@ const Panel: React.FC = () => {
                 </Accordion>
             )}
             {!is3Dview && (
-              <Accordion>
-                <AccordionSummary
-                  aria-controls="panel1-content"
-                  id="panel1-header"
-                >
-                  <Typography>How to use fornac</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography component="div">
-                    <div className="mt-5 mb-5">
-                      [left click] select single node
-                      <br />
-                      [ctrl + left click] select/deselect multiple nodes
-                      <br />
-                      [left click + drag] drag object
-                      <br />
-                      [ctrl + left click + drag] box selecting
-                      <br />
-                      [c] center the graph
-                    </div>
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>)}
+                <Accordion>
+                  <AccordionSummary
+                      aria-controls="panel1-content"
+                      id="panel1-header"
+                  >
+                    <Typography>How to use fornac</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Typography component="div">
+                      <div className="mt-5 mb-5">
+                        [left click] select single node
+                        <br/>
+                        [ctrl + left click] select/deselect multiple nodes
+                        <br/>
+                        [left click + drag] drag object
+                        <br/>
+                        [ctrl + left click + drag] box selecting
+                        <br/>
+                        [c] center the graph
+                      </div>
+                    </Typography>
+                  </AccordionDetails>
+                </Accordion>)}
           </div>
-          <div className="flex flex-col h-[20%] ml-4 my-4">
+          <div
+              className="relative flex flex-col h-[20%] ml-4 my-4"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+          >
+            {isDisabled && isHovered &&(
+                <div
+                    id="analyzeButtonTooltip"
+                    className="absolute bottom-full mb-2 mx-auto text-sm bg-white text-black rounded bg-opacity-70 shadow-xl p-2 z-40"
+                    style={{ left: '45%', transform: 'translateX(-50%)' }}
+                >
+                  Select fragment to analyze or check option 'Analyze whole structure' to run analysis.
+                </div>
+            )}
             <button
-              type="submit"
-              disabled={!(analyzeWholeStructure || selectedList.length > 0)}
-              className={`font-bold rounded-lg p-2 z-10 text-black flex justify-center items-center h-auto w-[90%] my-1 ${!(analyzeWholeStructure || selectedList.length > 0) ? "bg-gray-400 cursor-not-allowed" : ""
-                } transition-colors text-2xl text-black`}
-              onClick={handleNavigate}
+                id="analyzeButton"
+                type="submit"
+                disabled={isDisabled}
+                className={`font-bold rounded-lg p-2 z-10 text-black flex justify-center items-center h-auto w-[90%] my-1
+          ${isDisabled ? 'bg-gray-400 cursor-not-allowed' : ''}
+          transition-colors text-2xl text-black`}
+                onClick={handleNavigate}
             >
               Analyze
             </button>
@@ -297,23 +317,26 @@ const Panel: React.FC = () => {
       <div key={myData.id} className="flex-grow relative overflow-hidden">
         <div className="h-full">
           {myData ? (
-            <div id="container">
-              <div className="flex pt-1.5 pr-1.5 h-[70px]">
-                <button
-                  id="switchViewButton"
-                  onClick={() => { setIs3Dview(!is3Dview); setIsViewInitialized(false); }}
-                  disabled={!isViewInitialized}
-                  className="w-[auto] font-medium absolute right-2 rounded-lg text-2xl text-black flex justify-center items-center h-10 my-1 px-4"
-                >
-                  Switch to {is3Dview ? "2D " : "3D "} view
-                </button>
-              </div>
-              <div className="top-0 h-[20%] flex-grow bg-transparent z-100">
+              <div id="container">
+                <div className="flex pt-1.5 pr-1.5 h-[70px]">
+                  <button
+                      id="switchViewButton"
+                      onClick={() => {
+                        setIs3Dview(!is3Dview);
+                        setIsViewInitialized(false);
+                      }}
+                      disabled={!isViewInitialized}
+                      className="w-[auto] font-medium absolute right-2 rounded-lg text-2xl text-black flex justify-center items-center h-10 my-1 px-4"
+                  >
+                    Switch to {is3Dview ? "2D " : "3D "} view
+                  </button>
+                </div>
+                <div className="top-0 h-[20%] flex-grow bg-transparent z-100">
 
-                <RangeSelecting
-                  chains={chainsState}
-                  selectedChain={selectedChain}
-                  minId={minId}
+                  <RangeSelecting
+                      chains={chainsState}
+                      selectedChain={selectedChain}
+                      minId={minId}
                   maxId={maxId}
                   inputValueStart={inputValueStart}
                   inputValueEnd={inputValueEnd}
