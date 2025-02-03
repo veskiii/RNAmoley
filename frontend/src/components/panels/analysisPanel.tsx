@@ -10,7 +10,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import { SelectChangeEvent } from '@mui/material/Select';
-import { Job, Chain } from "../utils/types";
+import {Job, Chain, Nucleotide} from "../utils/types";
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors"
@@ -34,7 +34,7 @@ const Panel: React.FC = () => {
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [selectedModel, setSelectedModel] = useState<number>(1);
-  const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(true);
+  const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>(chainsState[0]?.name.slice(-1) || "");
   const [inputValueStart, setInputValueStart] = useState<string>('');
   const [inputValueEnd, setInputValueEnd] = useState<string>('');
@@ -124,6 +124,13 @@ const Panel: React.FC = () => {
     setSelectedList(idList);
   }, [chainsState])
 
+  useEffect(() => {
+    if (analyzeWholeStructure) {
+      setSelectedList([]);
+      chainsState.forEach(chain => chain.nucleotides.forEach(nucleotide => nucleotide.selected = false));
+    }
+  }, [analyzeWholeStructure]);
+
   if (error) return <ErrorPage errorMessage={error} />;
   if (!myData) {
     return <Loading page="Analysis panel" />;
@@ -143,41 +150,7 @@ const Panel: React.FC = () => {
 
         <div className="flex flex-col h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between" style={{ background: Colors.backgroundBeige }}>
           <div className="rounded-scrollbar overflow-auto h-[70%]">
-            {!is3Dview && (
-              <Accordion>
-                <AccordionSummary
-                  aria-controls="panel1-content"
-                  id="panel1-header"
-
-                >
-                  <Typography>Fornac options</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography component="div">
-                    <div>
-                      <FornaControls
-                        labelInterval={labelInterval}
-                        setLabelInterval={setLabelInterval}
-                        numbering={numbering}
-                        setNumbering={setNumbering}
-                        nodeOutline={nodeOutline}
-                        setNodeOutline={setNodeOutline}
-                        nodeLabel={nodeLabel}
-                        setNodeLabel={setNodeLabel}
-                        links={links}
-                        setLinks={setLinks}
-                        directionArrows={directionArrows}
-                        setDirectionArrows={setDirectionArrows}
-                        animation={animation}
-                        setAnimation={setAnimation}
-                      />
-                    </div>
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
-            )}
-
-            <Accordion>
+            <Accordion defaultExpanded>
               <AccordionSummary
                 aria-controls="panel2-content"
                 id="panel2-header"
@@ -249,6 +222,39 @@ const Panel: React.FC = () => {
                 </Typography>
               </AccordionDetails>
             </Accordion>
+            {!is3Dview && (
+                <Accordion>
+                  <AccordionSummary
+                      aria-controls="panel1-content"
+                      id="panel1-header"
+
+                  >
+                    <Typography>Fornac options</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Typography component="div">
+                      <div>
+                        <FornaControls
+                            labelInterval={labelInterval}
+                            setLabelInterval={setLabelInterval}
+                            numbering={numbering}
+                            setNumbering={setNumbering}
+                            nodeOutline={nodeOutline}
+                            setNodeOutline={setNodeOutline}
+                            nodeLabel={nodeLabel}
+                            setNodeLabel={setNodeLabel}
+                            links={links}
+                            setLinks={setLinks}
+                            directionArrows={directionArrows}
+                            setDirectionArrows={setDirectionArrows}
+                            animation={animation}
+                            setAnimation={setAnimation}
+                        />
+                      </div>
+                    </Typography>
+                  </AccordionDetails>
+                </Accordion>
+            )}
             {!is3Dview && (
               <Accordion>
                 <AccordionSummary
