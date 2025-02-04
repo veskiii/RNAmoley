@@ -99,8 +99,18 @@ const Panel: React.FC = () => {
   }
 
   function handleNavigate() {
-    sendDataToAnalyze(analyzeWholeStructure, jobID, selectedModel, selectedList);
-    navigate(`/summary/${jobID}`);
+    const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
+    const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
+    if(radius < 1) {
+      alert(`Invalid radius value: ${radius}. Enter value greater or equal 1.`);
+      return;
+    }else if(interval < 1) {
+      alert(`Invalid interval value: ${interval}. Enter value greater or equal 1.`);
+      return;
+    }else {
+      sendDataToAnalyze(analyzeWholeStructure, jobID, selectedModel, selectedList);
+      navigate(`/summary/${jobID}`);
+    }
   }
 
   const handleSetSelectedModel = (e: SelectChangeEvent) => {
@@ -129,8 +139,14 @@ const Panel: React.FC = () => {
   useEffect(() => {
     if (analyzeWholeStructure) {
       setSelectedList([]);
-      // var tmp_chains: Chain[] = chainsState.forEach(chain => chain.nucleotides.forEach(nucleotide => nucleotide.selected = false));
-      // setChainsState(tmp_chains);
+      let tmp_chains: Chain[] = chainsState.map(chain => ({
+        ...chain,
+        nucleotides: chain.nucleotides.map(nucleotide => ({
+          ...nucleotide,
+          selected: false
+        }))
+      }));
+      setChainsState(tmp_chains);
     }
   }, [analyzeWholeStructure]);
 
@@ -203,6 +219,7 @@ const Panel: React.FC = () => {
                                        className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                                        type="number"
                                        defaultValue={5}
+                                       min="1"
                                 />
                               </label>
                             </div>
@@ -214,6 +231,7 @@ const Panel: React.FC = () => {
                                        className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
                                        type="number"
                                        defaultValue={1}
+                                       min="1"
                                 />
                               </label>
                             </div>

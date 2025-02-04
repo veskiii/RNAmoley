@@ -43,7 +43,7 @@ const SummaryPanel: React.FC = () => {
             //console.warn("No data in myData.results.data");
             return <ErrorPage />
         }
-        if (myData.results.mode === "fragment") {
+        if (myData.results.mode === "fragment" || myData.results.mode === "full") {
             //@ts-ignore
             const nodes = d3.selectAll("circle.fornac-node");
             nodes.style("fill", "white");
@@ -465,7 +465,7 @@ const SummaryPanel: React.FC = () => {
     return (
         <div className="flex flex-col h-screen w-screen">
             <div className="flex flex-row w-full justify-between">
-                <div className="flex flex-row font-medium items-center self-start ml-[30px] cursor-pointer">
+                <div className="flex flex-row font-medium items-center self-start ml-[30px]">
                     <Logo page="Result panel" />
                     <div className="flex flex-row gap-8 ml-8">
                         <HomeIcon />
