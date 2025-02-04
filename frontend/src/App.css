@@ -11,6 +11,28 @@
   pointer-events: none;
 }
 
+.mobile-message {
+  display: none;
+}
+
+@media (max-device-width: 920px) {
+  .desktop-content {
+    display: none;
+  }
+
+  .mobile-message {
+    display: flex;
+    /* justify-content: center;s */
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    padding: 20px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
@@ -174,12 +196,12 @@ input[type="radio"]:checked+.button-label {
   background: #555;
 }
 
-#analyzeButtonTooltip{
+#analyzeButtonTooltip {
   transition: opacity 0.3s ease-in-out;
   position: absolute;
 }
 
-#analyzeButton:disabled:hover{
+#analyzeButton:disabled:hover {
   background-color: #9CA3AF;
   color: black;
 }

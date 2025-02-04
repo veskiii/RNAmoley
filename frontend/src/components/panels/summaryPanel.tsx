@@ -16,6 +16,7 @@ import { transformJobToChains } from '../utils/transformJobToChains';
 import { fetchMyData } from "../utils/api";
 import Logo from "../common/logo";
 import HomeIcon from "../common/homeIcon";
+import SmallScreenPage from "../common/smallScreenPage";
 
 const SummaryPanel: React.FC = () => {
     const { jobId } = useParams();
@@ -463,69 +464,97 @@ const SummaryPanel: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col h-screen w-screen">
-            <div className="flex flex-row w-full justify-between">
-                <div className="flex flex-row font-medium items-center self-start ml-[30px]">
-                    <Logo page="Result panel" />
-                    <div className="flex flex-row gap-8 ml-8">
-                        <HomeIcon />
-                        <HelpIcon />
+        <div>
+            <div className="desktop-content flex flex-col h-screen w-screen">
+                <div className="flex flex-row w-full justify-between">
+                    <div className="flex flex-row font-medium items-center self-start ml-[30px]">
+                        <Logo page="Result panel" />
+                        <div className="flex flex-row gap-8 ml-8">
+                            <HomeIcon />
+                            <HelpIcon />
+                        </div>
+                    </div>
+                    <div className="my-auto">
+                        <span className="font-bold" style={{ color: Colors.blue }}> Name of task: </span> {myData.name} <br />
+                        <span className="font-bold" style={{ color: Colors.blue }}> ID: </span> {myData.id}
+                    </div>
+                    <div className="flex justify-center items-center h-full">
+                        <button
+                            id="switchViewButton"
+                            onClick={toggle}
+                            className="font-bold rounded-lg p-4 text-2xl text-black flex justify-center items-center my-1 mr-[30px] w-auto"
+                        >
+                            Switch to 3D view
+                        </button>
                     </div>
                 </div>
-                <div className="my-auto">
-                    <span className="font-bold" style={{ color: Colors.blue }}> Name of task: </span> {myData.name} <br />
-                    <span className="font-bold" style={{ color: Colors.blue }}> ID: </span> {myData.id}
-                </div>
-                <div className="flex justify-center items-center h-full">
-                    <button
-                        id="switchViewButton"
-                        onClick={toggle}
-                        className="font-bold rounded-lg p-4 text-2xl text-black flex justify-center items-center my-1 mr-[30px] w-auto"
-                    >
-                        Switch to 3D view
-                    </button>
-                </div>
-            </div>
-            <div className="flex flex-wrap w-full h-full rounded-lg">
-                <div className="flex flex-col h-full max-h-full items-center p-9 rounded-lg bg-neutral-200">
-                    <div className="min-h-[12rem] max-h-[50vh] overflow-y-auto table-fixed mb-7">
-                        {makeTable(myData)}
-                        {colorColumn(selectedQualityScore)}
+                <div className="flex flex-wrap w-full h-full rounded-lg">
+                    <div className="flex flex-col h-full max-h-full items-center p-9 rounded-lg bg-neutral-200">
+                        <div className="min-h-[12rem] max-h-[50vh] overflow-y-auto table-fixed mb-7">
+                            {makeTable(myData)}
+                            {colorColumn(selectedQualityScore)}
+                        </div>
+                        <DownloadLink />
+                        <DownloadFile id={jobId} />
                     </div>
-                    <DownloadLink />
-                    <DownloadFile id={jobId} />
-                </div>
-                <div className="flex flex-grow bg-white">
-                    <div className="relative w-full h-full border-2 rounded-lg border-neutral-200">
-                        {myData.results.mode === "full" &&
-                            <div>
-                                <div
-                                    className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
-                                    {!showRangeDetails && (
-                                        <div>
-                                            <button
-                                                id="menuButton"
-                                                onClick={toggleRangeMenuVisibility}
-                                                className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                                Show coloring ranges
-                                            </button>
-                                        </div>)}
-                                    {showRangeDetails && (
-                                        <div>
-                                            <button
-                                                id="menuButton"
-                                                onClick={toggleRangeMenuVisibility}
-                                                className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                                Close
-                                            </button>
-                                            <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
-                                                {createRangeMenu()}
-                                            </div>
-                                        </div>)}
+                    <div className="flex flex-grow bg-white">
+                        <div className="relative w-full h-full border-2 rounded-lg border-neutral-200">
+                            {myData.results.mode === "full" &&
+                                <div>
+                                    <div
+                                        className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
+                                        {!showRangeDetails && (
+                                            <div>
+                                                <button
+                                                    id="menuButton"
+                                                    onClick={toggleRangeMenuVisibility}
+                                                    className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                    Show coloring ranges
+                                                </button>
+                                            </div>)}
+                                        {showRangeDetails && (
+                                            <div>
+                                                <button
+                                                    id="menuButton"
+                                                    onClick={toggleRangeMenuVisibility}
+                                                    className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                    Close
+                                                </button>
+                                                <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
+                                                    {createRangeMenu()}
+                                                </div>
+                                            </div>)}
 
+                                    </div>
+                                    <div style={{ display: is3Dview ? "none" : "block" }}
+                                        className="z-40 absolute bottom-2 left-64 border rounded-lg border-neutral-300 bg-white">
+                                        {!showDisplayOptions && (
+                                            <div>
+                                                <button
+                                                    id="menuButton"
+                                                    onClick={toggleDisplayOptionsVisibility}
+                                                    className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                    Fornac options
+                                                </button>
+                                            </div>)}
+                                        {showDisplayOptions && (
+                                            <div>
+                                                <button
+                                                    id="menuButton"
+                                                    onClick={toggleDisplayOptionsVisibility}
+                                                    className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
+                                                    Close
+                                                </button>
+                                                <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
+                                                    {createFornacDisplayDetails()}
+                                                </div>
+                                            </div>)}
+                                    </div>
                                 </div>
+                            }
+                            {myData.results.mode === "fragment" &&
                                 <div style={{ display: is3Dview ? "none" : "block" }}
-                                    className="z-40 absolute bottom-2 left-64 border rounded-lg border-neutral-300 bg-white">
+                                    className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
                                     {!showDisplayOptions && (
                                         <div>
                                             <button
@@ -547,70 +576,45 @@ const SummaryPanel: React.FC = () => {
                                                 {createFornacDisplayDetails()}
                                             </div>
                                         </div>)}
-                                </div>
-                            </div>
-                        }
-                        {myData.results.mode === "fragment" &&
-                            <div style={{ display: is3Dview ? "none" : "block" }}
-                                className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
-                                {!showDisplayOptions && (
-                                    <div>
-                                        <button
-                                            id="menuButton"
-                                            onClick={toggleDisplayOptionsVisibility}
-                                            className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                            Fornac options
-                                        </button>
-                                    </div>)}
-                                {showDisplayOptions && (
-                                    <div>
-                                        <button
-                                            id="menuButton"
-                                            onClick={toggleDisplayOptionsVisibility}
-                                            className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong">
-                                            Close
-                                        </button>
-                                        <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
-                                            {createFornacDisplayDetails()}
-                                        </div>
-                                    </div>)}
 
-                            </div>}
-                        <div style={{ display: is3Dview ? "none" : "block" }}
-                            className="absolute h-full w-full">
-                            <FornacSummaryComponent
-                                structures={myData.annotation.map((a) => a.dotbracket)}
-                                sequences={myData.annotation.map((a) => a.sequnece)}
-                                chains={chainsState}
-                                setChains={setChainsState}
-                                labelInterval={labelInterval}
-                                numbering={numbering}
-                                nodeOutline={nodeOutline}
-                                nodeLabel={nodeLabel}
-                                links={links}
-                                directionArrows={directionArrows}
-                                setAnimation={false}
-                                job={myData}
-                                colorGnodes={colorGnodes}
-                            />
-                            {/*{colorGnodes()}*/}
-                        </div>
-                        <div style={{ display: is3Dview ? "block" : "none" }}
-                            className="absolute h-full w-full">
-                            {getColorMap()}
-                            <Molstar
-                                useInterface={true}
-                                file={myData.pdb_file_string}
-                                chains={chainsState}
-                                setChains={setChainsState}
-                                initialized={initialized}
-                                setInitialized={setInitialized}
-                                is3dEnabled={is3Dview}
-                            />
+                                </div>}
+                            <div style={{ display: is3Dview ? "none" : "block" }}
+                                className="absolute h-full w-full">
+                                <FornacSummaryComponent
+                                    structures={myData.annotation.map((a) => a.dotbracket)}
+                                    sequences={myData.annotation.map((a) => a.sequnece)}
+                                    chains={chainsState}
+                                    setChains={setChainsState}
+                                    labelInterval={labelInterval}
+                                    numbering={numbering}
+                                    nodeOutline={nodeOutline}
+                                    nodeLabel={nodeLabel}
+                                    links={links}
+                                    directionArrows={directionArrows}
+                                    setAnimation={false}
+                                    job={myData}
+                                    colorGnodes={colorGnodes}
+                                />
+                                {/*{colorGnodes()}*/}
+                            </div>
+                            <div style={{ display: is3Dview ? "block" : "none" }}
+                                className="absolute h-full w-full">
+                                {getColorMap()}
+                                <Molstar
+                                    useInterface={true}
+                                    file={myData.pdb_file_string}
+                                    chains={chainsState}
+                                    setChains={setChainsState}
+                                    initialized={initialized}
+                                    setInitialized={setInitialized}
+                                    is3dEnabled={is3Dview}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <SmallScreenPage/>
         </div>
     );
 };
