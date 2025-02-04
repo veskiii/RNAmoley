@@ -6,10 +6,12 @@ const HelpPage = () => {
     return (
         <div>
             <div className="pl-[10vw] flex flex-row gap-8 pt-2">
+            <div className="pl-[10vw] flex flex-row gap-8 pt-2">
                 <Logo page="Help" />
                 <HomeIcon />
 
             </div>
+            <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
             <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
                 <div
                     className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
@@ -19,7 +21,7 @@ const HelpPage = () => {
                     <p>
                         RNAmoley is an application designed for RNA analysis, enabling users to upload data and
                         view results through RNA structure visualizations in 2D and 3D. The application supports file
-                        formats such as PDB (.pdb) and mmCIF (.mmCIF, .cif) as well as structure identifiers (PDB id).
+                        formats such as PDB (.pdb) and mmCIF (.mmCIF, .cif) as well as structure identifiers (PDB ID).
                         The primary goal of RNAmoley is to facilitate working with RNA data via an intuitive interface
                         and advanced visualization tools.
                     </p>

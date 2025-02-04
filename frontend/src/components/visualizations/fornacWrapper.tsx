@@ -37,9 +37,9 @@ const FornacWrapper = ({
   const [hoveredIndex, setHoveredIndex] = useState<number>();
   const [hybridizedName, setHybridizedName] = useState<string[]>([]);
 
-  useEffect(()=>{
+  useEffect(() => {
     setIsViewInitialized(true);
-  },[])
+  }, [])
 
   // Zapis do chains
   // Jeśli nastąpi zmiana na grafie zmieniany jest parametr selected w nucleotides
