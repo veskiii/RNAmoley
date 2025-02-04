@@ -113,15 +113,20 @@ const Panel: React.FC = () => {
   }
 
   function handleNavigate() {
-    const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
-    const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
-    if (radius < 1) {
-      alert(`Invalid radius value: ${radius}. Enter value greater or equal 1.`);
-      return;
-    } else if (interval < 1) {
-      alert(`Invalid interval value: ${interval}. Enter value greater or equal 1.`);
-      return;
-    } else {
+    if(analyzeWholeStructure){
+      const radius = parseInt((document.getElementById("radiusInput") as HTMLInputElement).value);
+      const interval = parseInt((document.getElementById("intervalInput") as HTMLInputElement).value);
+      if (radius < 1) {
+        alert(`Invalid radius value: ${radius}. Enter value greater or equal 1.`);
+        return;
+      } else if (interval < 1) {
+        alert(`Invalid interval value: ${interval}. Enter value greater or equal 1.`);
+        return;
+      } else {
+        sendDataToAnalyze(analyzeWholeStructure, jobID, selectedModel, selectedList);
+        navigate(`/summary/${jobID}`);
+      }
+    }else{
       sendDataToAnalyze(analyzeWholeStructure, jobID, selectedModel, selectedList);
       navigate(`/summary/${jobID}`);
     }
