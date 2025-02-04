@@ -6,12 +6,9 @@ const HelpPage = () => {
     return (
         <div>
             <div className="pl-[10vw] flex flex-row gap-8 pt-2">
-            <div className="pl-[10vw] flex flex-row gap-8 pt-2">
                 <Logo page="Help" />
                 <HomeIcon />
-
             </div>
-            <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
             <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
                 <div
                     className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
