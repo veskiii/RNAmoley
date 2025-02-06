@@ -1,0 +1,175 @@
+:root {
+  --color-button-pink: #eb7e77;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+button {
+  color: black;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  height: 2.5rem;
+  width: 10rem;
+  display: flex;
+  align-items: center;
+  margin-top: 2rem;
+  background-color: var(--color-button-pink);
+  cursor: pointer;
+  border-radius: 0.5rem;
+  text-align: center;
+  justify-content: center;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+button:hover {
+  background-color: #3a7a7a;
+  color: white;
+}
+
+.radio-container {
+  display: flex;
+  flex: 1;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.radioGroup {
+  display: flex;
+  flex-direction: row;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  border-radius: 8px;
+}
+
+.radioButton {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  line-height: 2.15rem;
+}
+
+.radioLabel {
+  margin-left: 8px;
+  font-size: 1.125rem;
+  color: #333;
+}
+
+#rna_ss svg {
+  width: 100%;
+  height: 100%;
+}
+
+.options {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.frame {
+  display: flex;
+  width: 50vw;
+  height: 50vh;
+}
+
+.button-label {
+  display: inline-block;
+  padding: 0.4em 2em;
+  margin: 0.5em;
+  cursor: pointer;
+  border-radius: 0.25em;
+  background: light;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.22);
+  transition: 0.3s;
+  user-select: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.button-label:hover {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.32);
+}
+
+.button-label:active {
+  transform: translateY(2px);
+  background: var(--color-button-pink);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1), inset 0px -2px 0 rgba(0, 0, 0, 0.22);
+}
+
+.button-label:checked {
+  background: var(--color-button-pink);
+}
+
+.button-label:checked:hover {
+  background: darken(var(--color-button-pink), 5%);
+}
+
+.hidden {
+  display: none;
+}
+
+input[type="radio"]:checked+.button-label {
+  background: var(--color-button-pink);
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: auto;
+  max-width: 10px;
+  max-height: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #bdbcbc;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
