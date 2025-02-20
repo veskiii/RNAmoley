@@ -5,3 +5,10 @@ pnpm-lock.yaml
 
 .DS_Store
 .env
+restapi/.env.local
+restapi/public/*
+.vs
+tools/scripts/PDBParser/Walking_sphere
+tools/scripts/Correction/Corrected
+tools/scripts/Correction/To_correct
+tests/test.json

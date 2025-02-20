@@ -11,6 +11,27 @@
   pointer-events: none;
 }
 
+.mobile-message {
+  display: none;
+}
+
+@media (max-device-width: 920px) {
+  .desktop-content {
+    display: none;
+  }
+
+  .mobile-message {
+    display: flex;
+    /* justify-content: center;s */
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    padding: 20px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
@@ -56,7 +77,8 @@ button {
   border-radius: 0.5rem;
   text-align: center;
   justify-content: center;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -133,7 +155,8 @@ button:hover {
 .button-label:active {
   transform: translateY(2px);
   background: var(--color-button-pink);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1), inset 0px -2px 0 rgba(0, 0, 0, 0.22);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1),
+    inset 0px -2px 0 rgba(0, 0, 0, 0.22);
 }
 
 .button-label:checked {
@@ -148,7 +171,7 @@ button:hover {
   display: none;
 }
 
-input[type="radio"]:checked+.button-label {
+input[type="radio"]:checked + .button-label {
   background: var(--color-button-pink);
 }
 
@@ -172,4 +195,14 @@ input[type="radio"]:checked+.button-label {
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+#analyzeButtonTooltip {
+  transition: opacity 0.3s ease-in-out;
+  position: absolute;
+}
+
+#analyzeButton:disabled:hover {
+  background-color: #9ca3af;
+  color: black;
 }
