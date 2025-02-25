@@ -5,7 +5,6 @@
 ```bash
 docker compose up --build
 ```
-<<<<<<< HEAD
 
 ## Run locally
 
@@ -24,5 +23,3 @@ pnpm install
 pnpm start
 
 ```
-=======
->>>>>>> origin/rc
