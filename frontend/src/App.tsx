@@ -8,6 +8,10 @@ import JobProcessing from "./components/common/JobProcessing";
 import ErrorPage from "./components/common/ErrorPage";
 import HelpPage from "./components/common/helpPage";
 
+export const API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1";
+// export const API_URL = "http://restapi/api/v1";
+// export const API_URL = "http://localhost:3001/v1";
+
 interface NameContextType {
   jobID: string | undefined;
   setId: React.Dispatch<React.SetStateAction<string | undefined>>;
@@ -39,7 +43,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/panel" element={<Panel />} />
+          <Route path="/analysisPanel/:jobId" element={<Panel />} />
           <Route path="/summary/:jobId" element={<SummaryPanel />} />
           <Route path="/jobProcessing" element={<JobProcessing />} />
           <Route path="/errorPage" element={<ErrorPage />} />

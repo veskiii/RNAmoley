@@ -52,8 +52,8 @@ const fornaControls: React.FC<ControlsPanelProps> = ({
           type="number"
           value={labelInterval}
           onChange={handleLabelIntervalChange}
-          placeholder="Label Interval"
           className="rounded-lg w-24 mb-2 border-gray-300 border-2 pl-2 p-1"
+          disabled={!numbering}
         />
       </label>
       <label className="options">
@@ -88,14 +88,6 @@ const fornaControls: React.FC<ControlsPanelProps> = ({
         />{' '}
         Links
       </label>
-      {/* <label className="options">
-        <input
-          type="checkbox"
-          checked={directionArrows}
-          onChange={handleCheckboxChange(setDirectionArrows)}
-        />{' '}
-        Direction Arrows
-      </label> */}
       <label className="options">
         <input
           type="checkbox"

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npx tsc",
     "start": "node dist/server.js",
-    "dev": "tsx watch --env-file .env src/server.ts"
+    "dev": "tsx --env-file=.env --watch src/server.ts"
   },
   "keywords": [],
   "author": "",

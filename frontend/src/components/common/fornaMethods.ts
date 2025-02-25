@@ -23,11 +23,8 @@ export const showGraphTooltip = (node_num: string, strand: string, chains: Chain
   if (tooltip) {
     let found_nucleotide;
     if (node_num) {
-      console.log(node_num, strand, strand?.slice(-1))
       const numIndex = parseInt(node_num.slice(1), 10);
-      console.log("STRAND:", strand)
       let found_chain = chains.find(chain => chain.name === strand);
-      console.log("found_chain:", found_chain)
       if (found_chain) {
 
         found_nucleotide = found_chain.nucleotides[numIndex - 1];
@@ -54,7 +51,6 @@ export const showGraphTooltip = (node_num: string, strand: string, chains: Chain
 
 //Ustaw kolor nukleotydu na sekwencji i zmień parametr selected
 export const setColor = (index: number, setChains: React.Dispatch<React.SetStateAction<Chain[]>>, selectedChain: string) => {
-  console.log("ustawianie na klik")
   setChains(prevChains =>
     prevChains.map(chain => {
       if (chain.name.slice(-1) === selectedChain) {
@@ -72,7 +68,6 @@ export const setColor = (index: number, setChains: React.Dispatch<React.SetState
 }
 
 export const updateFornacSelection = (chains: Chain[], hybridizedName: string[]) => {
-  console.log("Aktualizacja klas w grafie");
   chains.forEach(chain => {
     let forna_id = 1;
     chain.nucleotides.forEach(nucleotide => {

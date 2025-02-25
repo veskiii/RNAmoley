@@ -1,21 +1,17 @@
 import Loading from "./loading";
-import { Colors } from "./colors";
+import { useEffect } from "react";
 
 const JobProcessing: React.FC = () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      window.location.reload();
+    }, 50000);
+
+    return () => clearInterval(interval);
+  }, []);
   return (
     <div>
-        <div className="flex flex-row text-3xl font-medium items-center self-start p-[30px]">
-          <div className="flex flex-col">
-            <div className="font-extrabold">
-              <h1>RNA</h1>
-            </div>
-            <div className="font-semibold pr-5 text-{#526969}">
-              <h1 style={{ color: Colors.blue }}>MOLEY</h1>
-            </div>
-          </div>
-          <h1>| Processing</h1>
-        </div>
-        <Loading message="Your job is processing..." />
+      <Loading page="Processing" message="Your job is processing..." />
     </div>
   );
 };

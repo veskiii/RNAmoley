@@ -1,18 +1,12 @@
-import { useNavigate } from "react-router-dom";
-import {Colors} from "./colors"
+import { Colors } from "./colors";
 
 export interface LogoProps {
     page?: string;
 }
 
 const Logo: React.FC<LogoProps> = ({ page = "Submition panel" }) => {
-      const navigate = useNavigate();
-      const goToDashboard = () => {
-        navigate("/");
-      }
     return (
-        <div className="flex flex-row text-2xl font-medium items-center self-start py-4 cursor-pointer"
-        onClick={goToDashboard}
+        <div className="flex flex-row text-2xl font-medium items-center self-start"
         >
             <div className="flex flex-col">
                 <div className="font-bold">
