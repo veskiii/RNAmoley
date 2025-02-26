@@ -357,6 +357,8 @@ export async function analyzeStructureWalkingSphere(
 
       if (!res.ok) {
         throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
+      } else {
+        console.log("Molprobity analysis successful.");
       }
 
       const tmpMetrics: metrics = (await res.json()) as metrics;

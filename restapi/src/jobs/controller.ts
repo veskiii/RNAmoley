@@ -162,6 +162,17 @@ export async function createJob(req: Request, res: Response) {
   const jobname = (req.body.jobName as string) || "Untitled job";
   const demoFileName = (req.body.radioButton as string) || "None";
 
+  console.log(
+    "Creating job. rnaFile: ",
+    rnaFile,
+    " pdbCode: ",
+    pdbCode,
+    " jobName: ",
+    jobname,
+    " demoFileName: ",
+    demoFileName
+  );
+
   var id: UUID;
   var newFilename: string;
   var originalFilename: string;
@@ -248,6 +259,8 @@ export async function createJob(req: Request, res: Response) {
       deleteJobDirectory(id);
       res.status(500).send({ error: "CIF to PDB conversion error." });
       return;
+    } else {
+      console.log("Conversion successful.");
     }
 
     finalFilename = newFilename.split(".")[0] + ".pdb";
@@ -326,6 +339,8 @@ export async function createJob(req: Request, res: Response) {
     deleteJobDirectory(id);
     res.status(500).send({ error: "Annotation error" });
     return;
+  } else {
+    console.log("Annotation successful.");
   }
   const annotateResult: Annotation[][] =
     (await annotateResponse.json()) as Annotation[][];
@@ -499,6 +514,17 @@ export async function analyzeStructure(req: Request, res: Response) {
   const modelNumber = req.body.modelNumber || "1";
   const radius = req.body.radius || 5;
   const interval = req.body.interval || 1;
+
+  console.log(
+    "Analyzing whole structure. id: ",
+    id,
+    " modelNumber: ",
+    modelNumber,
+    " radius: ",
+    radius,
+    " interval: ",
+    interval
+  );
 
   if (!id) {
     res.status(400).send({ error: "ID is required." });
