@@ -73,7 +73,7 @@ const SummaryPanel: React.FC = () => {
 
           node.classed("fornac-selectedNode", true).style("fill", "#6fc2d3");
         } else {
-          console.warn(`Node with index ${residue.residue_number} not found`);
+          // console.warn(`Node with index ${residue.residue_number} not found`);
         }
       } catch (error) {
         console.error("Failed to select node:", error);
@@ -151,7 +151,13 @@ const SummaryPanel: React.FC = () => {
   }
 
   const resetColumns = () => {
-    ["CLASH_SCORE", "BAD_ANGLES", "BAD_BONDS"].forEach((column) => {
+    [
+      "CLASH_SCORE",
+      "BAD_ANGLES",
+      "BAD_BONDS",
+      "SUGAR_PUCKER_OUT",
+      "SUITENESS",
+    ].forEach((column) => {
       document.querySelectorAll(`.column-${column}`).forEach((cell, index) => {
         const isRowEven = index % 2 === 0;
         (cell as HTMLElement).style.backgroundColor = isRowEven
@@ -175,6 +181,12 @@ const SummaryPanel: React.FC = () => {
       "tableBadAngles"
     ) as HTMLElement;
     let tableBadBonds = document.getElementById("tableBadBonds") as HTMLElement;
+    let tableSuiteness = document.getElementById(
+      "tableSuiteness"
+    ) as HTMLElement;
+    let tableSugarPuckerOut = document.getElementById(
+      "tableSugarPuckerOut"
+    ) as HTMLElement;
     tableClashscore.style.backgroundColor = devColor;
     tableClashscore.style.borderColor = "#d4d4d4";
     tableClashscore.style.borderWidth = "1px";
@@ -184,6 +196,12 @@ const SummaryPanel: React.FC = () => {
     tableBadBonds.style.backgroundColor = devColor;
     tableBadBonds.style.borderColor = "#d4d4d4";
     tableBadBonds.style.borderWidth = "1px";
+    tableSuiteness.style.backgroundColor = devColor;
+    tableSuiteness.style.borderColor = "#d4d4d4";
+    tableSuiteness.style.borderWidth = "1px";
+    tableSugarPuckerOut.style.backgroundColor = devColor;
+    tableSugarPuckerOut.style.borderColor = "#d4d4d4";
+    tableSugarPuckerOut.style.borderWidth = "1px";
 
     if (selectedScore === QualityScore.CLASH_SCORE) {
       tableClashscore.style.borderColor = selectedBorderColor;
@@ -226,7 +244,7 @@ const SummaryPanel: React.FC = () => {
           setMyData(data);
           const chains = transformJobToChains(data);
           setChainsState(chains);
-          //console.log("data:", data);
+          console.log("data:", data);
 
           if (data.metadata.status === "completed") {
             clearInterval(interval); // Stop the interval loop
@@ -369,6 +387,24 @@ const SummaryPanel: React.FC = () => {
               >
                 <div className="text-sm whitespace-normal">Bad bonds [%]</div>
               </th>
+              <th
+                id="tableSuiteness"
+                className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
+                onClick={(event) => handleClick(QualityScore.SUITENESS, event)}
+              >
+                <div className="text-sm whitespace-normal">Suiteness</div>
+              </th>
+              <th
+                id="tableSugarPuckerOut"
+                className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
+                onClick={(event) =>
+                  handleClick(QualityScore.SUGAR_PUCKER_OUT, event)
+                }
+              >
+                <div className="text-sm whitespace-normal">
+                  Sugar Pucker Outlier Type
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -390,6 +426,12 @@ const SummaryPanel: React.FC = () => {
                 </td>
                 <td className="border border-neutral-300 column-BAD_BONDS">
                   {residue.metrics.pct_badbonds}
+                </td>
+                <td className="border border-neutral-300 column-SUITENESS">
+                  {residue.residueMetrics.suiteness}
+                </td>
+                <td className="border border-neutral-300 column-SUGAR_PUCKER_OUT">
+                  {residue.residueMetrics.pucker_outlier_type}
                 </td>
               </tr>
             ))}
@@ -746,6 +788,8 @@ const SummaryPanel: React.FC = () => {
                   initialized={initialized}
                   setInitialized={setInitialized}
                   is3dEnabled={is3Dview}
+                  resultResidues={myData.results.data}
+                  selectedQualityScore={selectedQualityScore}
                 />
               </div>
             </div>

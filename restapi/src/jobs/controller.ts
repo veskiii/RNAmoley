@@ -336,7 +336,7 @@ export async function createJob(req: Request, res: Response) {
 
   if (!annotateResponse.ok) {
     console.error("Annotation error");
-    deleteJobDirectory(id);
+    //deleteJobDirectory(id);
     res.status(500).send({ error: "Annotation error" });
     return;
   } else {

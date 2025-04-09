@@ -8,9 +8,11 @@ import JobProcessing from "./components/common/JobProcessing";
 import ErrorPage from "./components/common/ErrorPage";
 import HelpPage from "./components/common/helpPage";
 
-export const API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1";
-// export const API_URL = "http://restapi/api/v1";
+// export const API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1";
 // export const API_URL = "http://localhost:3001/v1";
+export const API_URL = process.env.REACT_APP_API_URL
+  ? process.env.REACT_APP_API_URL
+  : "http://localhost:3001/v1";
 
 interface NameContextType {
   jobID: string | undefined;
