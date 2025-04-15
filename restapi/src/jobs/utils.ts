@@ -264,10 +264,12 @@ export async function saveOriginalNumeration(
     var number = 1;
 
     pdbFile.atoms.forEach((atom) => {
-      if (atom.resSeq != originalNumeration.at(-1)) {
-        originalNumeration.push(atom.resSeq);
-        newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
-        number++;
+      if (["A", "C", "G", "U", ""].includes(atom.resName)) {
+        if (atom.resSeq != originalNumeration.at(-1)) {
+          originalNumeration.push(atom.resSeq);
+          newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
+          number++;
+        }
       }
     });
 

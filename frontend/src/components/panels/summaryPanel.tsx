@@ -34,6 +34,7 @@ const SummaryPanel: React.FC = () => {
   const [nodeOutline, setNodeOutline] = useState(true);
   const [nodeLabel, setNodeLabel] = useState(true);
   const [links, setLinks] = useState(true);
+  const [showClashes, setShowClashes] = useState(true);
   const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
   const [is3Dview, setIs3Dview] = useState(false);
@@ -47,6 +48,33 @@ const SummaryPanel: React.FC = () => {
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const devColor = "#f3f4f6";
   const selectedBorderColor = Colors.salmon;
+
+  const getClashesForForna = () => {
+    if (showClashes && myData) {
+      const clashes = new Set();
+      for (const item of myData.results.data) {
+        const sourceNum = item.residue_number;
+        const dstString = item.residueMetrics.dst_residue;
+
+        if (!dstString) continue;
+
+        const parts = dstString.trim().split(/\s+/);
+        if (parts.length < 2) continue;
+
+        const dstNum = parseInt(parts[1]);
+
+        if (sourceNum === dstNum) continue;
+
+        const clashPair = [sourceNum, dstNum].sort((a, b) => a - b);
+        clashes.add(JSON.stringify(clashPair));
+      }
+
+      //@ts-ignore
+      const result = Array.from(clashes).map((str) => JSON.parse(str));
+
+      return result;
+    }
+  };
 
   const colorGnodes = () => {
     if (!myData || !myData.results || !myData.results.data) {
@@ -89,6 +117,7 @@ const SummaryPanel: React.FC = () => {
     nodeOutline,
     nodeLabel,
     links,
+    showClashes,
     directionArrows,
     setAnimation,
   ]);
@@ -612,6 +641,14 @@ const SummaryPanel: React.FC = () => {
             />{" "}
             Links
           </label>
+          <label className="options">
+            <input
+              type="checkbox"
+              checked={showClashes}
+              onChange={handleCheckboxChange(setShowClashes)}
+            />{" "}
+            Clashes
+          </label>
         </div>
       </div>
     );
@@ -761,6 +798,7 @@ const SummaryPanel: React.FC = () => {
                 <FornacSummaryComponent
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
+                  clashMap={getClashesForForna() || []}
                   chains={chainsState}
                   setChains={setChainsState}
                   labelInterval={labelInterval}
@@ -768,6 +806,7 @@ const SummaryPanel: React.FC = () => {
                   nodeOutline={nodeOutline}
                   nodeLabel={nodeLabel}
                   links={links}
+                  showClashes={showClashes}
                   directionArrows={directionArrows}
                   setAnimation={false}
                   job={myData}

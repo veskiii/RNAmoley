@@ -53,31 +53,31 @@ const Molstar = (props) => {
   const mapResiduesToColors = () => {
     if (selectedQualityScore == QualityScore.BAD_ANGLES) {
       return resultResidues.map((residue) => [
-        "A",
+        residue.residueMetrics.residue.trim().split(/\s+/)[0],
         residue.residue_number,
         getColor(residue, QualityScore.BAD_ANGLES),
       ]);
     } else if (selectedQualityScore == QualityScore.BAD_BONDS) {
       return resultResidues.map((residue) => [
-        "A",
+        residue.residueMetrics.residue.trim().split(/\s+/)[0],
         residue.residue_number,
         getColor(residue, QualityScore.BAD_BONDS),
       ]);
     } else if (selectedQualityScore == QualityScore.CLASH_SCORE) {
       return resultResidues.map((residue) => [
-        "A",
+        residue.residueMetrics.residue.trim().split(/\s+/)[0],
         residue.residue_number,
         getColor(residue, QualityScore.CLASH_SCORE),
       ]);
     } else if (selectedQualityScore == QualityScore.SUGAR_PUCKER_OUT) {
       return resultResidues.map((residue) => [
-        "A",
+        residue.residueMetrics.residue.trim().split(/\s+/)[0],
         residue.residue_number,
         getColor(residue, QualityScore.SUGAR_PUCKER_OUT),
       ]);
     } else if (selectedQualityScore == QualityScore.SUITENESS) {
       return resultResidues.map((residue) => [
-        "A",
+        residue.residueMetrics.residue.trim().split(/\s+/)[0],
         residue.residue_number,
         getColor(residue, QualityScore.SUITENESS),
       ]);
@@ -156,16 +156,6 @@ const Molstar = (props) => {
       changeNucleotideColors();
     }
   }, [initialized, resultResidues, selectedQualityScore]);
-
-  //   useEffect(() => {
-  //     if (initialized) {
-  //       const timer = setTimeout(() => {
-  //         changeNucleotideColors();
-  //         console.log("color changed");
-  //       }, 5000);
-  //       return () => clearTimeout(timer);
-  //     }
-  //   }, [initialized, resultResidues, selectedQualityScore]);
 
   useEffect(() => {
     if (plugin.current) {

@@ -277,22 +277,6 @@ export async function createJob(req: Request, res: Response) {
     return;
   }
 
-  // reject if the file contains non-rna residues
-  var nonRNA = false;
-  pdbFile.residues.some((residue) => {
-    if (!["A", "C", "G", "U", ""].includes(residue.resName)) {
-      nonRNA = true;
-      console.error("Non-RNA residues found.");
-      console.error(residue.resName);
-      deleteJobDirectory(id);
-      return true;
-    }
-  });
-  if (nonRNA) {
-    res.status(422).send({ error: "Non-RNA residues found in the file." });
-    return;
-  }
-
   // split file into models
   var numberOfModels = 1;
   const splitResponse = await fetch(`${TOOLS_URL}/split?id=${id}`, {
@@ -310,6 +294,13 @@ export async function createJob(req: Request, res: Response) {
     return;
   }
 
+  // temporary fix for very very large structures
+  //@ts-ignore
+  // const wait = (ms) => {
+  //   return new Promise((resolve) => setTimeout(resolve, ms));
+  // };
+  // await wait(5000);
+
   // run clean up script on  all the models
   const correctResponse = await fetch(
     `${TOOLS_URL}/correct?id=${id}&numberOfModels=${numberOfModels}`,
@@ -318,7 +309,6 @@ export async function createJob(req: Request, res: Response) {
     }
   );
   if (!correctResponse.ok) {
-    console.error("Correction error");
     deleteJobDirectory(id);
     res
       .status(500)
