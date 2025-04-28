@@ -54,6 +54,9 @@ const SummaryPanel: React.FC = () => {
       const clashes = new Set();
       for (const item of myData.results.data) {
         const sourceNum = item.residue_number;
+
+        if (!item.residueMetrics) continue;
+
         const dstString = item.residueMetrics.dst_residue;
 
         if (!dstString) continue;

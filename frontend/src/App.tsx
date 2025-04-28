@@ -1,7 +1,7 @@
 import { useState, createContext, ReactNode } from "react";
 import "./App.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Dashboard from "./components/panels/startPanel";
+import Dashboard from "./components/panels/submitPanel";
 import Panel from "./components/panels/analysisPanel";
 import SummaryPanel from "./components/panels/summaryPanel";
 import JobProcessing from "./components/common/JobProcessing";

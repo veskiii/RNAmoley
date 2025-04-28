@@ -92,6 +92,8 @@ const Molstar = (props) => {
       return;
     }
 
+    if (!resultResidues[0].residueMetrics) return;
+
     const structure =
       plugin.current.managers.structure.hierarchy.current.structures[0];
     const data =
