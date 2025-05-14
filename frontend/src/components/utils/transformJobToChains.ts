@@ -36,7 +36,7 @@ export function transformJobToChains(job: Job): Chain[] {
           parseInt(key, 10) === id &&
           job.numeration[key][1] === annotation.name.slice(-1)
       );
-      console.log("numeration key: " + numerationKey);
+      // console.log("numeration key: " + numerationKey);
       if (numerationKey) {
         const nucleotide: Nucleotide = {
           index: parseInt(numerationKey, 10),

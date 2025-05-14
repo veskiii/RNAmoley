@@ -184,7 +184,7 @@ const Panel: React.FC = () => {
         <div className="w-80">
           <div className="w-[700px] bg-white items-start">
             <div className="h-[70px] flex flex-row gap-8 pl-4">
-              <Logo page="Analysis panel" />
+              <Logo />
               <div className="flex flex-row gap-8">
                 <HomeIcon />
                 <HelpIcon />

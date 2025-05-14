@@ -53,6 +53,19 @@ export interface Annotation {
   dotbracket: string | undefined;
 }
 
+export interface RangeOfResidues {
+  start: number | undefined;
+  end: number | undefined;
+  residues: string | undefined;
+  dotbracket: string | undefined;
+}
+
+export interface StructuralElement {
+  name: string | undefined;
+  type: string | undefined;
+  residues: RangeOfResidues[] | undefined;
+}
+
 export interface Metadata {
   status: `created` | `running` | `completed` | `failed`;
   model_count: number;
@@ -115,6 +128,7 @@ export interface Job {
   updated_at: string;
   annotation: Annotation[];
   numeration: { [key: string]: [number, string] };
+  motifs: StructuralElement[];
   pdb_file: PDBFile;
   pdb_file_string: string;
   results?: Analysis_results | null;

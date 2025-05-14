@@ -3,6 +3,7 @@ import {
   correctModels,
   runAnnotator,
   runConverter,
+  runMotifExtractor,
   splitModels,
   walkingSphere,
 } from "./wrappers.js";
@@ -30,6 +31,31 @@ app.post("/annotate", (req, res) => {
   console.log("Annotating", id, numberOfModels);
 
   runAnnotator(id, parseInt(numberOfModels))
+    .then((output) => {
+      res.status(200).send(output);
+    })
+    .catch((error) => {
+      console.log(error);
+      res.status(500).send(error);
+    });
+});
+
+app.post("/extractMotifs", (req, res) => {
+  const id = req.query.id as string;
+  const numberOfModels = req.query.numberOfModels as string;
+
+  if (!id) {
+    res.status(400).send("Motif-extractor error: id is required");
+    return;
+  }
+
+  if (!numberOfModels) {
+    res.status(400).send("Motif-extractor error: filename is required");
+    return;
+  }
+  console.log("Extracting motifs ", id, numberOfModels);
+
+  runMotifExtractor(id, parseInt(numberOfModels))
     .then((output) => {
       res.status(200).send(output);
     })

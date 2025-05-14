@@ -37,6 +37,7 @@ import type {
   Metadata,
   nucleotideResult,
   splitModelsResponse,
+  StructuralElement,
 } from "./types.js";
 import { TOOLS_URL } from "../server.js";
 
@@ -335,6 +336,25 @@ export async function createJob(req: Request, res: Response) {
   const annotateResult: Annotation[][] =
     (await annotateResponse.json()) as Annotation[][];
 
+  // extract motifs
+  const extractMotifsResponse = await fetch(
+    `${TOOLS_URL}/extractMotifs?id=${id}&numberOfModels=${numberOfModels}`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!extractMotifsResponse.ok) {
+    console.error("Motif extraction error");
+    //deleteJobDirectory(id);
+    res.status(500).send({ error: "Motif extraction error" });
+    return;
+  } else {
+    console.log("Motif extraction successful.");
+  }
+  const extractMotifsResult: StructuralElement[][] =
+    (await extractMotifsResponse.json()) as StructuralElement[][];
+
   // create a metadata file for the job
   metadata.model_count = numberOfModels;
   metadata.status = "completed";
@@ -369,6 +389,7 @@ export async function createJob(req: Request, res: Response) {
         numeration: newNumeration[0]
           ? Object.fromEntries(newNumeration[0])
           : {},
+        motifs: extractMotifsResult[0] ? extractMotifsResult[0] : [],
         pdb_file: pdbFile
           ? pdbFile
           : {

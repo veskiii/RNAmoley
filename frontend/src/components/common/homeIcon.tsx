@@ -10,7 +10,7 @@ const HomeIcon = () => {
       onClick={() => navigate("/")}
     >
       {/* <FaHome style={{ width: '2em', height: '2em', marginRight: '0.5em'}} /> */}
-      Submition Panel
+      Submission Panel
     </div>
   );
 };

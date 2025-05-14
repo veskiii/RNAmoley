@@ -662,7 +662,7 @@ const SummaryPanel: React.FC = () => {
       <div className="desktop-content flex flex-col h-screen w-screen">
         <div className="flex flex-row w-full justify-between">
           <div className="flex flex-row font-medium items-center self-start ml-[30px]">
-            <Logo page="Result panel" />
+            <Logo />
             <div className="flex flex-row gap-8 ml-8">
               <HomeIcon />
               <HelpIcon />

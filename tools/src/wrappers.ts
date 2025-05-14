@@ -13,6 +13,19 @@ interface Annotation {
   dotbracket: string | undefined;
 }
 
+interface RangeOfResidues {
+  start: number | undefined;
+  end: number | undefined;
+  residues: string | undefined;
+  dotbracket: string | undefined;
+}
+
+interface StructuralElement {
+  name: string | undefined;
+  type: string | undefined;
+  residues: RangeOfResidues[] | undefined;
+}
+
 async function formatOutput(output: string) {
   const splt = output.split("/\r?\n/");
   const filtered = splt.filter((line) => line !== "");
@@ -109,6 +122,17 @@ export async function runAnnotator(id: string, numberOfModels: number) {
     // console.log(output);
     results.push(output);
 
+    // save output as a merged dot-bracket file
+    const merged: Annotation = {
+      name: ">strands_merged",
+      sequnece: output.map((item) => item.sequnece).join(""),
+      dotbracket: output.map((item) => item.dotbracket).join(""),
+    };
+    const mergedFilename = `${i}.dot`;
+    const mergedString = `${merged.name}\n${merged.sequnece}\n${merged.dotbracket}`;
+    const mergedFilePath = resolve(`${JOBS_DIR}/${id}/models`, mergedFilename);
+    await fs.writeFile(mergedFilePath, mergedString);
+
     // save output as json file
     // const outputFilename = filename.split('.')[0] + '.json';
     const outputFilename = `${i}_annotation.json`;
@@ -118,6 +142,82 @@ export async function runAnnotator(id: string, numberOfModels: number) {
   }
 
   console.log(`Ending running annotator on ${id}...`);
+
+  return results;
+}
+
+const parseStructuralElements = (input: string) => {
+  const lines = input
+    .trim()
+    .substring(2, input.length - 2)
+    .split("\\n")
+    .slice(3)
+    .filter((line) => line.trim() !== "");
+  const result = [];
+  const typeCounters = { S: 0, L: 0, H: 0, SS: 0 };
+
+  for (const line of lines) {
+    const parts = line.trim().split(/\s+/);
+    const type = parts[0];
+
+    let key: keyof typeof typeCounters;
+    if (type === "Stem") key = "S";
+    else if (type === "Loop") key = "L";
+    else if (type === "Hairpin") key = "H";
+    else key = "SS";
+
+    typeCounters[key] += 1;
+    const name = `${key}${typeCounters[key]}`;
+
+    const residues = [];
+
+    const rangeRegex = /(\d+)\s+(\d+)\s+([AUGC]+)\s+([\(\)\[\]\{\}\.]+)/g;
+    let match;
+    while ((match = rangeRegex.exec(line)) !== null) {
+      const [, start, end, res, dotbracket] = match;
+      residues.push({
+        start: start ? parseInt(start, 10) : NaN,
+        end: end ? parseInt(end) : NaN,
+        residues: res,
+        dotbracket: dotbracket,
+      });
+    }
+
+    result.push({
+      name,
+      type,
+      residues,
+    });
+  }
+
+  return result;
+};
+
+export async function runMotifExtractor(id: string, numberOfModels: number) {
+  console.log(`Running motif extractor on ${id}...`);
+  const results = [];
+
+  for (let i = 1; i <= numberOfModels; i++) {
+    const motifExtractor = spawnSync(
+      "motif-extractor",
+      [`--dbn`, `${JOBS_DIR}/${id}/models/${i}.dot`],
+      { encoding: "utf-8" }
+    );
+    const stdout = motifExtractor.stdout.toString();
+    const result = await formatOutput(stdout);
+    // parse output to list of structural elements
+    // skip first three lines - dotbracket, sequence, and name
+    const output = parseStructuralElements(result);
+
+    results.push(output);
+
+    const outputFilename = `${i}_motifs.json`;
+    const outputString = JSON.stringify(output);
+    const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
+    await fs.writeFile(outputFilePath, outputString);
+  }
+
+  console.log(`Ending running motif extractor on ${id}...`);
 
   return results;
 }

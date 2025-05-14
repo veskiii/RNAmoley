@@ -7,11 +7,14 @@ export interface ErrorPageProps {
   statusCode?: string;
 }
 
-const ErrorPage: React.FC<ErrorPageProps> = ({ errorMessage = "Something is wrong.", statusCode = "" }) => {
+const ErrorPage: React.FC<ErrorPageProps> = ({
+  errorMessage = "Something is wrong.",
+  statusCode = "",
+}) => {
   return (
     <div>
       <div className="flex flex-row pl-2 gap-8">
-        <Logo page="Error" />
+        <Logo />
         <HomeIcon />
         <HelpIcon />
       </div>
