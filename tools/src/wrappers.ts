@@ -26,6 +26,14 @@ interface StructuralElement {
   residues: RangeOfResidues[] | undefined;
 }
 
+const MOTIF_TYPE_NAME_MAP = {
+  Stem: "S",
+  SingleStrand: "SS",
+  Hairpin: "H",
+  Loop: "L",
+  Junction: "J",
+};
+
 async function formatOutput(output: string) {
   const splt = output.split("/\r?\n/");
   const filtered = splt.filter((line) => line !== "");
@@ -100,7 +108,11 @@ export async function runAnnotator(id: string, numberOfModels: number) {
   for (let i = 1; i <= numberOfModels; i++) {
     const annotator = spawnSync(
       "annotator",
-      [`${JOBS_DIR}/${id}/models/${i}.pdb`],
+      [
+        "-j",
+        `${JOBS_DIR}/${id}/models/${i}.json`,
+        `${JOBS_DIR}/${id}/models/${i}.pdb`,
+      ],
       { encoding: "utf-8" }
     );
     const result = await formatOutput(annotator.stdout.toString());
@@ -146,51 +158,95 @@ export async function runAnnotator(id: string, numberOfModels: number) {
   return results;
 }
 
-const parseStructuralElements = (input: string) => {
-  const lines = input
-    .trim()
-    .substring(2, input.length - 2)
-    .split("\\n")
-    .slice(3)
-    .filter((line) => line.trim() !== "");
-  const result = [];
-  const typeCounters = { S: 0, L: 0, H: 0, SS: 0 };
+const retrieveMotifsFromJson = async (
+  filePath: string
+): Promise<StructuralElement[]> => {
+  // Wczytaj dane z pliku JSON
+  const rawData = await fs.readFile(filePath, "utf-8");
+  const jsonData = JSON.parse(rawData);
+  console.log(jsonData);
 
-  for (const line of lines) {
-    const parts = line.trim().split(/\s+/);
-    const type = parts[0];
+  const structuralElements: StructuralElement[] = [];
 
-    let key: keyof typeof typeCounters;
-    if (type === "Stem") key = "S";
-    else if (type === "Loop") key = "L";
-    else if (type === "Hairpin") key = "H";
-    else key = "SS";
-
-    typeCounters[key] += 1;
-    const name = `${key}${typeCounters[key]}`;
-
-    const residues = [];
-
-    const rangeRegex = /(\d+)\s+(\d+)\s+([AUGC]+)\s+([\(\)\[\]\{\}\.]+)/g;
-    let match;
-    while ((match = rangeRegex.exec(line)) !== null) {
-      const [, start, end, res, dotbracket] = match;
-      residues.push({
-        start: start ? parseInt(start, 10) : NaN,
-        end: end ? parseInt(end) : NaN,
-        residues: res,
-        dotbracket: dotbracket,
+  // Przetwarzanie "loops"
+  if (jsonData.loops) {
+    jsonData.loops.forEach((loop: any, index: number) => {
+      const type = loop.strands.length >= 3 ? "Junction" : "Loop";
+      structuralElements.push({
+        name: `${MOTIF_TYPE_NAME_MAP[type]}${index + 1}`,
+        type: type,
+        residues: loop.strands.map((strand: any) => ({
+          start: strand.first,
+          end: strand.last,
+          residues: strand.sequence,
+          dotbracket: strand.structure,
+        })),
       });
-    }
-
-    result.push({
-      name,
-      type,
-      residues,
     });
   }
 
-  return result;
+  // Przetwarzanie "hairpins"
+  if (jsonData.hairpins) {
+    jsonData.hairpins.forEach((hairpin: any, index: number) => {
+      structuralElements.push({
+        name: `${MOTIF_TYPE_NAME_MAP["Hairpin"]}${index + 1}`,
+        type: "Hairpin",
+        residues: [
+          {
+            start: hairpin.strand.first,
+            end: hairpin.strand.last,
+            residues: hairpin.strand.sequence,
+            dotbracket: hairpin.strand.structure,
+          },
+        ],
+      });
+    });
+  }
+
+  // Przetwarzanie "stems"
+  if (jsonData.stems) {
+    jsonData.stems.forEach((stem: any, index: number) => {
+      structuralElements.push({
+        name: `${MOTIF_TYPE_NAME_MAP["Stem"]}${index + 1}`,
+        type: "Stem",
+        residues: [
+          {
+            start: stem.strand5p.first,
+            end: stem.strand5p.last,
+            residues: stem.strand5p.sequence,
+            dotbracket: stem.strand5p.structure,
+          },
+          {
+            start: stem.strand3p.first,
+            end: stem.strand3p.last,
+            residues: stem.strand3p.sequence,
+            dotbracket: stem.strand3p.structure,
+          },
+        ],
+      });
+    });
+  }
+
+  // Przetwarzanie "singleStrands"
+  if (jsonData.singleStrands) {
+    jsonData.singleStrands.forEach((strand: any, index: number) => {
+      structuralElements.push({
+        name: `${MOTIF_TYPE_NAME_MAP["SingleStrand"]}${index + 1}`,
+        type: "SingleStrand",
+        residues: [
+          {
+            start: strand.strand.first,
+            end: strand.strand.last,
+            residues: strand.strand.sequence,
+            dotbracket: strand.strand.structure,
+          },
+        ],
+      });
+    });
+  }
+
+  console.log("Parsed motifs: ", structuralElements);
+  return structuralElements;
 };
 
 export async function runMotifExtractor(id: string, numberOfModels: number) {
@@ -198,21 +254,25 @@ export async function runMotifExtractor(id: string, numberOfModels: number) {
   const results = [];
 
   for (let i = 1; i <= numberOfModels; i++) {
-    const motifExtractor = spawnSync(
-      "motif-extractor",
-      [`--dbn`, `${JOBS_DIR}/${id}/models/${i}.dot`],
-      { encoding: "utf-8" }
-    );
-    const stdout = motifExtractor.stdout.toString();
-    const result = await formatOutput(stdout);
+    // const motifExtractor = spawnSync(
+    //   "motif-extractor",
+    //   [`--dbn`, `${JOBS_DIR}/${id}/models/${i}.dot`],
+    //   { encoding: "utf-8" }
+    // );
+    // const stdout = motifExtractor.stdout.toString();
+    // const result = await formatOutput(stdout);
     // parse output to list of structural elements
     // skip first three lines - dotbracket, sequence, and name
-    const output = parseStructuralElements(result);
+    const output = await retrieveMotifsFromJson(
+      `${JOBS_DIR}/${id}/models/${i}.json`
+    );
+    console.log("Motif extractor output: ", output);
 
     results.push(output);
 
     const outputFilename = `${i}_motifs.json`;
     const outputString = JSON.stringify(output);
+    console.log("Output string: ", outputString);
     const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
     await fs.writeFile(outputFilePath, outputString);
   }

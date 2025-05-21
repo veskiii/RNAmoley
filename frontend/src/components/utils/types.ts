@@ -30,6 +30,19 @@ export interface Metadata {
   model_count: number;
 }
 
+export interface RangeOfResidues {
+  start: number | undefined;
+  end: number | undefined;
+  residues: string | undefined;
+  dotbracket: string | undefined;
+}
+
+export interface StructuralElement {
+  name: string | undefined;
+  type: string | undefined;
+  residues: RangeOfResidues[] | undefined;
+}
+
 export interface Job {
   id: number;
   originalfilename: string;
@@ -38,6 +51,7 @@ export interface Job {
   updatedat: string;
   annotation: Annotation[];
   numeration: Numeration;
+  motifs: StructuralElement[];
   data: {
     atoms: Atom[];
   };
@@ -52,6 +66,7 @@ export interface Nucleotide {
   base: string;
   structure: string;
   selected: boolean;
+  structuralElements: StructuralElement[];
 }
 
 export interface Chain {

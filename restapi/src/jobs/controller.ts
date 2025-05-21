@@ -124,6 +124,17 @@ export async function getJobById(req: Request, res: Response) {
       return;
     }
 
+    const motifs = await fetchJSONFile(
+      id,
+      `${modelNumber}_motifs.json`,
+      modelNumber
+    );
+    if (!motifs) {
+      res.status(500).send({ error: "Motifs file not found." });
+      return;
+    }
+    console.log("Motifs: ", motifs);
+
     const pdbFile = await fetchPdbFileAsJSON(id, modelNumber);
     if (!pdbFile) {
       res.status(500).send({ error: "PDB file not found." });
@@ -148,6 +159,7 @@ export async function getJobById(req: Request, res: Response) {
       updated_at: result.rows[0].updated_at,
       annotation: annotation,
       numeration: numeration,
+      motifs: motifs,
       pdb_file: pdbFile,
       pdb_file_string: file_string,
       results: results,

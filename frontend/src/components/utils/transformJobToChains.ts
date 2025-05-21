@@ -1,4 +1,22 @@
-import { Chain, Job, Nucleotide } from "./types";
+import { Chain, Job, Nucleotide, StructuralElement } from "./types";
+
+export function findStructuralElementsForNucleotide(
+  elements: StructuralElement[],
+  nucleotideIndex: number
+): StructuralElement[] {
+  if (!elements || elements.length === 0) {
+    return [];
+  }
+  return elements.filter((element) =>
+    element.residues?.some(
+      (range) =>
+        range.start !== undefined &&
+        range.end !== undefined &&
+        nucleotideIndex >= range.start &&
+        nucleotideIndex <= range.end
+    )
+  );
+}
 
 export function transformJobToChains(job: Job): Chain[] {
   const chains: Chain[] = [];
@@ -30,6 +48,8 @@ export function transformJobToChains(job: Job): Chain[] {
       nucleotides: [],
     };
 
+    console.log(job);
+
     for (let i = 0; i < annotation.sequnece.length; i++) {
       const numerationKey = Object.keys(job.numeration).find(
         (key) =>
@@ -38,12 +58,20 @@ export function transformJobToChains(job: Job): Chain[] {
       );
       // console.log("numeration key: " + numerationKey);
       if (numerationKey) {
+        const index = parseInt(numerationKey, 10);
+        // TODO: does index continue on different chains
+        const structuralElements = findStructuralElementsForNucleotide(
+          job.motifs,
+          index
+        );
+
         const nucleotide: Nucleotide = {
-          index: parseInt(numerationKey, 10),
+          index: index,
           original_index: job.numeration[numerationKey][0],
           base: annotation.sequnece[i],
           structure: annotation.dotbracket[i],
           selected: false,
+          structuralElements: structuralElements,
         };
         chain.nucleotides.push(nucleotide);
       }

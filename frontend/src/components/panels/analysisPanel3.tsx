@@ -106,6 +106,7 @@ const Panel: React.FC = () => {
     try {
       const data = await fetchJobData(jobID, model);
       setMyData(data);
+      console.log(data);
       const chains = transformJobToChains(data);
       setChainsState(chains);
     } catch (error) {

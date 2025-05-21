@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from "react";
 import * as d3 from "d3";
-import { SummaryJob } from "../utils/types";
+import { SummaryJob, Nucleotide, Chain } from "../utils/types";
 
 declare const fornac: any;
 
-interface Nucleotide {
-  index: number;
-  original_index: number;
-  base: string;
-  structure: string;
-  selected: boolean;
-}
+// interface Nucleotide {
+//   index: number;
+//   original_index: number;
+//   base: string;
+//   structure: string;
+//   selected: boolean;
+// }
 
-interface Chain {
-  name: string;
-  nucleotides: Nucleotide[];
-  sequence: string;
-  dotBracket: string;
-}
+// interface Chain {
+//   name: string;
+//   nucleotides: Nucleotide[];
+//   sequence: string;
+//   dotBracket: string;
+// }
 
 const FornacSummaryComponent = ({
   sequences,

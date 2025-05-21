@@ -54,12 +54,12 @@ const ResidueTable = ({ data, selectedChain }) => {
           <td className="w-32 p-2 bg-gray-400 text-center">
             Structural Element
           </td>
-          {selectedChainData.nucleotides.map((_, index) => (
+          {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-name-${index}`}
               className="w-12 p-2 bg-gray-300 text-center"
             >
-              x
+              {nucleotide.structuralElements[0]?.name || ""}
             </td>
           ))}
         </tr>
