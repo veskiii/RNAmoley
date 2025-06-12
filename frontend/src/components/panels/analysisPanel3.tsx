@@ -523,7 +523,8 @@ const Panel: React.FC = () => {
                     useInterface={true}
                     file={myData.pdb_file_string}
                     chains={chainsState}
-                    setChains={setChainsState}
+                    selectResidue={selectResidue}
+                    deselectResidue={deselectResidue}
                     initialized={initialized}
                     setInitialized={setInitialized}
                     setIsViewInitialized={setIsViewInitialized}

@@ -28,7 +28,8 @@ const Molstar = (props) => {
     initialized,
     setInitialized,
     chains,
-    setChains,
+    selectResidue,
+    deselectResidue,
     setIsViewInitialized,
   } = props;
   const parentRef = useRef(null);
@@ -171,18 +172,61 @@ const Molstar = (props) => {
               const localSelected = [];
               for (const { structure } of selections) {
                 if (!structure) continue;
-
                 Structure.eachAtomicHierarchyElement(structure, {
                   residue: (loc) => {
-                    const position =
-                      StructureProperties.residue.label_seq_id(loc);
-                    localSelected.push({ position });
+                    const position = StructureProperties.residue.label_seq_id(loc);
+                    const chain = StructureProperties.chain.label_asym_id(loc);
+                    localSelected.push({ position, chain });
                   },
                 });
               }
 
-              setSelected(localSelected);
-              setEnableSelection(true);
+              setSelected((prevSelected) => {
+                // Nowe wybrane
+                const newSelected = localSelected.map(sel => {
+                  const wasSelected = chains.find( c => c.name.slice(-1) === sel.chain)
+                    .nucleotides.some(
+                      nucleotide =>
+                        nucleotide.index === sel.position &&
+                        nucleotide.selected === true
+                    );
+
+                  return {
+                    ...sel,
+                    status: wasSelected ? "kept" : "added"
+                  };
+                });
+
+                // Odznaczone
+                const removed = prevSelected
+                  .filter(
+                    prev =>
+                      !localSelected.some(
+                        sel => sel.position === prev.position && sel.chain === prev.chain
+                      ) && prev.status !== "removed"
+                  )
+                  .map(prev => ({
+                    ...prev,
+                    status: "removed"
+                  }));
+
+                // Jeśli nie ma zmian, nie aktualizuj stanu
+                if (
+                  newSelected.length === prevSelected.length &&
+                  newSelected.every((item, idx) =>
+                    item.position === prevSelected[idx].position &&
+                    item.chain === prevSelected[idx].chain &&
+                    (item.status === prevSelected[idx].status || prevSelected[idx].status === "kept")
+                  )
+                ) {
+                  return prevSelected;
+                }
+
+                setEnableSelection(true);
+                console.log("New selection:", newSelected);
+                console.log("Removed selection:", removed);
+                return [...newSelected, ...removed];
+              });
             }
           );
 
@@ -197,22 +241,26 @@ const Molstar = (props) => {
   //Zmiana selected w nucleotides na podstawie tablicy selected
   useEffect(() => {
     if (enableSelection === true) {
-      // Create a map for faster lookup of selected indices
-      const selectedIndices = new Set(selected.map((item) => item.position));
-
-      // Update chains immutably
-      const updatedChains = chains.map((chain) => {
-        const updatedNucleotides = chain.nucleotides.map((nucleotide) => ({
-          ...nucleotide, // Spread existing nucleotide properties
-          selected: selectedIndices.has(nucleotide.index),
-        }));
-
-        return { ...chain, nucleotides: updatedNucleotides };
+      console.log("Selected residues:", selected);
+      selected.forEach((item) => {
+        const { position, chain } = item;
+        const chainIndex = chains.findIndex(
+          (c) => c.name.slice(-1) === chain
+        );
+        if (chainIndex !== -1) {
+          const nucleotideIndex = chains[chainIndex].nucleotides.findIndex(
+            (nucleotide) => nucleotide.index === position
+          );
+          if (nucleotideIndex !== -1 && item.status == "added") {
+            selectResidue(chain, position);
+          }
+          if (nucleotideIndex !== -1 && item.status == "removed") {
+            deselectResidue(chain, position);
+          }
+        }
       });
-
-      setChains(updatedChains);
     }
-  }, [selected, setChains, enableSelection]);
+  }, [selected, enableSelection]);
 
   const loadStructure = async (plugin, file = null) => {
     if (plugin) {
@@ -319,7 +367,8 @@ Molstar.propTypes = {
       ).isRequired,
     })
   ).isRequired,
-  setChains: PropTypes.func,
+  selectResidue: PropTypes.func,
+  deselectResidue: PropTypes.func,
   initialized: PropTypes.bool,
   setInitialized: PropTypes.func,
   setIsViewInitialized: PropTypes.func,
