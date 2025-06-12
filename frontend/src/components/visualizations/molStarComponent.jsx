@@ -239,28 +239,28 @@ const Molstar = (props) => {
 
   //Zapis do chains
   //Zmiana selected w nucleotides na podstawie tablicy selected
-  useEffect(() => {
-    if (enableSelection === true) {
-      console.log("Selected residues:", selected);
-      selected.forEach((item) => {
-        const { position, chain } = item;
-        const chainIndex = chains.findIndex(
-          (c) => c.name.slice(-1) === chain
-        );
-        if (chainIndex !== -1) {
-          const nucleotideIndex = chains[chainIndex].nucleotides.findIndex(
-            (nucleotide) => nucleotide.index === position
-          );
-          if (nucleotideIndex !== -1 && item.status == "added") {
-            selectResidue(chain, position);
-          }
-          if (nucleotideIndex !== -1 && item.status == "removed") {
-            deselectResidue(chain, position);
-          }
-        }
-      });
-    }
-  }, [selected, enableSelection]);
+  // useEffect(() => {
+  //   if (enableSelection === true) {
+  //     console.log("Selected residues:", selected);
+  //     selected.forEach((item) => {
+  //       const { position, chain } = item;
+  //       const chainIndex = chains.findIndex(
+  //         (c) => c.name.slice(-1) === chain
+  //       );
+  //       if (chainIndex !== -1) {
+  //         const nucleotideIndex = chains[chainIndex].nucleotides.findIndex(
+  //           (nucleotide) => nucleotide.index === position
+  //         );
+  //         if (nucleotideIndex !== -1 && item.status == "added") {
+  //           selectResidue(chain, position);
+  //         }
+  //         if (nucleotideIndex !== -1 && item.status == "removed") {
+  //           deselectResidue(chain, position);
+  //         }
+  //       }
+  //     });
+  //   }
+  // }, [selected, enableSelection]);
 
   const loadStructure = async (plugin, file = null) => {
     if (plugin) {

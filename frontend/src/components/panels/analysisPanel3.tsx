@@ -33,11 +33,10 @@ const Panel: React.FC = () => {
   const [links, setLinks] = useState(true);
   const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
-  const [is3Dview, setIs3Dview] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [selectedModel, setSelectedModel] = useState<number>(1);
-  const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(false);
+  const [useWalkingSphere, setUseWalkingSphere] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>(
     chainsState[0]?.name.slice(-1) || ""
   );
@@ -52,7 +51,7 @@ const Panel: React.FC = () => {
   const jobID = jobId;
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const isDisabled = !(analyzeWholeStructure || selectedList.length > 0);
+  const isDisabled = !(selectedList.length > 0);
 
   useEffect(() => {
     setSelectedChain(chainsState[0]?.name.slice(-1) || "");
@@ -68,23 +67,6 @@ const Panel: React.FC = () => {
 
   const handleChange = (event: SelectChangeEvent) => {
     setSelectedChain(event.target.value);
-  };
-
-  const handleAnalyzeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!analyzeWholeStructure) {
-      setSelectedList([]);
-      setChainsState((prevChains) => {
-        const newChains = prevChains.map((chain) => ({
-          ...chain,
-          nucleotides: chain.nucleotides.map((nucleotide) => ({
-            ...nucleotide,
-            selected: false,
-          })),
-        }));
-        return newChains;
-      });
-    }
-    setAnalyzeWholeStructure(e.target.checked);
   };
 
   //do placeholder z max i min original_id nukleotydów podanego chain
@@ -118,12 +100,12 @@ const Panel: React.FC = () => {
   }
 
   function handleNavigate() {
-    if (analyzeWholeStructure) {
+    if (useWalkingSphere) {
       const radius = parseInt(
-        (document.getElementById("radiusInput") as HTMLInputElement).value
+        "5"
       );
       const interval = parseInt(
-        (document.getElementById("intervalInput") as HTMLInputElement).value
+        "1"
       );
       if (radius < 1) {
         alert(
@@ -135,24 +117,16 @@ const Panel: React.FC = () => {
           `Invalid interval value: ${interval}. Enter value greater or equal 1.`
         );
         return;
-      } else {
-        sendDataToAnalyze(
-          analyzeWholeStructure,
-          jobID,
-          selectedModel,
-          selectedList
-        );
-        navigate(`/summary/${jobID}`);
-      }
-    } else {
-      sendDataToAnalyze(
-        analyzeWholeStructure,
-        jobID,
-        selectedModel,
-        selectedList
-      );
-      navigate(`/summary/${jobID}`);
+      } 
     }
+    sendDataToAnalyze(
+      useWalkingSphere,
+      jobID,
+      selectedModel,
+      selectedList
+    );
+    navigate(`/summary/${jobID}`);
+    
   }
 
   const handleSetSelectedModel = (e: SelectChangeEvent) => {
@@ -411,14 +385,27 @@ const Panel: React.FC = () => {
       </div>
 
       {/* Side view + Main content */}
-      <div className="flex h-full overflow-hidden">
+      <div className="flex overflow-hidden h-[calc(100vh-64px)]">
         {/* Sidebar */}
-        <div className="w-80 h-full overflow-y-auto">
+        <div className="w-80">
           <div
             className="flex flex-col h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
             style={{ background: Colors.backgroundBeige }}
           >
-            <div className="rounded-scrollbar overflow-auto h-[70%]"></div>
+            {/* Scrollowalna zawartość sidebar'a */}
+            <div className="rounded-scrollbar overflow-auto flex-1">
+              {/* ...tutaj Twoja zawartość sidebar'a... */}
+            </div>
+            {/* Przycisk Analyze na dole sidebar'a */}
+            <div className="mt-4 flex justify-center">
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isDisabled}
+                onClick={handleNavigate}
+              >
+                Analyze
+              </button>
+            </div>
           </div>
         </div>
 
@@ -427,6 +414,19 @@ const Panel: React.FC = () => {
           key={myData.id}
           className="flex-1 overflow-y-auto overflow-x-hidden"
         >
+          {/* Toggle analizowania sekwencyjnego */}
+            <div className="flex items-center gap-2 p-4">
+            <label htmlFor="sequential-toggle" className="font-semibold">
+              Analyze residue neighborhoods
+            </label>
+            <input
+              id="sequential-toggle"
+              type="checkbox"
+              checked={useWalkingSphere}
+              onChange={e => setUseWalkingSphere(e.target.checked)}
+              className="w-5 h-5 accent-blue-600"
+            />
+            </div>
           {myData ? (
             <div className="flex flex-col min-h-full">
               <div className="bg-transparent z-10">

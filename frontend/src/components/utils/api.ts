@@ -76,10 +76,10 @@ export async function sendDataToAnalyze(
   if (analyzeWholeStructure) {
     API_Url = `${API_URL}/jobs/analyzeStructure`;
     const radius = parseInt(
-      (document.getElementById("radiusInput") as HTMLInputElement).value
+      "5"
     );
     const interval = parseInt(
-      (document.getElementById("intervalInput") as HTMLInputElement).value
+      "1"
     );
     jobToPost = {
       id: jobID,
