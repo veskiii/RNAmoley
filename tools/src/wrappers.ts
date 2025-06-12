@@ -62,7 +62,7 @@ export async function runConverter(id: string, filename: string) {
 }
 
 export async function splitModels(id: string) {
-  console.log(`Splitting ${id}.pdb into models...`);
+  console.log(`Splitting ${JOBS_DIR}/${id}/${id}.pdb into models...`);
 
   const split = spawnSync(`${SCRIPTS_DIR}/Separate.py`, [
     `${JOBS_DIR}/${id}/${id}.pdb`,

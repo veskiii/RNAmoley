@@ -30,6 +30,13 @@ export interface Metadata {
   model_count: number;
 }
 
+export interface SelectedFragment {
+  name: string;
+  chainName: string;
+  residues: number[];
+  deselectedResidues: number[];
+}
+
 export interface RangeOfResidues {
   start: number | undefined;
   end: number | undefined;

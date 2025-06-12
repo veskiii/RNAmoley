@@ -376,7 +376,7 @@ const Panel: React.FC = () => {
                   </button>
                 </div>
                 <div className="top-0 h-[20%] flex-grow bg-transparent z-100">
-                  <RangeSelecting
+                  {/* <RangeSelecting
                     chains={chainsState}
                     selectedChain={selectedChain}
                     minId={minId}
@@ -391,7 +391,7 @@ const Panel: React.FC = () => {
                     handleChange={handleChange}
                     handleInputChangeStart={handleInputChangeStart}
                     handleInputChangeEnd={handleInputChangeEnd}
-                  />
+                  /> */}
                 </div>
                 {is3Dview && (
                   <Molstar

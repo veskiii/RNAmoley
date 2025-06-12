@@ -9,8 +9,8 @@ import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import Typography from "@mui/material/Typography";
-import { SelectChangeEvent } from "@mui/material/Select";
-import { Job, Chain, Nucleotide } from "../utils/types";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import { Job, Chain, Nucleotide, SelectedFragment } from "../utils/types";
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors";
@@ -46,6 +46,7 @@ const Panel: React.FC = () => {
   const [minId, setMinId] = useState<string>("");
   const [maxId, setMaxId] = useState<string>("");
   const [selectedList, setSelectedList] = useState<number[]>([]);
+  const [selectedFragments, setSelectedFragments] = useState<SelectedFragment[]>([]);
   const [isViewInitialized, setIsViewInitialized] = useState<boolean>(true);
   const { jobId } = useParams();
   const jobID = jobId;
@@ -163,6 +164,129 @@ const Panel: React.FC = () => {
     loadData(jobID, model);
   };
 
+  const selectFragment = (name: string, chainName: string, residueIds: number[]) => {
+    // check if all residues are already selected
+    const allSelected = residueIds.every((id) =>
+      chainsState.some(
+        (chain) =>
+          chain.name.slice(-1) === chainName &&
+          chain.nucleotides.some((nucleotide) => nucleotide.index === id && nucleotide.selected)
+      )
+    );
+    if (allSelected) {
+      // If all residues are selected, dont do anything
+      return;
+    } else if (selectedFragments.some(f => f.name === name && f.chainName === chainName)) {
+      // If fragment with the same name and chain already exists, update it
+      setSelectedFragments((prev) =>
+        prev.map((f) =>
+          f.name === name && f.chainName === chainName
+            ? {
+                ...f,
+                deselectedResidues: [],
+              }
+            : f
+        )
+      );
+    } else {
+      // Otherwise, set selected fragment
+      setSelectedFragments((prev) => [
+        ...prev,
+        { name, chainName, residues: residueIds, deselectedResidues: [] },
+      ]);
+    }
+  };
+
+  const deselectResidue = (chainName: string, residueId: number) => {
+    // check selected fragments if residue is part of any
+    const fragment = selectedFragments.find(
+      (f) =>
+        f.chainName === chainName && f.residues.includes(residueId)
+    );
+    if (fragment) {
+      // Sprawdź, czy po dodaniu residueId do deselectedResidues będą identyczne z residues
+      const newDeselected = [...fragment.deselectedResidues, residueId];
+      const residuesSorted = [...fragment.residues].sort((a, b) => a - b);
+      const deselectedSorted = [...newDeselected].sort((a, b) => a - b);
+      const allDeselected =
+        residuesSorted.length === deselectedSorted.length &&
+        residuesSorted.every((val, idx) => val === deselectedSorted[idx]);
+
+      if (allDeselected) {
+        removeSelectedFragment(fragment.name);
+      } else {
+        // If residue is part of a fragment, add it to deselected residues
+        setSelectedFragments((prev) =>
+          prev.map((f) =>
+            f.name === fragment.name
+              ? {
+                  ...f,
+                  deselectedResidues: newDeselected,
+                }
+              : f
+          )
+        );
+      }
+    }
+  }
+
+  const removeSelectedFragment = ( selectedFragmentName: string ) => {
+    console.log("Removing fragment:", selectedFragmentName);
+    // Get the fragment to remove
+    const fragmentToRemove = selectedFragments.find(
+      (f) => f.name === selectedFragmentName
+    );
+    console.log("Fragment to remove:", fragmentToRemove);
+    if (!fragmentToRemove) return;
+    // Remove the fragment from selected fragments
+    setSelectedFragments((prev) =>
+      prev.filter((f) => f.name !== selectedFragmentName)
+    );
+    // Deselect all residues in the removed fragment, excluding those that are part of other fragments
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {
+        if (chain.name.slice(-1) === fragmentToRemove.chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              if ( fragmentToRemove.residues.includes(nucleotide.index) &&
+                selectedFragments.some(
+                  (f) =>
+                    f.name !== selectedFragmentName &&
+                    f.chainName === fragmentToRemove.chainName &&
+                    f.residues.includes(nucleotide.index)
+                ) === false
+              ) {
+                console.log("Deselecting nucleotide:", nucleotide.index);
+                return { ...nucleotide, selected: false };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      }));
+  }
+
+  const formatResidueRanges = (residues: number[]): string => {
+  if (!residues || residues.length === 0) return "";
+  const sorted = [...residues].sort((a, b) => a - b);
+  const ranges: string[] = [];
+  let start = sorted[0];
+  let end = sorted[0];
+
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === end + 1) {
+      end = sorted[i];
+    } else {
+      ranges.push(start === end ? `${start}` : `${start}-${end}`);
+      start = end = sorted[i];
+    }
+  }
+  ranges.push(start === end ? `${start}` : `${start}-${end}`);
+  return ranges.join(",");
+}
+
   useEffect(() => {
     if (!jobID) return;
     loadData(jobID, 1);
@@ -174,6 +298,7 @@ const Panel: React.FC = () => {
         .filter((nucleotide) => nucleotide.selected)
         .map((nucleotide) => nucleotide.index)
     );
+    console.log("Selected IDs:", idList);
     setSelectedList(idList);
   }, [chainsState]);
 
@@ -212,10 +337,15 @@ const Panel: React.FC = () => {
                   <ResidueTable
                     data={chainsState}
                     selectedChain={selectedChain}
+                    selectedResidueIds={selectedList}
+                    setData={setChainsState}
+                    selectFragment={selectFragment}
+                    deselectResidue={deselectResidue}
+                    deselectFragment={removeSelectedFragment}
                   />
                 </div>
               </div>
-              <div className="bg-transparent z-10">
+              <div className="flex flex-row bg-transparent z-10">
                 <RangeSelecting
                   chains={chainsState}
                   selectedChain={selectedChain}
@@ -231,7 +361,49 @@ const Panel: React.FC = () => {
                   handleChange={handleChange}
                   handleInputChangeStart={handleInputChangeStart}
                   handleInputChangeEnd={handleInputChangeEnd}
+                  selectFragment={selectFragment}
                 />
+                <div className="bg-gray-400 h-48 m-2 w-full overflow-y-auto p-2 rounded-md">
+                  {selectedFragments.length === 0 ? (
+                    <span >Brak wybranych fragmentów</span>
+                  ) : (
+                    <table className="w-full">
+                      <thead>
+                        <tr>
+                          <th></th>
+                          <th className="text-left">Name</th>
+                          <th className="text-left">Chain</th>
+                          <th className="text-left">Residues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedFragments.map((fragment, idx) => (
+                          <tr key={fragment.name + fragment.chainName + idx}>
+                            <td>
+                              <div
+                                className="ml-2 px-1 py-1 bg-white text-center text-red-600 rounded hover:bg-gray-200"
+                                onClick={() => removeSelectedFragment(fragment.name)}
+                                title="Usuń fragment"
+                              >
+                                X
+                              </div>
+                            </td>
+                            <td>{fragment.name}</td>
+                            <td>{fragment.chainName}</td>
+                            <td>
+                              {formatResidueRanges(fragment.residues)}
+                              {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
+                                <span className="ml-2 text-xs text-yellow-200">
+                                  (except: {formatResidueRanges(fragment.deselectedResidues)})
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
               </div>
               {/* Forna + Molstar */}
               <div className="flex flex-row h-[60vh] min-h-[400px]">

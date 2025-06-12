@@ -21,6 +21,7 @@ interface RangeSelectingProps {
     handleChange: (event: SelectChangeEvent<string>) => void;
     handleInputChangeStart: React.ChangeEventHandler<HTMLInputElement>;
     handleInputChangeEnd: React.ChangeEventHandler<HTMLInputElement>;
+    selectFragment: (name: string, chainName: string, residueIds: number[]) => void;
 }
 
 const RangeSelecting: React.FC<RangeSelectingProps> = ({
@@ -38,16 +39,28 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
     handleChange,
     handleInputChangeStart,
     handleInputChangeEnd,
+    selectFragment,
 }) => {
     const handleSubmit = () => {
         const start = parseInt(inputValueStart, 10);
         const end = parseInt(inputValueEnd, 10);
+        
+            console.log(`Selected range: ${start} to ${end} on chain ${selectedChain}`);
 
         if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
             alert(`Invalid range: ${start} to ${end}`);
             return;
         }
         if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
+
+            const selectedNucleotides = chains
+                .find(chain => chain.name.slice(-1) === selectedChain)
+                ?.nucleotides
+                .filter(nucleotide => nucleotide.index >= start && nucleotide.index <= end)
+                .map(nucleotide => nucleotide.index) || [];
+            
+            selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
+
             setChainsState(prevChains =>
                 prevChains.map(chain => {
                     if (chain.name.slice(-1) === selectedChain) {
@@ -56,7 +69,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                             ...chain,
                             nucleotides: chain.nucleotides.map(nucleotide => ({
                                 ...nucleotide,
-                                selected: nucleotide.index >= start && nucleotide.index <= end,
+                                selected: (nucleotide.index >= start && nucleotide.index <= end) || nucleotide.selected,
                             })),
                         };
                     }
