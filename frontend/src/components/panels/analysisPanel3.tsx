@@ -195,10 +195,107 @@ const Panel: React.FC = () => {
         { name, chainName, residues: residueIds, deselectedResidues: [] },
       ]);
     }
+
+    // Zaznacz odpowiednie nukleotydy w chainsState
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {
+        if (chain.name.slice(-1) === chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) =>
+              residueIds.includes(nucleotide.index)
+                ? { ...nucleotide, selected: true }
+                : nucleotide
+            ),
+          };
+        }
+        return chain;
+      })
+    );
   };
+
+  const selectResidue = (chainName: string, residueId: number) => {
+    // check if residue is already selected
+    const isSelected = chainsState.some(
+      (chain) =>
+        chain.name.slice(-1) === chainName &&
+        chain.nucleotides.some((nucleotide) => nucleotide.index === residueId && nucleotide.selected)
+    );
+    if (isSelected) {
+      // If residue is already selected, deselect it
+      deselectResidue(chainName, residueId);
+      return;
+    }
+    // Otherwise, select the residue
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {   
+        if (chain.name.slice(-1) === chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              if (nucleotide.index === residueId) {
+                return { ...nucleotide, selected: true };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      }
+    )
+    );
+    // check if residue is part of any selected fragment
+    const fragment = selectedFragments.find(
+      (f) =>
+        f.chainName === chainName && f.residues.includes(residueId)
+    );
+    if (fragment) {
+      // If residue is part of a fragment, remove it from deselected residues
+      setSelectedFragments((prev) =>
+        prev.map((f) =>
+          f.name === fragment.name
+            ? {
+                ...f,
+                deselectedResidues: f.deselectedResidues.filter(
+                  (id) => id !== residueId
+                ),
+              }
+            : f
+        )
+      );
+    } else {
+      // If residue is not part of any fragment, create a new fragment
+      const newFragmentName = `Selection ${selectedFragments.length + 1}`;
+      setSelectedFragments((prev) => [
+        ...prev,
+        {
+          name: newFragmentName,
+          chainName,
+          residues: [residueId],
+          deselectedResidues: [],
+        },
+      ]);
+    }
+  }
 
   const deselectResidue = (chainName: string, residueId: number) => {
     // check selected fragments if residue is part of any
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {
+        if (chain.name.slice(-1) === chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              if (nucleotide.index === residueId) {
+                return { ...nucleotide, selected: false };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      })
+    );
     const fragment = selectedFragments.find(
       (f) =>
         f.chainName === chainName && f.residues.includes(residueId)
@@ -338,7 +435,7 @@ const Panel: React.FC = () => {
                     data={chainsState}
                     selectedChain={selectedChain}
                     selectedResidueIds={selectedList}
-                    setData={setChainsState}
+                    selectResidue={selectResidue}
                     selectFragment={selectFragment}
                     deselectResidue={deselectResidue}
                     deselectFragment={removeSelectedFragment}
@@ -353,7 +450,6 @@ const Panel: React.FC = () => {
                   maxId={maxId}
                   inputValueStart={inputValueStart}
                   inputValueEnd={inputValueEnd}
-                  setChainsState={setChainsState}
                   setMinId={setMinId}
                   setMaxId={setMaxId}
                   setInputValueStart={setInputValueStart}

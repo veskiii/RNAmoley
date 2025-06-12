@@ -13,7 +13,6 @@ interface RangeSelectingProps {
     maxId: string;
     inputValueStart: string;
     inputValueEnd: string;
-    setChainsState: React.Dispatch<React.SetStateAction<Chain[]>>;
     setMinId: React.Dispatch<React.SetStateAction<string>>;
     setMaxId: React.Dispatch<React.SetStateAction<string>>;
     setInputValueStart: React.Dispatch<React.SetStateAction<string>>;
@@ -31,7 +30,6 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
     maxId,
     inputValueStart,
     inputValueEnd,
-    setChainsState,
     setMinId,
     setMaxId,
     setInputValueStart,
@@ -60,21 +58,6 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                 .map(nucleotide => nucleotide.index) || [];
             
             selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
-
-            setChainsState(prevChains =>
-                prevChains.map(chain => {
-                    if (chain.name.slice(-1) === selectedChain) {
-
-                        return {
-                            ...chain,
-                            nucleotides: chain.nucleotides.map(nucleotide => ({
-                                ...nucleotide,
-                                selected: (nucleotide.index >= start && nucleotide.index <= end) || nucleotide.selected,
-                            })),
-                        };
-                    }
-                    return chain;
-                }));
         } else {
             alert("Type valid range on selected chain");
         }

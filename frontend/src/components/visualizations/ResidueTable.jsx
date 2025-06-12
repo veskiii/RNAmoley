@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 
-const ResidueTable = ({ data, selectedChain, selectedResidueIds, setData, selectFragment, deselectResidue, deselectFragment }) => {
+const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment, deselectFragment, selectResidue, deselectResidue, }) => {
   useEffect(() => {
     console.log("ResidueTable rerendered");
     console.log("selectedResidueIds:", selectedResidueIds);
@@ -19,8 +19,8 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, setData, select
   const handleResidueClick = (index) => {
     console.log(`Residue ${index} clicked`);
     console.log(data);
-    setData(prevChains =>
-      prevChains.map(chain => {
+    // setData(prevChains =>
+      data.map(chain => {
         if (chain.name.slice(-1) === selectedChain) {
           return {
             ...chain,
@@ -28,6 +28,9 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, setData, select
               if (nucleotide.index === index) {
                 if (nucleotide.selected) {
                   deselectResidue(selectedChain, nucleotide.index);
+                }
+                else {
+                  selectResidue(selectedChain, nucleotide.index);
                 }
                 return {
                   ...nucleotide,
@@ -39,14 +42,14 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, setData, select
           };
         }
         return chain;
-    }));
+    })//);
   }
 
   const handleStructuralElementClick = (index) => {
     console.log(`Structural element of residue ${index} clicked`);
     console.log(data);
-    setData(prevChains =>
-      prevChains.map(chain => {
+    // setData(prevChains =>
+      data.map(chain => {
         if (chain.name.slice(-1) === selectedChain) {
           const clickedNucleotide = chain.nucleotides.find( nucleotide => nucleotide.index === index);
           const clickedStructuralNames = clickedNucleotide.structuralElements.map(el => el.name);
@@ -90,7 +93,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, setData, select
           };
         }
         return chain;
-    }));
+    })//);
   }
 
   return (
