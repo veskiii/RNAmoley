@@ -238,17 +238,40 @@ const Panel: React.FC = () => {
         )
       );
     } else {
-      // If residue is not part of any fragment, create a new fragment
-      const newFragmentName = `Selection ${selectedFragments.length + 1}`;
-      setSelectedFragments((prev) => [
-        ...prev,
-        {
-          name: newFragmentName,
-          chainName,
-          residues: [residueId],
-          deselectedResidues: [],
-        },
-      ]);
+      const selectionFragments = selectedFragments
+        .filter(f => f.chainName === chainName && f.name.startsWith("Selection"));
+
+      let allResidues = [
+        ...selectionFragments.flatMap(f => f.residues.filter(id => !f.deselectedResidues?.includes(id))),
+        residueId,
+      ];
+
+      allResidues = Array.from(new Set(allResidues)).sort((a, b) => a - b);
+
+      const ranges: number[][] = [];
+      let rangeStart = allResidues[0];
+      let prev = allResidues[0];
+      for (let i = 1; i < allResidues.length; i++) {
+        if (allResidues[i] === prev + 1) {
+          prev = allResidues[i];
+        } else {
+          ranges.push([rangeStart, prev]);
+          rangeStart = prev = allResidues[i];
+        }
+      }
+      ranges.push([rangeStart, prev]);
+
+      setSelectedFragments(prev =>
+        [
+          ...prev.filter(f => !(f.chainName === chainName && f.name.startsWith("Selection"))),
+          ...ranges.map(([start, end]) => ({
+        name: start === end ? `Selection ${start}` : `Selection ${start}-${end}`,
+        chainName,
+        residues: Array.from({ length: end - start + 1 }, (_, i) => start + i),
+        deselectedResidues: [],
+          })),
+        ]
+      );
     }
   }
 
