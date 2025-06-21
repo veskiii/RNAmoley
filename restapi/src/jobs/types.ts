@@ -112,7 +112,7 @@ export interface metrics {
 
 export interface nucleotideResult {
   residue_number: number;
-  metrics: metrics;
+  metrics?: metrics;
   residueMetrics: residueMetrics;
 }
 

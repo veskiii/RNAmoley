@@ -72,19 +72,21 @@ async function performAnalysis(
   metadata: Metadata
 ) {
   try {
-    const analysisOutput = await analyzeStructureWalkingSphere(
+    const analyzeSphereFilesEnabled = (radius < 0 || interval < 0) ? false : true;
+
+    const analysisOutput = await analyzeStructure(
       jobID,
       modelNumber,
       radius,
       interval,
-      metadata
+      metadata,
+      analyzeSphereFilesEnabled
     );
 
     if (!analysisOutput) {
       throw new Error("Analysis output is empty or undefined");
     }
 
-    // save the result as json file
     await saveResults(jobID, analysisOutput);
     metadata.status = "completed";
     metadata.last_used_model = parseInt(modelNumber);
@@ -98,20 +100,31 @@ async function performAnalysis(
   }
 }
 
-export async function analyzeStructureWalkingSphere(
+export async function analyzeStructure(
   jobID: UUID,
   modelNumber: string,
   radius: number,
   interval: number,
-  metadata: Metadata
+  metadata: Metadata,
+  analyzeSphereFilesEnabled: boolean
 ): Promise<Analysis_results> {
   metadata.status = "running";
   await saveMetadata(jobID, metadata);
 
-  await createWalkingSphere(jobID, modelNumber, radius, interval);
-
   const residueAnalysisArray = await fetchResidueAnalysis(jobID);
 
+  if (!analyzeSphereFilesEnabled) {
+    const data: nucleotideResult[] = residueAnalysisArray.map((res) => ({
+      residue_number: extractResidueNumber(res.residue),
+      residueMetrics: res,
+    }));
+    return {
+      mode: "fragment",
+      data,
+    };
+  }
+
+  await createWalkingSphere(jobID, modelNumber, radius, interval);
   const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
   const results = await analyzeSphereFiles(
     files,
@@ -119,12 +132,15 @@ export async function analyzeStructureWalkingSphere(
     residueAnalysisArray
   );
 
-  const result: Analysis_results = {
+  return {
     mode: "full",
     data: results,
   };
+}
 
-  return result;
+function extractResidueNumber(residue: string): number {
+  const match = residue.match(/\s+(\d+)\s+/);
+  return match ? Number(match[1]) : -1;
 }
 
 async function createWalkingSphere(
