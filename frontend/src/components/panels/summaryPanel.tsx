@@ -324,6 +324,11 @@ const SummaryPanel: React.FC = () => {
     const indices: string[] = [];
     const original_indices: number[] = [];
 
+    if (!myData.results || !myData.results.data) {
+      console.error("No data in myData.results.data");
+      return <ErrorPage />;
+    }
+
     myData.results.data.forEach((residue) => {
       if (residue) {
         indices.push(residue.residue_number.toString());

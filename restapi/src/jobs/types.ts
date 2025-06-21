@@ -1,3 +1,5 @@
+import type { UUID } from "crypto";
+
 interface Atom {
   serial: number;
   name: string;
@@ -67,9 +69,10 @@ export interface StructuralElement {
 }
 
 export interface Metadata {
-  status: `created` | `running` | `completed` | `failed`;
+  status: `created` | `starting` | `running` | `completed` | `failed`;
   model_count: number;
   last_used_model?: number;
+  error_message?: string;
 }
 
 export interface metrics {
@@ -132,6 +135,15 @@ export interface Job {
   pdb_file: PDBFile;
   pdb_file_string: string;
   results?: Analysis_results | null;
+}
+
+export interface NewJob {
+  id: UUID;
+  original_filename: string;
+  original_extension: string;
+  new_filename: string;
+  name: string;
+  metadata: Metadata;
 }
 
 export interface residueMetrics {

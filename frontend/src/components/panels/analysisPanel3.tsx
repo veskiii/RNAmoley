@@ -99,7 +99,7 @@ const Panel: React.FC = () => {
     }
   }
 
-  function handleNavigate() {
+  async function handleNavigate() {
     if (useWalkingSphere) {
       const radius = parseInt(
         "5"
@@ -119,7 +119,7 @@ const Panel: React.FC = () => {
         return;
       } 
     }
-    sendDataToAnalyze(
+    await sendDataToAnalyze(
       useWalkingSphere,
       jobID,
       selectedModel,

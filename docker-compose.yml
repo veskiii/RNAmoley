@@ -18,16 +18,14 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - db_data:/var/lib/postgresql/data
-    # secrets:
-    #   - db-password
 
-    # adminer:
-    #   image: adminer
-    #   restart: always
-    #   depends_on:
-    #     - db
-    #   ports:
-    #     - 8080:8080
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   molprobity:
     image: dawidgrajek1/molprobity:latest
@@ -65,6 +63,7 @@ services:
       - user_data:/usr/src/app/public/jobs
     depends_on:
       - db
+      - redis
     scale: 1
 
   frontend:
@@ -84,6 +83,5 @@ volumes:
     driver: local
   user_data:
     driver: local
-# secrets:
-#   db-password:
-#     file: db/password.txt
+  redis_data:
+    driver: local
