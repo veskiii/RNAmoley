@@ -113,29 +113,107 @@ export async function analyzeStructure(
 
   const residueAnalysisArray = await fetchResidueAnalysis(jobID);
 
+  const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => ({
+    residue_number: extractResidueNumber(res.residue),
+    residueMetrics: res,
+  }));
+
+  await saveResults(jobID, {
+    mode: analyzeSphereFilesEnabled ? "full" : "fragment",
+    data: initialData,
+  });
+
   if (!analyzeSphereFilesEnabled) {
-    const data: nucleotideResult[] = residueAnalysisArray.map((res) => ({
-      residue_number: extractResidueNumber(res.residue),
-      residueMetrics: res,
-    }));
     return {
       mode: "fragment",
-      data,
+      data: initialData,
     };
   }
 
   await createWalkingSphere(jobID, modelNumber, radius, interval);
+
   const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
-  const results = await analyzeSphereFiles(
+  const results = await analyzeSphereFilesIncremental(
     files,
     jobID,
-    residueAnalysisArray
+    residueAnalysisArray,
+    initialData
   );
 
   return {
     mode: "full",
     data: results,
   };
+}
+
+async function analyzeSphereFilesIncremental(
+  files: string[],
+  jobID: UUID,
+  residueAnalysisArray: residueMetrics[],
+  initialData: nucleotideResult[]
+): Promise<nucleotideResult[]> {
+  const resultMap = new Map<number, nucleotideResult>();
+  initialData.forEach((res) => resultMap.set(res.residue_number, { ...res }));
+
+  const batchSize = 10;
+  for (let i = 0; i < files.length; i += batchSize) {
+    const batchFiles = files.slice(i, i + batchSize);
+    const batchTasks = batchFiles.map((file) => async () => {
+      try {
+        const res = await fetch(
+          `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/sphere/${file}`,
+          { keepalive: true }
+        );
+
+        if (!res.ok) {
+          throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
+        }
+
+        const tmpMetrics: metrics = (await res.json()) as metrics;
+        const nucleotideNumber = parseInt(file.split(".")[0] ?? "");
+        const residueMetrics = findResidueInResidueAnalysis(
+          residueAnalysisArray,
+          nucleotideNumber
+        );
+
+        return {
+          residue_number: nucleotideNumber,
+          metrics: tmpMetrics,
+          residueMetrics: residueMetrics,
+        } as nucleotideResult;
+      } catch (error) {
+        console.error(`Error processing file ${file}:`, error);
+        return null;
+      }
+    });
+
+    const batchResults = await Promise.allSettled(batchTasks.map((t) => t()));
+    const fulfilled = batchResults
+      .filter(
+        (p): p is PromiseFulfilledResult<nucleotideResult> =>
+          p.status === "fulfilled"
+      )
+      .map((p) => p.value)
+      .filter((result) => result !== null) as nucleotideResult[];
+
+    for (const res of fulfilled) {
+      if (res) {
+        resultMap.set(res.residue_number, res);
+      }
+    }
+
+    const sortedResults = Array.from(resultMap.values()).sort(
+      (a, b) => a.residue_number - b.residue_number
+    );
+    await saveResults(jobID, {
+      mode: "full",
+      data: sortedResults,
+    });
+  }
+
+  return Array.from(resultMap.values()).sort(
+    (a, b) => a.residue_number - b.residue_number
+  );
 }
 
 function extractResidueNumber(residue: string): number {
@@ -171,55 +249,6 @@ async function fetchResidueAnalysis(
   return (await residueAnalysis.json()) as residueMetrics[];
 }
 
-async function analyzeSphereFiles(
-  files: string[],
-  jobID: UUID,
-  residueAnalysisArray: residueMetrics[]
-): Promise<nucleotideResult[]> {
-  const promises = files.map((file) => async () => {
-    try {
-      const res = await fetch(
-        `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/sphere/${file}`,
-        { keepalive: true }
-      );
-
-      if (!res.ok) {
-        throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
-      }
-
-      const tmpMetrics: metrics = (await res.json()) as metrics;
-      const nucleotideNumber = parseInt(file.split(".")[0] ?? "");
-      const residueMetrics = findResidueInResidueAnalysis(
-        residueAnalysisArray,
-        nucleotideNumber
-      );
-
-      return {
-        residue_number: nucleotideNumber,
-        metrics: tmpMetrics,
-        residueMetrics: residueMetrics,
-      } as nucleotideResult;
-    } catch (error) {
-      console.error(`Error processing file ${file}:`, error);
-      return null;
-    }
-  });
-
-  const promisesResults = await processInBatches(promises, 10);
-
-  const results = promisesResults
-    .filter(
-      (p): p is PromiseFulfilledResult<nucleotideResult> =>
-        p.status === "fulfilled"
-    )
-    .map((p) => p.value)
-    .filter((result) => result !== null);
-
-  results.sort((a, b) => a.residue_number - b.residue_number);
-
-  return results;
-}
-
 const findResidueInResidueAnalysis = (
   residues: residueMetrics[],
   residueNumber: number
@@ -228,17 +257,4 @@ const findResidueInResidueAnalysis = (
     const match = residue.residue.match(/\s+(\d+)\s+/);
     return match ? Number(match[1]) === residueNumber : false;
   });
-};
-
-const processInBatches = async (
-  tasks: (() => Promise<any>)[],
-  batchSize: number
-) => {
-  let results: any[] = [];
-  for (let i = 0; i < tasks.length; i += batchSize) {
-    const batch = tasks.slice(i, i + batchSize).map((task) => task());
-    const batchResults = await Promise.allSettled(batch);
-    results.push(...batchResults);
-  }
-  return results;
 };
