@@ -254,7 +254,7 @@ const Dashboard: React.FC = () => {
           <div className="mt-6 flex items-center justify-end gap-x-6">
             <button
               type="submit"
-              className="rounded-md px-3 py-2 bg-moley-blue text-sm font-semibold text-white shadow-xs hover:bg-moley-lightBlue focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors"
+              className="rounded-md px-3 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors"
             >
               {isSubmitting ? (
                 <span className="flex items-center transition-transform group-hover:translate-x-1 motion-reduce:transform-none">

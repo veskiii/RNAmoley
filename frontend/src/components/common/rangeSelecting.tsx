@@ -127,7 +127,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                 <button
                     id="select_button"
                     onClick={handleSubmit}
-                    className="p-0 m-0"
+                    className="p-0 m-0 bg-moley-backgroundGreen hover:bg-moley-green"
                 >
                     Select
                 </button>

@@ -412,8 +412,7 @@ const Panel: React.FC = () => {
         {/* Sidebar */}
         <div className="w-80">
           <div
-            className="flex flex-col h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
-            style={{ background: Colors.backgroundBeige }}
+            className="flex flex-col  bg-moley-backgroundGreen h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
           >
             {/* Scrollowalna zawartość sidebar'a */}
             <div className="rounded-scrollbar overflow-auto flex-1">
@@ -422,7 +421,7 @@ const Panel: React.FC = () => {
             {/* Przycisk Analyze na dole sidebar'a */}
             <div className="mt-4 flex justify-center">
               <button
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-moley-darkGreen hover:bg-moley-green text-white font-bold py-2 px-6 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isDisabled}
                 onClick={handleNavigate}
               >
@@ -447,7 +446,7 @@ const Panel: React.FC = () => {
               type="checkbox"
               checked={useWalkingSphere}
               onChange={e => setUseWalkingSphere(e.target.checked)}
-              className="w-5 h-5 accent-blue-600"
+              className="w-5 h-5 accent-moley-accentGreen"
             />
             </div>
           {myData ? (
@@ -482,7 +481,7 @@ const Panel: React.FC = () => {
                   handleInputChangeEnd={handleInputChangeEnd}
                   selectFragment={selectFragment}
                 />
-                <div className="bg-gray-400 h-48 m-2 w-full overflow-y-auto p-2 rounded-md">
+                <div className="bg-moley-backgroundGreen h-48 m-2 w-full overflow-y-auto p-2 rounded-md">
                   {selectedFragments.length === 0 ? (
                     <span >Brak wybranych fragmentów</span>
                   ) : (

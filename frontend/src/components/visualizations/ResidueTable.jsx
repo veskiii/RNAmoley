@@ -100,15 +100,15 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
     <table className="mt-4 w-max border-separate border-spacing-1">
       <tbody>
         <tr>
-          <td className="w-32 p-2 bg-gray-400 text-center">Index</td>
+          <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Index</td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-id-${index}`}
               className={[
-                "w-12 p-2 bg-gray-300 text-center border-2",
+                "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
                 selectedResidueIds.includes(index + 1)
-                  ? "border-blue-500"
-                  : "border-gray-300"
+                  ? "border-moley-accentGreen"
+                  : "border-moley-backgroundLightGreen"
               ].join(" ")}
               onClick={() => handleResidueClick(index + 1)}
             >
@@ -117,14 +117,14 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-32 p-2 bg-gray-400 text-center">Base</td>
+          <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Base</td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-name-${index}`}
               className={[
-                "w-12 p-2 bg-gray-300 text-center border-2",
+                "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
                 selectedResidueIds.includes(index + 1)
-                  ? "border-blue-500"
+                  ? "border-moley-accentGreen"
                   : "border-gray-300"
               ].join(" ")}
               onClick={() => handleResidueClick(index + 1)}
@@ -134,17 +134,17 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-32 p-2 bg-gray-400 text-center">
+          <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
             Secondary Structure
           </td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-index-${index}`}
               className={[
-                "w-12 p-2 bg-gray-300 text-center border-2",
+                "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
                 selectedResidueIds.includes(index + 1)
-                  ? "border-blue-500"
-                  : "border-gray-300"
+                  ? "border-moley-accentGreen"
+                  : "border-moley-backgroundLightGreen"
               ].join(" ")}
               onClick={() => handleResidueClick(index + 1)}
             >
@@ -153,13 +153,13 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-32 p-2 bg-gray-400 text-center">
+          <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
             Structural Element
           </td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-name-${index}`}
-              className="w-12 p-2 bg-gray-300 text-center"
+              className="w-12 p-2 bg-moley-backgroundLightGreen text-center"
               onClick={() => handleStructuralElementClick(index + 1)}
             >
               {nucleotide.structuralElements && nucleotide.structuralElements.length > 0
