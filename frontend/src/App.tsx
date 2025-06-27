@@ -3,7 +3,7 @@ import "./App.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Dashboard from "./components/panels/submitPanel";
 import Panel from "./components/panels/analysisPanel3";
-import SummaryPanel from "./components/panels/summaryPanel";
+import SummaryPanel from "./components/panels/summaryPanel3";
 import JobProcessing from "./components/common/JobProcessing";
 import ErrorPage from "./components/common/ErrorPage";
 import HelpPage from "./components/common/helpPage";

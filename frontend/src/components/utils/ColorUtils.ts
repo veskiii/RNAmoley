@@ -41,6 +41,7 @@ export const rangeMap: Map<String, Range> = new Map([
 
 function getRange(residue: Residue, givenQualityScore: QualityScore): number {
   if (givenQualityScore === QualityScore.BAD_BONDS) {
+    if(!residue.metrics) return 0;
     var qualityScore = parseFloat(residue.metrics.pct_badbonds);
     if (qualityScore < 0.01) {
       return 1;
@@ -50,6 +51,7 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
       return 5;
     }
   } else if (givenQualityScore == QualityScore.BAD_ANGLES) {
+    if(!residue.metrics) return 0;
     var qualityScore = parseFloat(residue.metrics.pct_badangles);
     if (qualityScore < 0.1) {
       return 1;
@@ -59,6 +61,7 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
       return 5;
     }
   } else if (givenQualityScore == QualityScore.CLASH_SCORE) {
+    if(!residue.metrics) return 0;
     var qualityScore = parseFloat(residue.metrics.clashscore);
     var range = rangeMap.get("Clash Score");
     const ranges = range?.ranges ?? [];
@@ -78,6 +81,7 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
       return 5;
     }
   } else if (givenQualityScore == QualityScore.SUITENESS) {
+    if(!residue.residueMetrics) return 0;
     var qualityScore = parseFloat(residue.residueMetrics.suiteness);
     var range = rangeMap.get("Suiteness");
     const ranges = range?.ranges ?? [];
@@ -97,6 +101,7 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
       return 1;
     }
   } else if (givenQualityScore == QualityScore.SUGAR_PUCKER_OUT) {
+    if(!residue.residueMetrics) return 0;
     var sugarPuckerOutlierType = residue.residueMetrics.pucker_outlier_type;
     if (sugarPuckerOutlierType === "") {
       return 1;
