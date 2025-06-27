@@ -83,9 +83,14 @@ export interface Chain {
   dotBracket: string;
 }
 
+export interface ChainElement {
+  chainID: string;
+  residueID: number;
+}
+
 export interface JobToPost {
   id: string;
-  residues: number[];
+  residues: ChainElement[];
   modelNumber: number;
   radius: number;
   interval: number;

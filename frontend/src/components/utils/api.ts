@@ -1,5 +1,5 @@
 import { API_URL } from "../../App";
-import { Job, JobToPost } from "./types";
+import { ChainElement, Job, JobToPost } from "./types";
 
 //const API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1";
 // const API_URL = "http://restapi/api/v1";
@@ -53,11 +53,12 @@ export async function fetchMyData(jobID: string | undefined) {
   }
 }
 
+
 export async function sendDataToAnalyze(
   analyzeNeighborhoods: boolean,
   jobID: string | undefined,
   selectedModel: number,
-  selectedList: number[]
+  selectedList: ChainElement[]
 ): Promise<string | void> {
 
   if (!jobID) {

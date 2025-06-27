@@ -33,6 +33,7 @@ import type { UUID } from "crypto";
 import type {
   Analysis_results,
   Annotation,
+  ChainElement,
   Job,
   Metadata,
   nucleotideResult,
@@ -535,7 +536,7 @@ export async function analyzeStructure(req: Request, res: Response) {
 
   const id: UUID = req.body.id;
   const modelNumber = req.body.modelNumber || "1";
-  const residues: number[] = req.body.residues;
+  const residues: ChainElement[] = req.body.residues;
   const radius = req.body.radius || 5;
   const interval = req.body.interval || 1;
   var analyzeNeighborhoods = false;
@@ -604,7 +605,7 @@ export async function analyzeStructure(req: Request, res: Response) {
   metadata.last_used_model = parseInt(modelNumber);
   await saveMetadata(id, metadata);
 
-  addAnalysisTask(id, modelNumber, radius, interval, metadata);
+  addAnalysisTask(id, modelNumber, residues, radius, interval, metadata);
 
   db.query(getJobByIdQuery, [id], async (err, result) => {
     if (err) {

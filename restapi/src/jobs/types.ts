@@ -117,8 +117,9 @@ export interface nucleotideResult {
 }
 
 export interface Analysis_results {
-  mode: `fragment` | `full`;
+  // mode: `fragment` | `full`;
   data: nucleotideResult[];
+  modelMetrics: metrics;
 }
 
 export interface Job {
@@ -172,4 +173,9 @@ export interface residueMetrics {
   worst_angle_sigma: string;
   outlier_count: string;
   outlier_count_sep_geom: string;
+}
+
+export interface ChainElement {
+  chainID: string;
+  residueID: number;
 }

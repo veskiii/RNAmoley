@@ -10,7 +10,7 @@ import AccordionSummary from "@mui/material/AccordionSummary";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import Typography from "@mui/material/Typography";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import { Job, Chain, Nucleotide, SelectedFragment } from "../utils/types";
+import { Job, Chain, Nucleotide, SelectedFragment, ChainElement } from "../utils/types";
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors";
@@ -44,7 +44,7 @@ const Panel: React.FC = () => {
   const [inputValueEnd, setInputValueEnd] = useState<string>("");
   const [minId, setMinId] = useState<string>("");
   const [maxId, setMaxId] = useState<string>("");
-  const [selectedList, setSelectedList] = useState<number[]>([]);
+  const [selectedList, setSelectedList] = useState<ChainElement[]>([]);
   const [selectedFragments, setSelectedFragments] = useState<SelectedFragment[]>([]);
   const [isViewInitialized, setIsViewInitialized] = useState<boolean>(true);
   const { jobId } = useParams();
@@ -387,13 +387,16 @@ const Panel: React.FC = () => {
   }, [jobID]);
 
   useEffect(() => {
-    const idList: number[] = chainsState.flatMap((chain) =>
+    const selectedChainElements: ChainElement[] = chainsState.flatMap((chain) =>
       chain.nucleotides
         .filter((nucleotide) => nucleotide.selected)
-        .map((nucleotide) => nucleotide.index)
+        .map((nucleotide) => ({
+          chainID: chain.name.slice(-1),
+          residueID: nucleotide.index,
+        }))
     );
-    console.log("Selected IDs:", idList);
-    setSelectedList(idList);
+    console.log("Selected IDs:", selectedChainElements);
+    setSelectedList(selectedChainElements);
   }, [chainsState]);
 
   if (error) return <ErrorPage errorMessage={error} />;
@@ -456,7 +459,7 @@ const Panel: React.FC = () => {
                   <ResidueTable
                     data={chainsState}
                     selectedChain={selectedChain}
-                    selectedResidueIds={selectedList}
+                    selectedResidueIds={selectedList.filter(ce => ce.chainID === selectedChain).map(ce => ce.residueID)}
                     selectResidue={selectResidue}
                     selectFragment={selectFragment}
                     deselectResidue={deselectResidue}

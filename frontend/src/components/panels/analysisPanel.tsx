@@ -132,21 +132,21 @@ const Panel: React.FC = () => {
         );
         return;
       } else {
-        sendDataToAnalyze(
-          analyzeWholeStructure,
-          jobID,
-          selectedModel,
-          selectedList
-        );
+        // sendDataToAnalyze(
+        //   analyzeWholeStructure,
+        //   jobID,
+        //   selectedModel,
+        //   selectedList
+        // );
         navigate(`/summary/${jobID}`);
       }
     } else {
-      sendDataToAnalyze(
-        analyzeWholeStructure,
-        jobID,
-        selectedModel,
-        selectedList
-      );
+      // sendDataToAnalyze(
+      //   analyzeWholeStructure,
+      //   jobID,
+      //   selectedModel,
+      //   selectedList
+      // );
       navigate(`/summary/${jobID}`);
     }
   }

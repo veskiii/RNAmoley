@@ -304,6 +304,7 @@ export async function walkingSphere(
 
   const sphere = spawnSync(`${SCRIPTS_DIR}/Walking_sphere.py`, [
     `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
+    `${JOBS_DIR}/${id}/models/${modelNumber}_residues.json`,
     `${JOBS_DIR}/${id}/sphere`,
     radius.toString(),
     interval.toString(),

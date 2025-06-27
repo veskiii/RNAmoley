@@ -377,7 +377,7 @@ export async function analyzeStructureWalkingSphere(
 
   // for each file in the directory, run clashscore
   const result = {} as Analysis_results;
-  result.mode = "full";
+  // result.mode = "full";
   result.data = [];
 
   const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);

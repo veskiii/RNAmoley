@@ -6,6 +6,7 @@ import type {
   Analysis_results,
   nucleotideResult,
   residueMetrics,
+  ChainElement,
 } from "./types.js";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
 import {
@@ -26,14 +27,15 @@ export function createAnalysisWorker() {
   const worker = new Worker<{
     jobID: UUID;
     modelNumber: string;
+    residues: ChainElement[];
     radius: number;
     interval: number;
     metadata: Metadata;
   }>(
     "analysis",
     async (job) => {
-      const { jobID, modelNumber, radius, interval, metadata } = job.data;
-      await performAnalysis(jobID, modelNumber, radius, interval, metadata);
+      const { jobID, modelNumber, residues, radius, interval, metadata } = job.data;
+      await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata);
     },
     {
       connection: {
@@ -50,6 +52,7 @@ export function createAnalysisWorker() {
 export async function addAnalysisTask(
   jobID: UUID,
   modelNumber: string,
+  residues: ChainElement[],
   radius: number,
   interval: number,
   metadata: Metadata
@@ -57,6 +60,7 @@ export async function addAnalysisTask(
   await analysisQueue.add("analyze-structure", {
     jobID,
     modelNumber,
+    residues,
     radius,
     interval,
     metadata,
@@ -67,6 +71,7 @@ export async function addAnalysisTask(
 async function performAnalysis(
   jobID: UUID,
   modelNumber: string,
+  residues: ChainElement[],
   radius: number,
   interval: number,
   metadata: Metadata
@@ -77,6 +82,7 @@ async function performAnalysis(
     const analysisOutput = await analyzeStructure(
       jobID,
       modelNumber,
+      residues,
       radius,
       interval,
       metadata,
@@ -103,6 +109,7 @@ async function performAnalysis(
 export async function analyzeStructure(
   jobID: UUID,
   modelNumber: string,
+  residues: ChainElement[],
   radius: number,
   interval: number,
   metadata: Metadata,
@@ -111,7 +118,8 @@ export async function analyzeStructure(
   metadata.status = "running";
   await saveMetadata(jobID, metadata);
 
-  const residueAnalysisArray = await fetchResidueAnalysis(jobID);
+  const oneLineAnalysis = await fetchOneLineAnalysis(jobID, modelNumber);
+  const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber);
 
   const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => ({
     residue_number: extractResidueNumber(res.residue),
@@ -119,30 +127,34 @@ export async function analyzeStructure(
   }));
 
   await saveResults(jobID, {
-    mode: analyzeSphereFilesEnabled ? "full" : "fragment",
+    // mode: analyzeSphereFilesEnabled ? "full" : "fragment",
     data: initialData,
+    modelMetrics: oneLineAnalysis,
   });
 
   if (!analyzeSphereFilesEnabled) {
     return {
-      mode: "fragment",
+      // mode: "fragment",
       data: initialData,
+      modelMetrics: oneLineAnalysis,
     };
   }
 
-  await createWalkingSphere(jobID, modelNumber, radius, interval);
+  await createWalkingSphere(jobID, modelNumber, residues, radius, interval);
 
   const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
   const results = await analyzeSphereFilesIncremental(
     files,
     jobID,
     residueAnalysisArray,
-    initialData
+    initialData,
+    oneLineAnalysis
   );
 
   return {
-    mode: "full",
+    // mode: "full",
     data: results,
+    modelMetrics: oneLineAnalysis,
   };
 }
 
@@ -150,7 +162,8 @@ async function analyzeSphereFilesIncremental(
   files: string[],
   jobID: UUID,
   residueAnalysisArray: residueMetrics[],
-  initialData: nucleotideResult[]
+  initialData: nucleotideResult[],
+  modelMetrics: metrics
 ): Promise<nucleotideResult[]> {
   const resultMap = new Map<number, nucleotideResult>();
   initialData.forEach((res) => resultMap.set(res.residue_number, { ...res }));
@@ -206,8 +219,9 @@ async function analyzeSphereFilesIncremental(
       (a, b) => a.residue_number - b.residue_number
     );
     await saveResults(jobID, {
-      mode: "full",
+      // mode: "full",
       data: sortedResults,
+      modelMetrics,
     });
   }
 
@@ -224,9 +238,15 @@ function extractResidueNumber(residue: string): number {
 async function createWalkingSphere(
   jobID: UUID,
   modelNumber: string,
+  residues: ChainElement[],
   radius: number,
   interval: number
 ) {
+
+  // save residues to a file
+  const residuesFilePath = `${JOBS_DIR}/${jobID}/models/${modelNumber}_residues.json`;
+  await fs.writeFile(residuesFilePath, JSON.stringify(residues, null, 2));
+
   const walkingSphere = await fetch(
     `${TOOLS_URL}/sphere?id=${jobID}&modelNumber=${modelNumber}&radius=${radius}&interval=${interval}`,
     { method: "POST" }
@@ -237,16 +257,31 @@ async function createWalkingSphere(
 }
 
 async function fetchResidueAnalysis(
-  jobID: UUID
+  jobID: UUID,
+  modelNumber: string
 ): Promise<residueMetrics[]> {
   const residueAnalysis = await fetch(
-    `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/models/1.pdb`,
+    `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/models/${modelNumber}.pdb`,
     { keepalive: true }
   );
   if (!residueAnalysis.ok) {
     throw new Error("Residue analysis error: " + residueAnalysis.statusText);
   }
   return (await residueAnalysis.json()) as residueMetrics[];
+}
+
+async function fetchOneLineAnalysis(
+  jobID: UUID,
+  modelNumber: string
+): Promise<metrics> {
+  const response = await fetch(
+    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/models/${modelNumber}.pdb`,
+    { keepalive: true }
+  );
+  if (!response.ok) {
+    throw new Error("One-line analysis error: " + response.statusText);
+  }
+  return (await response.json()) as metrics;
 }
 
 const findResidueInResidueAnalysis = (
