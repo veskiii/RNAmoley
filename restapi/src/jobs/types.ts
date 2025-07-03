@@ -112,6 +112,12 @@ export interface metrics {
 
 export interface nucleotideResult {
   residue_number: number;
+  original_index: number;
+  base: string;
+  structure: string;
+  chainID: string;
+  selected: boolean;
+  structuralElements: StructuralElement[];
   metrics?: metrics;
   residueMetrics: residueMetrics;
 }
