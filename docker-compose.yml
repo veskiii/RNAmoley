@@ -28,7 +28,9 @@ services:
       - redis_data:/data
 
   molprobity:
-    image: dawidgrajek1/molprobity:latest
+    image: molprobity
+    build:
+      context: ./molprobity
     restart: always
     #ports:
     #  - 3015:3001
