@@ -98,7 +98,7 @@ app.post("/split", (req, res) => {
       res.status(200).send(output);
     })
     .catch((error) => {
-      res.status;
+      res.status(500).send(error);
     });
 });
 
