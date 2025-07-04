@@ -12,6 +12,7 @@ import type {
   Analysis_results,
   Job,
   nucleotideResult,
+  residueMetrics,
 } from "./types.js";
 import archiver from "archiver";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
@@ -43,6 +44,7 @@ export async function uploadFileFromPDBCode(rnaFile: File, newName: string) {
   const arrayBuffer = await rnaFile.arrayBuffer();
   const buffer = new Uint8Array(arrayBuffer);
 
+  console.log(`Writing file at ${JOBS_DIR}/${newName}`);
   await fs.writeFile(`${JOBS_DIR}/${newName}`, buffer);
 }
 
@@ -65,14 +67,19 @@ export async function getDemoFiles(filename: string) {
 export async function moveToJobDirectroy(filename: string, jobID: UUID) {
   // create directory if it does not exist
   try {
+    console.log(`Creating directory ${JOBS_DIR}/${jobID}`);
+    console.log(`Creating directory ${JOBS_DIR}/${jobID}/models`);
     await fs.mkdir(`${JOBS_DIR}/${jobID}`);
     await fs.mkdir(`${JOBS_DIR}/${jobID}/models`);
   } catch (err: any) {
     if (err.code !== "EEXIST") {
       throw err;
     }
+    console.log(err);
   }
-
+  console.log(
+    `Moving ${JOBS_DIR}/${filename} to ${JOBS_DIR}/${jobID}/${filename}`
+  );
   return fs.rename(
     `${JOBS_DIR}/${filename}`,
     `${JOBS_DIR}/${jobID}/${filename}`
@@ -257,10 +264,12 @@ export async function saveOriginalNumeration(
     var number = 1;
 
     pdbFile.atoms.forEach((atom) => {
-      if (atom.resSeq != originalNumeration.at(-1)) {
-        originalNumeration.push(atom.resSeq);
-        newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
-        number++;
+      if (["A", "C", "G", "U", ""].includes(atom.resName)) {
+        if (atom.resSeq != originalNumeration.at(-1)) {
+          originalNumeration.push(atom.resSeq);
+          newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
+          number++;
+        }
       }
     });
 
@@ -307,6 +316,16 @@ export async function analyzeStructureFragment(
   return data;
 }
 
+const findResidueInResidueAnalysis = (
+  residues: residueMetrics[],
+  residueNumber: number
+): residueMetrics | undefined => {
+  return residues.find((residue) => {
+    const match = residue.residue.match(/\s+(\d+)\s+/);
+    return match ? Number(match[1]) === residueNumber : false;
+  });
+};
+
 const processInBatches = async (
   tasks: (() => Promise<any>)[],
   batchSize: number
@@ -342,14 +361,31 @@ export async function analyzeStructureWalkingSphere(
     throw new Error("Sphere error: " + walkingSphere.statusText);
   }
 
+  // run residue-analysis
+  const residueAnalysis = await fetch(
+    `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/models/1.pdb`, // TODO: hardcoded model number
+    { keepalive: true }
+  );
+  if (!residueAnalysis.ok) {
+    metadata.status = "failed";
+    await saveMetadata(jobID, metadata);
+    throw new Error("Residue analysis error: " + residueAnalysis.statusText);
+  }
+
+  const residueAnalysisArray =
+    (await residueAnalysis.json()) as residueMetrics[];
+
   // for each file in the directory, run clashscore
   const result = {} as Analysis_results;
-  result.mode = "full";
+  // result.mode = "full";
   result.data = [];
 
   const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
   const promises = files.map((file) => async () => {
     try {
+      console.log(
+        `Fetching ${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/sphere/${file}`
+      );
       const res = await fetch(
         `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/sphere/${file}`,
         { keepalive: true }
@@ -357,14 +393,21 @@ export async function analyzeStructureWalkingSphere(
 
       if (!res.ok) {
         throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
+      } else {
+        console.log("Molprobity analysis successful.");
       }
 
       const tmpMetrics: metrics = (await res.json()) as metrics;
       const nucleotideNumber = parseInt(file.split(".")[0] ?? "");
+      const residueMetrics = findResidueInResidueAnalysis(
+        residueAnalysisArray,
+        nucleotideNumber
+      );
 
       return {
         residue_number: nucleotideNumber,
         metrics: tmpMetrics,
+        residueMetrics: residueMetrics,
       } as nucleotideResult;
     } catch (error) {
       console.error(`Error processing file ${file}:`, error);

@@ -1,10 +1,12 @@
 node_modules
 dist
-package-lock.json
-pnpm-lock.yaml
 
 .DS_Store
 .env
+.env.local
+.env.development
+.env.production
+.env.prod
 restapi/.env.local
 restapi/public/*
 .vs
@@ -12,3 +14,4 @@ tools/scripts/PDBParser/Walking_sphere
 tools/scripts/Correction/Corrected
 tools/scripts/Correction/To_correct
 tests/test.json
+docker-compose.yml.local

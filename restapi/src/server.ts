@@ -4,6 +4,7 @@ import runDbMigrations from "./db/migrations/index.js";
 import { router as jobRoutes } from "./jobs/routes.js";
 import { cleanUpJobs } from "./jobs/controller.js";
 import cors from "cors";
+import { createAnalysisWorker } from "./jobs/analysis.js";
 
 const app = express();
 app.use(express.json());
@@ -44,6 +45,8 @@ setInterval(() => {
   console.log("Cleaning up jobs...");
   cleanUpJobs();
 }, 1000 * 60 * 60 * 24);
+
+createAnalysisWorker();
 
 app.listen(PORT, HOST, () => {
   console.log(`Server is running at http://${HOST}:${PORT}`);

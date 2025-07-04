@@ -1,120 +1,187 @@
+import type { UUID } from "crypto";
+
 interface Atom {
-    serial: number;
-    name: string;
-    altLoc: string;
-    resName: string;
-    chainID: string;
-    resSeq: number;
-    iCode: string;
-    x: number;
-    y: number;
-    z: number;
-    occupancy: number;
-    tempFactor: number;
-    element: string;
-    charge: string;
+  serial: number;
+  name: string;
+  altLoc: string;
+  resName: string;
+  chainID: string;
+  resSeq: number;
+  iCode: string;
+  x: number;
+  y: number;
+  z: number;
+  occupancy: number;
+  tempFactor: number;
+  element: string;
+  charge: string;
 }
 
 interface seqRes {
-    serNum: number;
-    chainID: string;
-    numRes: number;
-    resNames: string[];
+  serNum: number;
+  chainID: string;
+  numRes: number;
+  resNames: string[];
 }
 
 interface Residue {
-    id: number;
-    serNum: number;
-    chainID: string;
-    resName: string;
-    atoms: Atom[];
+  id: number;
+  serNum: number;
+  chainID: string;
+  resName: string;
+  atoms: Atom[];
 }
 
 interface Chain {
-    id: number;
-    chainID: string;
-    residues: Residue[];
+  id: number;
+  chainID: string;
+  residues: Residue[];
 }
 
 export interface PDBFile {
-    atoms: Atom[];
-    seqRes: seqRes;
-    residues: Residue[];
-    chains: Map<string, Chain>;
+  atoms: Atom[];
+  seqRes: seqRes;
+  residues: Residue[];
+  chains: Map<string, Chain>;
 }
 
 export interface splitModelsResponse {
-    numberOfModels: number;
+  numberOfModels: number;
 }
 
 export interface Annotation {
-    name: string | undefined;
-    sequnece: string | undefined;
-    dotbracket: string | undefined;
+  name: string | undefined;
+  sequnece: string | undefined;
+  dotbracket: string | undefined;
+}
+
+export interface RangeOfResidues {
+  start: number | undefined;
+  end: number | undefined;
+  residues: string | undefined;
+  dotbracket: string | undefined;
+}
+
+export interface StructuralElement {
+  name: string | undefined;
+  type: string | undefined;
+  residues: RangeOfResidues[] | undefined;
 }
 
 export interface Metadata {
-    status: `created` | `running` | `completed` | `failed`;
-    model_count: number;
-    last_used_model?: number;
+  status: `created` | `starting` | `running` | `completed` | `failed`;
+  model_count: number;
+  last_used_model?: number;
+  error_message?: string;
 }
 
 export interface metrics {
-    pdbFileName: string;
-    x_H_type: string;
-    chains: string;
-    residues: string;
-    nucacids: string;
-    resolution: string;
-    rvalue: string;
-    rfree: string;
-    clashscore: string;
-    clashscoreB_40: string;
-    minresol: string;
-    maxresol: string;
-    n_samples: string;
-    pct_rank: string;
-    pct_rank40: string;
-    numbadbonds: string;
-    numbonds: string;
-    pct_badbonds: string;
-    pct_resbadbonds: string;
-    numbadangles: string;
-    numangles: string;
-    pct_badangles: string;
-    pct_resbadangles: string;
-    chiralSwaps: string;
-    tetraOutliers: string;
-    pseudochiralErrors: string;
-    waterClashes: string;
-    totalWaters: string;
-    numPperpOutliers: string;
-    numPperp: string;
-    numSuiteOutliers: string;
-    numSuites: string;
+  pdbFileName: string;
+  x_H_type: string;
+  chains: string;
+  residues: string;
+  nucacids: string;
+  resolution: string;
+  rvalue: string;
+  rfree: string;
+  clashscore: string;
+  clashscoreB_40: string;
+  minresol: string;
+  maxresol: string;
+  n_samples: string;
+  pct_rank: string;
+  pct_rank40: string;
+  numbadbonds: string;
+  numbonds: string;
+  pct_badbonds: string;
+  pct_resbadbonds: string;
+  numbadangles: string;
+  numangles: string;
+  pct_badangles: string;
+  pct_resbadangles: string;
+  chiralSwaps: string;
+  tetraOutliers: string;
+  pseudochiralErrors: string;
+  waterClashes: string;
+  totalWaters: string;
+  numPperpOutliers: string;
+  numPperp: string;
+  numSuiteOutliers: string;
+  numSuites: string;
 }
 
 export interface nucleotideResult {
-    residue_number: number;
-    metrics: metrics;
+  residue_number: number;
+  original_index: number;
+  base: string;
+  structure: string;
+  chainID: string;
+  selected: boolean;
+  structuralElements: StructuralElement[];
+  metrics?: metrics;
+  residueMetrics: residueMetrics;
 }
 
 export interface Analysis_results {
-    mode: `fragment` | `full`;
-    data: nucleotideResult[];
+  // mode: `fragment` | `full`;
+  data: nucleotideResult[];
+  modelMetrics: metrics;
 }
 
 export interface Job {
-    id: string;
-    original_filename: string;
-    name: string;
-    metadata: Metadata;
-    model_number: number;
-    created_at: string;
-    updated_at: string;
-    annotation: Annotation[];
-    numeration: { [key: string]: [number, string] };
-    pdb_file: PDBFile;
-    pdb_file_string: string;
-    results?: Analysis_results | null;
+  id: string;
+  original_filename: string;
+  name: string;
+  metadata: Metadata;
+  model_number: number;
+  created_at: string;
+  updated_at: string;
+  annotation: Annotation[];
+  numeration: { [key: string]: [number, string] };
+  motifs: StructuralElement[];
+  pdb_file: PDBFile;
+  pdb_file_string: string;
+  results?: Analysis_results | null;
+}
+
+export interface NewJob {
+  id: UUID;
+  original_filename: string;
+  original_extension: string;
+  new_filename: string;
+  name: string;
+  metadata: Metadata;
+}
+
+export interface residueMetrics {
+  file_name: string;
+  "x-H_type": string;
+  residue: string;
+  res_high_B: string;
+  mc_high_B: string;
+  worst_clash: string;
+  src_atom: string;
+  dst_atom: string;
+  dst_residue: string;
+  pucker_outlier_type: string;
+  implied_pucker: string;
+  suitename: string;
+  "d-1dg_bin": string;
+  triage: string;
+  suiteness: string;
+  num_length_out: string;
+  worst_length: string;
+  worst_length_value: string;
+  worst_length_sigma: string;
+  num_angle_out: string;
+  worst_angle: string;
+  worst_angle_value: string;
+  worst_angle_sigma: string;
+  outlier_count: string;
+  outlier_count_sep_geom: string;
+}
+
+export interface ChainElement {
+  chainID: string;
+  residueID: number;
 }

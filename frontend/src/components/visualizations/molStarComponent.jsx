@@ -11,14 +11,27 @@ import { renderReact18 } from "molstar/lib/mol-plugin-ui/react18";
 import {
   Structure,
   StructureProperties,
-} from "molstar/lib/mol-model/structure"
+} from "molstar/lib/mol-model/structure";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import { MolScriptBuilder as MS } from "molstar/lib/mol-script/language/builder";
 import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
 
-const Molstar = props => {
-
-  const { useInterface, pdbId, url, file, className, showControls, showAxes, initialized, setInitialized, chains, setChains, setIsViewInitialized } = props;
+const Molstar = (props) => {
+  const {
+    useInterface,
+    pdbId,
+    url,
+    file,
+    className,
+    showControls,
+    showAxes,
+    initialized,
+    setInitialized,
+    chains,
+    selectResidue,
+    deselectResidue,
+    setIsViewInitialized,
+  } = props;
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
@@ -27,23 +40,21 @@ const Molstar = props => {
 
   useEffect(() => {
     if (plugin.current) {
-      // console.log("Plugin already initialized");
+      console.log("Plugin already initialized");
       return;
     } else {
       (async () => {
         if (useInterface) {
-
           const spec = DefaultPluginUISpec();
           spec.layout = {
-
             initial: {
               isExpanded: false,
               controlsDisplay: "reactive",
               showControls,
               regionState: {
-                right: 'hidden',
-                bottom: 'hidden',
-                left: 'collapsed'
+                right: "hidden",
+                bottom: "hidden",
+                left: "collapsed",
               },
             },
           };
@@ -62,7 +73,6 @@ const Molstar = props => {
             spec: spec,
             render: renderReact18,
           });
-
         } else {
           plugin.current = new PluginContext(DefaultPluginSpec());
           plugin.current.initViewer(canvasRef.current, parentRef.current);
@@ -71,28 +81,27 @@ const Molstar = props => {
           plugin.current.canvas3d?.setProps({
             camera: {
               show: true,
-            }
+            },
           });
         }
         await loadStructure(plugin.current, file);
         setInitialized(true);
         setIsViewInitialized(true);
-      })()
-    };
+      })();
+    }
     return () => {
       plugin.current?.dispose();
       plugin.current = null;
       setInitialized(false);
     };
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (!initialized) return;
     (async () => {
       await loadStructure(plugin.current, file);
     })();
-  }, [pdbId, url, file])
-
+  }, [pdbId, url, file]);
 
   useEffect(() => {
     if (plugin.current) {
@@ -100,35 +109,37 @@ const Molstar = props => {
         plugin.current.canvas3d?.setProps({
           camera: {
             show: true,
-          }
-        })
+          },
+        });
       } else {
         plugin.current.canvas3d?.setProps({
           camera: {
             helper: {
-              axes: ParamDefinition.getDefaultValues(CameraHelperParams).axes
-            }
-          }
-        })
+              axes: ParamDefinition.getDefaultValues(CameraHelperParams).axes,
+            },
+          },
+        });
       }
     }
-  }, [showAxes])
+  }, [showAxes]);
 
-  //Odczyt chains - wywołanie jednokrotne, tylko po otworzeniu komponentu 
-  //Zaznaczanie elementów na podstawie parametru selected w nucleotides 
+  //Odczyt chains - wywołanie jednokrotne, tylko po otworzeniu komponentu
+  //Zaznaczanie elementów na podstawie parametru selected w nucleotides
   useEffect(() => {
     setEnableSelection(false);
     if (!plugin.current) return;
 
-    const atomGroups = chains.flatMap(chain =>
-      chain.nucleotides.filter(nucleotide => nucleotide.selected === true).map(nucleotide =>
-        MS.struct.generator.atomGroups({
-          "residue-test": MS.core.rel.eq([
-            MS.struct.atomProperty.macromolecular.label_seq_id(),
-            nucleotide.index,
-          ]),
-        })
-      )
+    const atomGroups = chains.flatMap((chain) =>
+      chain.nucleotides
+        .filter((nucleotide) => nucleotide.selected === true)
+        .map((nucleotide) =>
+          MS.struct.generator.atomGroups({
+            "residue-test": MS.core.rel.eq([
+              MS.struct.atomProperty.macromolecular.label_seq_id(),
+              nucleotide.index,
+            ]),
+          })
+        )
     );
 
     const selectionQuery = StructureSelectionQuery(
@@ -136,97 +147,147 @@ const Molstar = props => {
       MS.struct.combinator.merge(atomGroups)
     );
 
-    plugin.current.managers.structure.selection.fromSelectionQuery("set", selectionQuery);
-
+    plugin.current.managers.structure.selection.fromSelectionQuery(
+      "set",
+      selectionQuery
+    );
   }, [plugin.current, chains]);
 
   //ZAPIS
   //Tworzenie tablicy indeksów elementów zaznaczonych na podstawie zmiany na widoku
   useEffect(() => {
-    document.body.addEventListener('click', () => {
+    document.body.addEventListener("click", () => {
       if (initialized && plugin.current && plugin.current.managers.structure) {
+        const subscription =
+          plugin.current.behaviors?.interaction?.click.subscribe(
+            async (event) => {
+              const selections = Array.from(
+                plugin.current.managers.structure.selection.entries.values()
+              );
 
-        const subscription = plugin.current.behaviors?.interaction?.click.subscribe(async (event) => {
+              if (selections.length === 0) {
+                return;
+              }
 
-          const selections = Array.from(
-            plugin.current.managers.structure.selection.entries.values()
+              const localSelected = [];
+              for (const { structure } of selections) {
+                if (!structure) continue;
+                Structure.eachAtomicHierarchyElement(structure, {
+                  residue: (loc) => {
+                    const position = StructureProperties.residue.label_seq_id(loc);
+                    const chain = StructureProperties.chain.label_asym_id(loc);
+                    localSelected.push({ position, chain });
+                  },
+                });
+              }
+
+              setSelected((prevSelected) => {
+                // Nowe wybrane
+                const newSelected = localSelected.map(sel => {
+                  const wasSelected = chains.find( c => c.name.slice(-1) === sel.chain)
+                    .nucleotides.some(
+                      nucleotide =>
+                        nucleotide.index === sel.position &&
+                        nucleotide.selected === true
+                    );
+
+                  return {
+                    ...sel,
+                    status: wasSelected ? "kept" : "added"
+                  };
+                });
+
+                // Odznaczone
+                const removed = prevSelected
+                  .filter(
+                    prev =>
+                      !localSelected.some(
+                        sel => sel.position === prev.position && sel.chain === prev.chain
+                      ) && prev.status !== "removed"
+                  )
+                  .map(prev => ({
+                    ...prev,
+                    status: "removed"
+                  }));
+
+                // Jeśli nie ma zmian, nie aktualizuj stanu
+                if (
+                  newSelected.length === prevSelected.length &&
+                  newSelected.every((item, idx) =>
+                    item.position === prevSelected[idx].position &&
+                    item.chain === prevSelected[idx].chain &&
+                    (item.status === prevSelected[idx].status || prevSelected[idx].status === "kept")
+                  )
+                ) {
+                  return prevSelected;
+                }
+
+                setEnableSelection(true);
+                console.log("New selection:", newSelected);
+                console.log("Removed selection:", removed);
+                return [...newSelected, ...removed];
+              });
+            }
           );
-
-          if (selections.length === 0) {
-            return;
-          }
-
-          const localSelected = [];
-          for (const { structure } of selections) {
-            if (!structure) continue;
-
-            Structure.eachAtomicHierarchyElement(structure, {
-              residue: (loc) => {
-                const position = StructureProperties.residue.label_seq_id(loc);
-                localSelected.push({ position });
-              },
-            });
-          }
-
-          setSelected(localSelected);
-          setEnableSelection(true);
-        })
 
         return () => {
           subscription?.unsubscribe();
         };
-
       }
     });
-
   }, [initialized]);
 
   //Zapis do chains
   //Zmiana selected w nucleotides na podstawie tablicy selected
-  useEffect(() => {
-    if (enableSelection === true) {
-      // Create a map for faster lookup of selected indices
-      const selectedIndices = new Set(selected.map((item) => item.position));
-
-      // Update chains immutably
-      const updatedChains = chains.map((chain) => {
-        const updatedNucleotides = chain.nucleotides.map((nucleotide) => ({
-          ...nucleotide, // Spread existing nucleotide properties
-          selected: selectedIndices.has(nucleotide.index),
-        }));
-
-        return { ...chain, nucleotides: updatedNucleotides };
-      });
-
-      setChains(updatedChains);
-    }
-
-  }, [selected, setChains, enableSelection]);
+  // useEffect(() => {
+  //   if (enableSelection === true) {
+  //     console.log("Selected residues:", selected);
+  //     selected.forEach((item) => {
+  //       const { position, chain } = item;
+  //       const chainIndex = chains.findIndex(
+  //         (c) => c.name.slice(-1) === chain
+  //       );
+  //       if (chainIndex !== -1) {
+  //         const nucleotideIndex = chains[chainIndex].nucleotides.findIndex(
+  //           (nucleotide) => nucleotide.index === position
+  //         );
+  //         if (nucleotideIndex !== -1 && item.status == "added") {
+  //           selectResidue(chain, position);
+  //         }
+  //         if (nucleotideIndex !== -1 && item.status == "removed") {
+  //           deselectResidue(chain, position);
+  //         }
+  //       }
+  //     });
+  //   }
+  // }, [selected, enableSelection]);
 
   const loadStructure = async (plugin, file = null) => {
     if (plugin) {
       plugin.clear();
       if (file) {
         const data = await plugin.builders.data.rawData({
-          data: file
+          data: file,
         });
-        const traj = await plugin.builders.structure.parseTrajectory(data, "pdb");
+        const traj = await plugin.builders.structure.parseTrajectory(
+          data,
+          "pdb"
+        );
         await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
-
       }
     }
-  }
+  };
   const hideOptions = () => {
     const options = [
       ...document.querySelectorAll('[title="Home"]'),
       ...document.querySelectorAll('[title="Plugin State"]'),
       ...document.querySelectorAll('[title="Remove All"]'),
-      ...document.querySelectorAll('[class="msp-btn msp-btn-icon-small msp-btn-link-toggle-off"]'),
-
-
+      ...document.querySelectorAll(
+        '[class="msp-btn msp-btn-icon-small msp-btn-link-toggle-off"]'
+      ),
     ];
-    options.forEach(option => {
-      option.style.visibility = 'hidden';
+    options.forEach((option) => {
+      option.style.visibility = "hidden";
       option.style.width = "0px";
       option.style.height = "0px";
       option.style.flex = "0px";
@@ -236,20 +297,36 @@ const Molstar = props => {
     const handleHidingOptions = () => {
       hideOptions();
     };
-    document.body.addEventListener('click', handleHidingOptions);
+    document.body.addEventListener("click", handleHidingOptions);
     return () => {
-      document.body.removeEventListener('click', handleHidingOptions);
+      document.body.removeEventListener("click", handleHidingOptions);
     };
   }, []);
-  const width = "100%";
+  const width = "50%";
   const height = "80%";
 
   if (useInterface) {
     return (
-      <div style={{ position: "absolute", width, height, overflow: "hidden", top: "20%", "zIndex": "1000" }}>
-        <div ref={parentRef} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} />
+      // <div
+      //   // style={{
+      //   //   position: "absolute",
+      //   //   width,
+      //   //   height,
+      //   //   overflow: "hidden",
+      //   //   top: "20%",
+      //   //   zIndex: "1000",
+      //   // }}
+      //   className="flex-grow relative h-1/2"
+      // >
+      //   <div
+      //     ref={parentRef}
+      //     style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
+      //   />
+      // </div>
+      <div className="h-full relative">
+        <div ref={parentRef} className="w-full h-full" />
       </div>
-    )
+    );
   }
 
   return (
@@ -290,7 +367,8 @@ Molstar.propTypes = {
       ).isRequired,
     })
   ).isRequired,
-  setChains: PropTypes.func,
+  selectResidue: PropTypes.func,
+  deselectResidue: PropTypes.func,
   initialized: PropTypes.bool,
   setInitialized: PropTypes.func,
   setIsViewInitialized: PropTypes.func,

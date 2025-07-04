@@ -24,6 +24,8 @@ import { fetchMyData } from "../utils/api";
 import Logo from "../common/logo";
 import HomeIcon from "../common/homeIcon";
 import SmallScreenPage from "../common/smallScreenPage";
+import TopPanel from "../common/topPanel";
+import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 
 const SummaryPanel: React.FC = () => {
   const { jobId } = useParams();
@@ -81,28 +83,28 @@ const SummaryPanel: React.FC = () => {
 
   const colorGnodes = () => {
     if (!myData || !myData.results || !myData.results.data) {
-      //console.warn("No data in myData.results.data");
+      console.warn("No data in myData.results.data");
       return <ErrorPage />;
     }
-    if (myData.results.mode === "fragment" || myData.results.mode === "full") {
+    // if (myData.results.mode === "fragment" || myData.results.mode === "full") {
       //@ts-ignore
       const nodes = d3.selectAll("circle.fornac-node");
       nodes.style("fill", "white");
-    }
+    // }
     myData.results.data.forEach((residue) => {
       try {
         //@ts-ignore
         const node = d3.select(
           `circle.fornac-node[node_num="${residue.residue_number}"]`
         );
-        if (!node.empty() && myData.results.mode === "full") {
+        if (!node.empty()) {
           node
             .classed("fornac-selectedNode", true)
             .style("fill", getColor(residue, selectedQualityScore));
-        } else if (!node.empty() && myData.results.mode === "fragment") {
-          //@ts-ignore
+        // } else if (!node.empty() && myData.results.mode === "fragment") {
+        //   //@ts-ignore
 
-          node.classed("fornac-selectedNode", true).style("fill", "#6fc2d3");
+        //   node.classed("fornac-selectedNode", true).style("fill", "#6fc2d3");
         } else {
           // console.warn(`Node with index ${residue.residue_number} not found`);
         }
@@ -281,7 +283,8 @@ const SummaryPanel: React.FC = () => {
           if (data.metadata.status === "completed") {
             clearInterval(interval); // Stop the interval loop
             setIsLoading(false);
-          } else if (data.metadata.status === "running") {
+          } else if (isLoading && data.metadata.status === "running" && data.results) {
+            console.log("stop loading");
             setIsLoading(false);
           }
         }
@@ -312,13 +315,13 @@ const SummaryPanel: React.FC = () => {
     return <ErrorPage errorMessage={message} statusCode={code} />;
   }
 
-  if (!myData) {
+  if (!myData || !myData.results || !myData.results.data ) {
     return <ErrorPage />;
   }
 
-  if (myData.metadata.status !== "completed") {
-    return <JobProcessing />;
-  }
+  // if (myData.metadata.status !== "completed") {
+  //   return <JobProcessing />;
+  // }
 
   function makeTable(myData: SummaryJob) {
     const indices: string[] = [];
@@ -347,52 +350,52 @@ const SummaryPanel: React.FC = () => {
       }
     }
 
-    if (myData.results.mode === "fragment") {
-      const clashscore = myData.results.data?.[0].metrics.clashscore;
-      const pct_badangles = myData.results.data?.[0].metrics.pct_badangles;
-      const pct_badbonds = myData.results.data?.[0].metrics.pct_badbonds;
-      return (
-        <div className="max-h-[60vh] overflow-y-auto">
-          <table>
-            <tbody className="w-full">
-              <tr>
-                <th className="border border-neutral-300 bg-gray-100 w-[70%] p-3 text-2xl font-semibold">
-                  Residue numbers range
-                </th>
-                <td className="border border-neutral-300 bg-gray-100 w-[30%] text-2xl text-center">
-                  {original_indices[0]} -{" "}
-                  {original_indices[original_indices.length - 1]}
-                </td>
-              </tr>
-              <tr>
-                <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-                  Clashscore
-                </th>
-                <td className="border border-neutral-300 bg-white text-2xl text-center">
-                  {clashscore}
-                </td>
-              </tr>
-              <tr>
-                <th className="border border-neutral-300 bg-gray-100 p-3 text-2xl font-semibold">
-                  Bad angles [%]
-                </th>
-                <td className="border border-neutral-300 bg-gray-100 text-2xl text-center">
-                  {pct_badangles}
-                </td>
-              </tr>
-              <tr>
-                <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-                  Bad bonds [%]
-                </th>
-                <td className="border border-neutral-300 bg-white text-2xl text-center">
-                  {pct_badbonds}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      );
-    } else if (myData.results.mode === "full") {
+    // if (myData.results.mode === "fragment") {
+    //   const clashscore = myData.results.data?.[0].metrics.clashscore;
+    //   const pct_badangles = myData.results.data?.[0].metrics.pct_badangles;
+    //   const pct_badbonds = myData.results.data?.[0].metrics.pct_badbonds;
+    //   return (
+    //     <div className="max-h-[60vh] overflow-y-auto">
+    //       <table>
+    //         <tbody className="w-full">
+    //           <tr>
+    //             <th className="border border-neutral-300 bg-gray-100 w-[70%] p-3 text-2xl font-semibold">
+    //               Residue numbers range
+    //             </th>
+    //             <td className="border border-neutral-300 bg-gray-100 w-[30%] text-2xl text-center">
+    //               {original_indices[0]} -{" "}
+    //               {original_indices[original_indices.length - 1]}
+    //             </td>
+    //           </tr>
+    //           <tr>
+    //             <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
+    //               Clashscore
+    //             </th>
+    //             <td className="border border-neutral-300 bg-white text-2xl text-center">
+    //               {clashscore}
+    //             </td>
+    //           </tr>
+    //           <tr>
+    //             <th className="border border-neutral-300 bg-gray-100 p-3 text-2xl font-semibold">
+    //               Bad angles [%]
+    //             </th>
+    //             <td className="border border-neutral-300 bg-gray-100 text-2xl text-center">
+    //               {pct_badangles}
+    //             </td>
+    //           </tr>
+    //           <tr>
+    //             <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
+    //               Bad bonds [%]
+    //             </th>
+    //             <td className="border border-neutral-300 bg-white text-2xl text-center">
+    //               {pct_badbonds}
+    //             </td>
+    //           </tr>
+    //         </tbody>
+    //       </table>
+    //     </div>
+    //   );
+    // } else if (myData.results.mode === "full") {
       return (
         <table className="text-center min-w-full text-wrap">
           <thead className="sticky top-0">
@@ -456,28 +459,28 @@ const SummaryPanel: React.FC = () => {
                   {original_indices[index]}
                 </td>
                 <td className="border border-neutral-300 column-CLASH_SCORE">
-                  {residue.metrics.clashscore}
+                  {residue.metrics ? residue.metrics.clashscore : '-'}
                 </td>
                 <td className="border border-neutral-300 column-BAD_ANGLES">
-                  {residue.metrics.pct_badangles}
+                  {residue.metrics ? residue.metrics.pct_badangles : '-'}
                 </td>
                 <td className="border border-neutral-300 column-BAD_BONDS">
-                  {residue.metrics.pct_badbonds}
+                  {residue.metrics ? residue.metrics.pct_badbonds : '-'}
                 </td>
                 <td className="border border-neutral-300 column-SUITENESS">
-                  {residue.residueMetrics.suiteness}
+                  {residue.residueMetrics ? residue.residueMetrics.suiteness : '-'}
                 </td>
                 <td className="border border-neutral-300 column-SUGAR_PUCKER_OUT">
-                  {residue.residueMetrics.pucker_outlier_type}
+                  {residue.residueMetrics ? residue.residueMetrics.pucker_outlier_type : '-'}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       );
-    } else {
-      return <ErrorPage />;
-    }
+    // } else {
+    //   return <ErrorPage />;
+    // }
   }
 
   function createRangeMenu() {
@@ -663,146 +666,45 @@ const SummaryPanel: React.FC = () => {
   }
 
   return (
-    <div>
-      <div className="desktop-content flex flex-col h-screen w-screen">
-        <div className="flex flex-row w-full justify-between">
-          <div className="flex flex-row font-medium items-center self-start ml-[30px]">
-            <Logo />
-            <div className="flex flex-row gap-8 ml-8">
-              <HomeIcon />
-              <HelpIcon />
+    <div className="desktop-content h-screen w-screen overflow-hidden">
+      {/* Top panel */}
+      <div className="sticky top-0 z-50 bg-white">
+        <TopPanel page="Results Panel"/>
+      </div>
+      {/* Side view + Main content */}
+      <div className="flex overflow-hidden h-[calc(100vh-64px)]">
+        {/* Sidebar */}
+        <div className="w-80">
+          <div
+            className="flex flex-col  bg-moley-backgroundGreen h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
+          >
+            {/* Scrollowalna zawartość sidebar'a */}
+            <div className="rounded-scrollbar overflow-auto flex-1">
+              {/* ...tutaj zawartość sidebar'a... */}
             </div>
-          </div>
-          <div className="my-auto">
-            <span className="font-bold" style={{ color: Colors.blue }}>
-              {" "}
-              Name of task:{" "}
-            </span>{" "}
-            {myData.name} <br />
-            <span className="font-bold" style={{ color: Colors.blue }}>
-              {" "}
-              ID:{" "}
-            </span>{" "}
-            {myData.id}
-          </div>
-          <div className="flex justify-center items-center h-full">
-            <button
-              id="switchViewButton"
-              onClick={toggle}
-              className="font-bold rounded-lg p-4 text-2xl text-black flex justify-center items-center my-1 mr-[30px] w-auto"
-            >
-              Switch to 3D view
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-wrap w-full h-full rounded-lg">
-          <div className="flex flex-col h-full max-h-full items-center p-9 rounded-lg bg-neutral-200">
-            <div className="min-h-[12rem] max-h-[50vh] overflow-y-auto table-fixed mb-7">
-              {makeTable(myData)}
-              {colorColumn(selectedQualityScore)}
-            </div>
+            {/* Przyciski pobierania*/}
+            <div className="mt-4 flex justify-center">
             <DownloadLink />
             <DownloadFile id={jobId} />
+            </div>
           </div>
-          <div className="flex flex-grow bg-white">
-            <div className="relative w-full h-full border-2 rounded-lg border-neutral-200">
-              {myData.results.mode === "full" && (
-                <div>
-                  <div className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white">
-                    {!showRangeDetails && (
-                      <div>
-                        <button
-                          id="menuButton"
-                          onClick={toggleRangeMenuVisibility}
-                          className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong"
-                        >
-                          Show coloring ranges
-                        </button>
-                      </div>
-                    )}
-                    {showRangeDetails && (
-                      <div>
-                        <button
-                          id="menuButton"
-                          onClick={toggleRangeMenuVisibility}
-                          className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong"
-                        >
-                          Close
-                        </button>
-                        <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
-                          {createRangeMenu()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    style={{ display: is3Dview ? "none" : "block" }}
-                    className="z-40 absolute bottom-2 left-64 border rounded-lg border-neutral-300 bg-white"
-                  >
-                    {!showDisplayOptions && (
-                      <div>
-                        <button
-                          id="menuButton"
-                          onClick={toggleDisplayOptionsVisibility}
-                          className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong"
-                        >
-                          Fornac options
-                        </button>
-                      </div>
-                    )}
-                    {showDisplayOptions && (
-                      <div>
-                        <button
-                          id="menuButton"
-                          onClick={toggleDisplayOptionsVisibility}
-                          className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong"
-                        >
-                          Close
-                        </button>
-                        <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
-                          {createFornacDisplayDetails()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {myData.results.mode === "fragment" && (
-                <div
-                  style={{ display: is3Dview ? "none" : "block" }}
-                  className="z-40 absolute bottom-2 left-2 rounded-lg border border-neutral-300 bg-white"
-                >
-                  {!showDisplayOptions && (
-                    <div>
-                      <button
-                        id="menuButton"
-                        onClick={toggleDisplayOptionsVisibility}
-                        className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong"
-                      >
-                        Fornac options
-                      </button>
-                    </div>
-                  )}
-                  {showDisplayOptions && (
-                    <div>
-                      <button
-                        id="menuButton"
-                        onClick={toggleDisplayOptionsVisibility}
-                        className="w-full mt-0 inline-block rounded-lg bg-neutral-300 px-6 text-sm font-medium uppercase leading-normal text-neutral-900 shadow-light-3 transition duration-150 ease-in-out hover:bg-neutral-600 hover:text-white hover:shadow-light-2 focus:bg-neutral-200 focus:shadow-light-2 focus:outline-none focus:ring-0 active:bg-neutral-200 active:shadow-light-2 motion-reduce:transition-none dark:shadow-black/30 dark:hover:shadow-dark-strong dark:focus:shadow-dark-strong dark:active:shadow-dark-strong"
-                      >
-                        Close
-                      </button>
-                      <div className="flex flex-col max-h-[50vh] overflow-y-auto p-2">
-                        {createFornacDisplayDetails()}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              <div
-                style={{ display: is3Dview ? "none" : "block" }}
-                className="absolute h-full w-full"
-              >
+        </div>
+        {/* Main content */}
+        <div 
+          key={myData.id}
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+        >
+          <div className="flex flex-col min-h-full">
+            <div className="bg-transparent z-10">
+              <div className="overflow-x-auto">
+                {/* residue table */}
+                <ResultsResidueTable
+                data={myData.results.data}
+                />
+              </div>
+            </div>
+            <div className="flex flex-row h-[60vh] min-h-[400px]">
+              <div className="w-1/2 h-full p-5">
                 <FornacSummaryComponent
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
@@ -820,12 +722,8 @@ const SummaryPanel: React.FC = () => {
                   job={myData}
                   colorGnodes={colorGnodes}
                 />
-                {/*{colorGnodes()}*/}
               </div>
-              <div
-                style={{ display: is3Dview ? "block" : "none" }}
-                className="absolute h-full w-full"
-              >
+              <div className="w-1/2 h-full p-5">
                 {getColorMap()}
                 <Molstar
                   useInterface={true}

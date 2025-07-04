@@ -184,6 +184,7 @@ const FornacWrapper = ({
   //Na podstawie parametru selected w nucleotides (zaznacz) zmień klasę wierzchołków na grafie
   //Kolorowanie grafu poprzez zmianę klasy na podstawie zmiany selected
   useEffect(() => {
+    console.log("useEffect chains");
     // Wywołaj aktualizację przy zmianach w chains
     updateFornacSelection(chains, hybridizedName);
 
@@ -215,8 +216,9 @@ const FornacWrapper = ({
   }, [setAnimation, numbering, labelInterval, links, nodeOutline, nodeLabel]);
 
   return (
-    <div className="absolute bottom-0 h-[85%] flex-grow w-full bg-transparent">
-      <div className="text-xl font-semibold pt-4 break-words shadow-sm">
+    // <div className="bottom-0 h-[85%] flex-grow w-full bg-transparent">
+    <div className="h-full bg-transparent">
+      {/* <div className="text-xl font-semibold pt-4 break-words shadow-sm">
         {chains
           .filter((chain) => chain.name.slice(-1) === selectedChain)
           .map((chain) => (
@@ -257,7 +259,7 @@ const FornacWrapper = ({
               </div>
             </div>
           ))}
-      </div>
+      </div> */}
       <Fornac
         chains={chains}
         setChains={setChains}

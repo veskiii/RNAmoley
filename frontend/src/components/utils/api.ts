@@ -1,5 +1,5 @@
 import { API_URL } from "../../App";
-import { Job, JobToPost } from "./types";
+import { ChainElement, Job, JobToPost } from "./types";
 
 //const API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1";
 // const API_URL = "http://restapi/api/v1";
@@ -53,54 +53,42 @@ export async function fetchMyData(jobID: string | undefined) {
   }
 }
 
+
 export async function sendDataToAnalyze(
-  analyzeWholeStructure: boolean,
+  analyzeNeighborhoods: boolean,
   jobID: string | undefined,
   selectedModel: number,
-  selectedList: number[]
+  selectedList: ChainElement[]
 ): Promise<string | void> {
-  let API_Url = "";
 
   if (!jobID) {
     throw new Error("jobID is required");
   }
 
   let jobToPost: JobToPost = {
-    id: "",
-    residues: [],
-    modelNumber: 0,
-    radius: 0,
-    interval: 0,
+    id: jobID,
+    residues: selectedList,
+    modelNumber: selectedModel,
+    radius: -1,
+    interval: -1,
   };
 
-  if (analyzeWholeStructure) {
-    API_Url = `${API_URL}/jobs/analyzeStructure`;
+  if (analyzeNeighborhoods) {
     const radius = parseInt(
-      (document.getElementById("radiusInput") as HTMLInputElement).value
+      "5"
     );
     const interval = parseInt(
-      (document.getElementById("intervalInput") as HTMLInputElement).value
+      "1"
     );
     jobToPost = {
-      id: jobID,
-      modelNumber: selectedModel,
-      residues: [],
+      ...jobToPost,
       radius: radius,
       interval: interval,
-    };
-  } else {
-    API_Url = `${API_URL}/jobs/analyzeFragment`;
-    jobToPost = {
-      id: jobID,
-      modelNumber: 0,
-      residues: selectedList,
-      radius: 0,
-      interval: 0,
     };
   }
 
   try {
-    const response = await fetch(`${API_Url}`, {
+    const response = await fetch(`${API_URL}/jobs/analyzeStructure`, {
       method: "POST",
       body: JSON.stringify(jobToPost),
       headers: {
@@ -110,7 +98,7 @@ export async function sendDataToAnalyze(
     });
     if (response.ok) {
       const data = await response.json();
-      console.log("Data posted successfully:", data.id);
+      console.log("Data posted successfully:", data);
     } else {
       let errorData = await response.json();
       console.error("Error creating job:", errorData);

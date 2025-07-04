@@ -132,21 +132,21 @@ const Panel: React.FC = () => {
         );
         return;
       } else {
-        sendDataToAnalyze(
-          analyzeWholeStructure,
-          jobID,
-          selectedModel,
-          selectedList
-        );
+        // sendDataToAnalyze(
+        //   analyzeWholeStructure,
+        //   jobID,
+        //   selectedModel,
+        //   selectedList
+        // );
         navigate(`/summary/${jobID}`);
       }
     } else {
-      sendDataToAnalyze(
-        analyzeWholeStructure,
-        jobID,
-        selectedModel,
-        selectedList
-      );
+      // sendDataToAnalyze(
+      //   analyzeWholeStructure,
+      //   jobID,
+      //   selectedModel,
+      //   selectedList
+      // );
       navigate(`/summary/${jobID}`);
     }
   }
@@ -184,7 +184,7 @@ const Panel: React.FC = () => {
         <div className="w-80">
           <div className="w-[700px] bg-white items-start">
             <div className="h-[70px] flex flex-row gap-8 pl-4">
-              <Logo page="Analysis panel" />
+              <Logo />
               <div className="flex flex-row gap-8">
                 <HomeIcon />
                 <HelpIcon />
@@ -376,7 +376,7 @@ const Panel: React.FC = () => {
                   </button>
                 </div>
                 <div className="top-0 h-[20%] flex-grow bg-transparent z-100">
-                  <RangeSelecting
+                  {/* <RangeSelecting
                     chains={chainsState}
                     selectedChain={selectedChain}
                     minId={minId}
@@ -391,14 +391,14 @@ const Panel: React.FC = () => {
                     handleChange={handleChange}
                     handleInputChangeStart={handleInputChangeStart}
                     handleInputChangeEnd={handleInputChangeEnd}
-                  />
+                  /> */}
                 </div>
                 {is3Dview && (
                   <Molstar
                     useInterface={true}
                     file={myData.pdb_file_string}
                     chains={chainsState}
-                    setChains={setChainsState}
+                    selectResidue={setChainsState}
                     initialized={initialized}
                     setInitialized={setInitialized}
                     setIsViewInitialized={setIsViewInitialized}

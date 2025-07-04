@@ -6,7 +6,7 @@ const HelpPage = () => {
   return (
     <div>
       <div className="pl-[10vw] flex flex-row gap-8 pt-2">
-        <Logo page="Help" />
+        <Logo />
         <HomeIcon />
       </div>
       <div className="flex min-h-screen flex-col items-center pb-16 pt-6">

@@ -13,7 +13,6 @@ interface RangeSelectingProps {
     maxId: string;
     inputValueStart: string;
     inputValueEnd: string;
-    setChainsState: React.Dispatch<React.SetStateAction<Chain[]>>;
     setMinId: React.Dispatch<React.SetStateAction<string>>;
     setMaxId: React.Dispatch<React.SetStateAction<string>>;
     setInputValueStart: React.Dispatch<React.SetStateAction<string>>;
@@ -21,6 +20,7 @@ interface RangeSelectingProps {
     handleChange: (event: SelectChangeEvent<string>) => void;
     handleInputChangeStart: React.ChangeEventHandler<HTMLInputElement>;
     handleInputChangeEnd: React.ChangeEventHandler<HTMLInputElement>;
+    selectFragment: (name: string, chainName: string, residueIds: number[]) => void;
 }
 
 const RangeSelecting: React.FC<RangeSelectingProps> = ({
@@ -30,7 +30,6 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
     maxId,
     inputValueStart,
     inputValueEnd,
-    setChainsState,
     setMinId,
     setMaxId,
     setInputValueStart,
@@ -38,30 +37,27 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
     handleChange,
     handleInputChangeStart,
     handleInputChangeEnd,
+    selectFragment,
 }) => {
     const handleSubmit = () => {
         const start = parseInt(inputValueStart, 10);
         const end = parseInt(inputValueEnd, 10);
+        
+            console.log(`Selected range: ${start} to ${end} on chain ${selectedChain}`);
 
         if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
             alert(`Invalid range: ${start} to ${end}`);
             return;
         }
         if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
-            setChainsState(prevChains =>
-                prevChains.map(chain => {
-                    if (chain.name.slice(-1) === selectedChain) {
 
-                        return {
-                            ...chain,
-                            nucleotides: chain.nucleotides.map(nucleotide => ({
-                                ...nucleotide,
-                                selected: nucleotide.index >= start && nucleotide.index <= end,
-                            })),
-                        };
-                    }
-                    return chain;
-                }));
+            const selectedNucleotides = chains
+                .find(chain => chain.name.slice(-1) === selectedChain)
+                ?.nucleotides
+                .filter(nucleotide => nucleotide.index >= start && nucleotide.index <= end)
+                .map(nucleotide => nucleotide.index) || [];
+            
+            selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
         } else {
             alert("Type valid range on selected chain");
         }
@@ -110,7 +106,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                     type="number"
                     min={minId}
                     max={maxId}
-                    defaultValue={minId}
+                    value={inputValueStart}
                     onChange={handleInputChangeStart}
                     placeholder={minId}
                     className="w-[100px] h-[40px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -122,7 +118,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                     type="number"
                     min={minId}
                     max={maxId}
-                    defaultValue={maxId}
+                    value={inputValueEnd}
                     onChange={handleInputChangeEnd}
                     placeholder={maxId}
                     className="w-[100px] h-[40px] p-2  mr-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -131,7 +127,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                 <button
                     id="select_button"
                     onClick={handleSubmit}
-                    className="p-0 m-0"
+                    className="p-0 m-0 bg-moley-backgroundGreen hover:bg-moley-green"
                 >
                     Select
                 </button>
