@@ -164,7 +164,6 @@ const retrieveMotifsFromJson = async (
   // Wczytaj dane z pliku JSON
   const rawData = await fs.readFile(filePath, "utf-8");
   const jsonData = JSON.parse(rawData);
-  console.log(jsonData);
 
   const structuralElements: StructuralElement[] = [];
 
@@ -245,7 +244,6 @@ const retrieveMotifsFromJson = async (
     });
   }
 
-  console.log("Parsed motifs: ", structuralElements);
   return structuralElements;
 };
 
@@ -266,13 +264,11 @@ export async function runMotifExtractor(id: string, numberOfModels: number) {
     const output = await retrieveMotifsFromJson(
       `${JOBS_DIR}/${id}/models/${i}.json`
     );
-    console.log("Motif extractor output: ", output);
 
     results.push(output);
 
     const outputFilename = `${i}_motifs.json`;
     const outputString = JSON.stringify(output);
-    console.log("Output string: ", outputString);
     const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
     await fs.writeFile(outputFilePath, outputString);
   }
