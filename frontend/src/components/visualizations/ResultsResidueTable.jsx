@@ -10,21 +10,12 @@ const ResultsResidueTable = ({ data }) => {
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
     const chainsSet = new Set();
-    data.forEach((chain) => {
-      if (chain.nucleotides && chain.nucleotides.length > 0) {
-        chain.nucleotides.forEach((nuc) => {
-          if (nuc.chainID) {
-            chainsSet.add(nuc.chainID);
-          }
-        });
-        if (chainsSet.size === 0 && chain.name) {
-          chainsSet.add(chain.name.slice(-1));
-        }
+    console.log(data.length);
+    data.forEach((nucleotide) => {
+      if (nucleotide.chainID) {
+        chainsSet.add(nucleotide.chainID);
       }
     });
-    if (chainsSet.size === 0 && data[0]?.name) {
-      chainsSet.add(data[0].name.slice(-1));
-    }
     return Array.from(chainsSet);
   }, [data]);
 
@@ -163,7 +154,7 @@ const ResultsResidueTable = ({ data }) => {
         <tbody>
           <tr>
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Index</td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-id-${index}`}
                 className={
@@ -176,7 +167,7 @@ const ResultsResidueTable = ({ data }) => {
           </tr>
           <tr>
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Base</td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-name-${index}`}
                 className={
@@ -191,7 +182,7 @@ const ResultsResidueTable = ({ data }) => {
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
               Secondary Structure
             </td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-index-${index}`}
                 className={
@@ -206,7 +197,7 @@ const ResultsResidueTable = ({ data }) => {
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
               Structural Element
             </td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
@@ -231,7 +222,7 @@ const ResultsResidueTable = ({ data }) => {
             >
               Neighborhood ClashScore
             </td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
@@ -251,7 +242,7 @@ const ResultsResidueTable = ({ data }) => {
             >
               Neighborhood Bad Angles
             </td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
@@ -273,7 +264,7 @@ const ResultsResidueTable = ({ data }) => {
             >
               Neighborhood Bad Bond Lengths
             </td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
@@ -295,7 +286,7 @@ const ResultsResidueTable = ({ data }) => {
             >
               Suiteness
             </td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
@@ -315,7 +306,7 @@ const ResultsResidueTable = ({ data }) => {
             >
               Sugar Pucker Outlier Type
             </td>
-            {data && data.map((nucleotide, index) => (
+            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={

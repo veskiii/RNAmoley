@@ -3,6 +3,7 @@ import {
   correctModels,
   runAnnotator,
   runConverter,
+  runFragmentExtraction,
   runMotifExtractor,
   splitModels,
   walkingSphere,
@@ -156,6 +157,31 @@ app.post("/sphere", (req, res) => {
   }
 
   walkingSphere(id, parseInt(modelNumber), parseInt(radius), parseInt(interval))
+    .then((output) => {
+      res.status(200).send(output);
+    })
+    .catch((error) => {
+      res.status(500).send(error);
+    });
+});
+
+app.post("/fragment", (req, res) => {
+  const id = req.query.id as string;
+  const modelNumber = req.query.modelNumber as string;
+
+  if (!id) {
+    res.status(400).send({ error: "Fragment extraction error: id is required" });
+    return;
+  }
+
+  if (!modelNumber) {
+    res
+      .status(400)
+      .send({ error: "Fragment extraction error: modelNumber is required" });
+    return;
+  }
+
+  runFragmentExtraction(id, modelNumber)
     .then((output) => {
       res.status(200).send(output);
     })

@@ -26,6 +26,7 @@ import HomeIcon from "../common/homeIcon";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
+import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 
 const SummaryPanel: React.FC = () => {
   const { jobId } = useParams();
@@ -280,7 +281,16 @@ const SummaryPanel: React.FC = () => {
           setChainsState(chains);
           console.log("data:", data);
 
-          if (data.metadata.status === "completed") {
+          if(data.metadata.status === "failed")
+          {
+            setMyError({
+              errorMessage: data.metadata.error_message,
+              statusCode: "500",
+            });
+            clearInterval(interval);
+            return;
+          }
+          else if (data.metadata.status === "completed") {
             clearInterval(interval); // Stop the interval loop
             setIsLoading(false);
           } else if (isLoading && data.metadata.status === "running" && data.results) {
@@ -305,14 +315,16 @@ const SummaryPanel: React.FC = () => {
     return () => clearInterval(interval);
   }, [jobId]);
 
-  if (isLoading) {
-    return <Loading />;
-  }
+  
 
   if (myError) {
     var message = myError.errorMessage;
     var code = myError.statusCode;
     return <ErrorPage errorMessage={message} statusCode={code} />;
+  }
+
+  if (isLoading) {
+    return <Loading />;
   }
 
   if (!myData || !myData.results || !myData.results.data ) {
@@ -350,52 +362,6 @@ const SummaryPanel: React.FC = () => {
       }
     }
 
-    // if (myData.results.mode === "fragment") {
-    //   const clashscore = myData.results.data?.[0].metrics.clashscore;
-    //   const pct_badangles = myData.results.data?.[0].metrics.pct_badangles;
-    //   const pct_badbonds = myData.results.data?.[0].metrics.pct_badbonds;
-    //   return (
-    //     <div className="max-h-[60vh] overflow-y-auto">
-    //       <table>
-    //         <tbody className="w-full">
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-gray-100 w-[70%] p-3 text-2xl font-semibold">
-    //               Residue numbers range
-    //             </th>
-    //             <td className="border border-neutral-300 bg-gray-100 w-[30%] text-2xl text-center">
-    //               {original_indices[0]} -{" "}
-    //               {original_indices[original_indices.length - 1]}
-    //             </td>
-    //           </tr>
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-    //               Clashscore
-    //             </th>
-    //             <td className="border border-neutral-300 bg-white text-2xl text-center">
-    //               {clashscore}
-    //             </td>
-    //           </tr>
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-gray-100 p-3 text-2xl font-semibold">
-    //               Bad angles [%]
-    //             </th>
-    //             <td className="border border-neutral-300 bg-gray-100 text-2xl text-center">
-    //               {pct_badangles}
-    //             </td>
-    //           </tr>
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-    //               Bad bonds [%]
-    //             </th>
-    //             <td className="border border-neutral-300 bg-white text-2xl text-center">
-    //               {pct_badbonds}
-    //             </td>
-    //           </tr>
-    //         </tbody>
-    //       </table>
-    //     </div>
-    //   );
-    // } else if (myData.results.mode === "full") {
       return (
         <table className="text-center min-w-full text-wrap">
           <thead className="sticky top-0">
@@ -695,6 +661,11 @@ const SummaryPanel: React.FC = () => {
           className="flex-1 overflow-y-auto overflow-x-hidden"
         >
           <div className="flex flex-col min-h-full">
+            <div className="w-2/3 3xl:w-1/2">
+              <GlobalResultsTable 
+              modelMetrics={myData.results.modelMetrics} 
+              fragmentMetrics={myData.results.fragmentMetrics} />
+            </div>
             <div className="bg-transparent z-10">
               <div className="overflow-x-auto">
                 {/* residue table */}

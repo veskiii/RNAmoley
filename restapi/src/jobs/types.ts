@@ -126,6 +126,7 @@ export interface Analysis_results {
   // mode: `fragment` | `full`;
   data: nucleotideResult[];
   modelMetrics: metrics;
+  fragmentMetrics: metrics;
 }
 
 export interface Job {
