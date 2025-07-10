@@ -3,14 +3,14 @@ import { QualityScore } from "../utils/types";
 import { getColor } from "../utils/ColorUtils";
 import { Colors } from "../common/colors";
 
-const ResultsResidueTable = ({ data }) => {
-  const devColor = "#f3f4f6";
+const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore }) => {
   const selectedBorderColor = Colors.salmon;
 
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
     const chainsSet = new Set();
     console.log(data.length);
+    console.log(data);
     data.forEach((nucleotide) => {
       if (nucleotide.chainID) {
         chainsSet.add(nucleotide.chainID);
@@ -62,7 +62,29 @@ const ResultsResidueTable = ({ data }) => {
     });
   };
 
-  const handleClick = (selectedScore) => {
+  const handleClick = (clickedScore) => {
+    setSelectedScore(clickedScore);
+  };
+
+  useEffect(() => {
+    if (chainOptions.length > 0 && !chainOptions.includes(selectedChain)) {
+      setSelectedChain(chainOptions[0]);
+    }
+  }, [chainOptions]);
+
+  useEffect(() => {
+    console.log("ResidueTable rerendered");
+  }, [selectedChain]);
+
+  useEffect(() => {
+    colorColumn(selectedScore);
+    // if (analyzeNeighborhood)
+    //   colorColumn(QualityScore.CLASH_SCORE);
+    // else 
+    //   colorColumn(QualityScore.SUITENESS);
+  }, [data]);
+
+  useEffect(() => {
     resetColumns();
 
     const ids = [
@@ -96,41 +118,11 @@ const ResultsResidueTable = ({ data }) => {
       selectedEl.style.borderWidth = "3px";
     }
     colorColumn(selectedScore);
-  };
-
-  useEffect(() => {
-    if (chainOptions.length > 0 && !chainOptions.includes(selectedChain)) {
-      setSelectedChain(chainOptions[0]);
-    }
-  }, [chainOptions]);
-
-  useEffect(() => {
-    console.log("ResidueTable rerendered");
-  }, [selectedChain]);
-
-  useEffect(() => {
-    colorColumn(QualityScore.CLASH_SCORE);
-  }, [data]);
+  }, [selectedScore]);
 
   if (!data || data.length === 0) {
     return <p>No data available</p>;
   }
-
-  const selectedChainData =
-    data.find(
-      (chain) =>
-        (chain.nucleotides &&
-          chain.nucleotides.length > 0 &&
-          chain.nucleotides[0].chainID === selectedChain) ||
-        (chain.name && chain.name.slice(-1) === selectedChain)
-    ) || data[0];
-    console.log("Data: ", data);
-    console.log("Selected chain data:", selectedChainData);
-
-  if (!selectedChainData) {
-    return <p>No data available for the selected chain {selectedChain}</p>;
-  }
-
 
   return (
     <div>
@@ -213,6 +205,7 @@ const ResultsResidueTable = ({ data }) => {
               </td>
             ))}
           </tr>
+          { analyzeNeighborhood && (
           <tr>
             <td
             id="tableClashscore"
@@ -229,10 +222,16 @@ const ResultsResidueTable = ({ data }) => {
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-CLASH_SCORE"
                 }
               >
-                {nucleotide.metrics ? nucleotide.metrics.clashscore : ""}
+                {nucleotide.metrics ? nucleotide.metrics.clashscore : 
+                  nucleotide.selected ? (
+                    <span className="inline-block align-middle">
+                      <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
+                    </span>
+                  ) : ""}
               </td>
             ))}
-          </tr>
+          </tr>)}
+          {analyzeNeighborhood && (
           <tr>
             <td 
             id="tableBadAngles"
@@ -251,10 +250,16 @@ const ResultsResidueTable = ({ data }) => {
               >
                 {nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
-                : ""}
+                : 
+                  nucleotide.selected ? (
+                    <span className="inline-block align-middle">
+                      <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
+                    </span>
+                  ) : ""}
               </td>
             ))}
-          </tr>
+          </tr>)}
+          {analyzeNeighborhood && (
           <tr>
             <td 
             id="tableBadBonds"
@@ -273,10 +278,15 @@ const ResultsResidueTable = ({ data }) => {
               >
                 {nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
-                : ""}
+                : 
+                  nucleotide.selected ? (
+                    <span className="inline-block align-middle">
+                      <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
+                    </span>
+                  ) : ""}
               </td>
             ))}
-          </tr>
+          </tr>)}
           <tr>
             <td 
             id="tableSuiteness"
@@ -319,6 +329,22 @@ const ResultsResidueTable = ({ data }) => {
           </tr>
         </tbody>
       </table>
+      {/* Spinner CSS */}
+      <style>
+        {`
+          .animate-spin {
+            display: inline-block;
+            border-radius: 9999px;
+            border-width: 2px;
+            border-style: solid;
+            border-color: #d1d5db transparent #d1d5db transparent;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
   );
 };

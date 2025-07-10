@@ -34,11 +34,12 @@ export function createAnalysisWorker() {
     radius: number;
     interval: number;
     metadata: Metadata;
+    analyzeSphereFilesEnabled: boolean;
   }>(
     "analysis",
     async (job) => {
-      const { jobID, modelNumber, residues, radius, interval, metadata } = job.data;
-      await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata);
+      const { jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled } = job.data;
+      await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled);
     },
     {
       connection: {
@@ -58,7 +59,8 @@ export async function addAnalysisTask(
   residues: ChainElement[],
   radius: number,
   interval: number,
-  metadata: Metadata
+  metadata: Metadata,
+  analyzeSphereFilesEnabled: boolean
 ) {
   await analysisQueue.add("analyze-structure", {
     jobID,
@@ -67,6 +69,7 @@ export async function addAnalysisTask(
     radius,
     interval,
     metadata,
+    analyzeSphereFilesEnabled,
   }, {jobId: jobID});
 }
   
@@ -77,11 +80,10 @@ async function performAnalysis(
   residues: ChainElement[],
   radius: number,
   interval: number,
-  metadata: Metadata
+  metadata: Metadata,
+  analyzeSphereFilesEnabled: boolean
 ) {
   try {
-    const analyzeSphereFilesEnabled = (radius < 0 || interval < 0) ? false : true;
-
     const analysisOutput = await analyzeStructure(
       jobID,
       modelNumber,

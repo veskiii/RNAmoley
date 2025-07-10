@@ -73,6 +73,7 @@ export interface Metadata {
   model_count: number;
   last_used_model?: number;
   error_message?: string;
+  analyzeNeighborhoods?: boolean;
 }
 
 export interface metrics {

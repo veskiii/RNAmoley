@@ -147,6 +147,7 @@ export interface SummaryJob {
 
 export interface Metadata {
   status: string;
+  analyzeNeighborhoods?: boolean;
 }
 
 export enum QualityScore {
