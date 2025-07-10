@@ -18,6 +18,9 @@ module.exports = {
         "moley-green": "#6b9c9c",
         "moley-accentGreen": "#4a8c8c",
       },
+      screens: {
+        "3xl": "2000px",
+      }
     },
   },
   plugins: [],

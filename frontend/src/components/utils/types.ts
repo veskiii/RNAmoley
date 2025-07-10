@@ -118,9 +118,15 @@ export interface ResidueMetrics {
 
 export type Residue = {
   residue_number: number;
+  original_index: number;
+  base: string;
+  structure: string;
+  chainID: string;
+  selected: boolean;
+  structuralElements: StructuralElement[];
   metrics: Metrics;
   residueMetrics: ResidueMetrics;
-};
+}
 
 export interface SummaryJob {
   id: number;
@@ -132,7 +138,8 @@ export interface SummaryJob {
   metadata: Metadata;
   numeration: Numeration;
   results: {
-    mode: string;
+    modelMetrics: Metrics;
+    fragmentMetrics: Metrics;
     data: Residue[];
   };
   pdb_file_string: string;
@@ -140,6 +147,7 @@ export interface SummaryJob {
 
 export interface Metadata {
   status: string;
+  analyzeNeighborhoods?: boolean;
 }
 
 export enum QualityScore {

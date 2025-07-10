@@ -363,23 +363,33 @@ const Panel: React.FC = () => {
   }
 
   const formatResidueRanges = (residues: number[]): string => {
-  if (!residues || residues.length === 0) return "";
-  const sorted = [...residues].sort((a, b) => a - b);
-  const ranges: string[] = [];
-  let start = sorted[0];
-  let end = sorted[0];
+    if (!residues || residues.length === 0) return "";
+    const sorted = [...residues].sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = sorted[0];
+    let end = sorted[0];
 
-  for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i] === end + 1) {
-      end = sorted[i];
-    } else {
-      ranges.push(start === end ? `${start}` : `${start}-${end}`);
-      start = end = sorted[i];
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === end + 1) {
+        end = sorted[i];
+      } else {
+        ranges.push(start === end ? `${getResidueByIndex(start).original_index}` : `${getResidueByIndex(start).original_index}-${getResidueByIndex(end).original_index}`);
+        start = end = sorted[i];
+      }
     }
+    ranges.push(start === end ? `${getResidueByIndex(start).original_index}` : `${getResidueByIndex(start).original_index}-${getResidueByIndex(end).original_index}`);
+    return ranges.join(",");
   }
-  ranges.push(start === end ? `${start}` : `${start}-${end}`);
-  return ranges.join(",");
-}
+
+  const getResidueByIndex = (index: number): Nucleotide => {
+    for (const chain of chainsState) {
+      const nucleotide = chain.nucleotides.find(n => n.index === index);
+      if (nucleotide) {
+        return nucleotide;
+      }
+    }
+    throw new Error(`Residue with index ${index} not found`);
+  }
 
   useEffect(() => {
     if (!jobID) return;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Loading from "../common/loading";
 import "../../App.css";
 import Molstar from "../visualizations/molStarSummaryComponent";
@@ -17,15 +17,12 @@ import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
 import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
 import { colorMapByRange, getColor } from "../utils/ColorUtils";
-import JobProcessing from "../common/JobProcessing";
-import HelpIcon from "../common/helpIcon";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { fetchMyData } from "../utils/api";
-import Logo from "../common/logo";
-import HomeIcon from "../common/homeIcon";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
+import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 
 const SummaryPanel: React.FC = () => {
   const { jobId } = useParams();
@@ -39,7 +36,6 @@ const SummaryPanel: React.FC = () => {
   const [showClashes, setShowClashes] = useState(true);
   const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
-  const [is3Dview, setIs3Dview] = useState(false);
   const [showRangeDetails, setshowRangeDetails] = useState(false);
   const [showDisplayOptions, setshowDisplayOptions] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -48,8 +44,6 @@ const SummaryPanel: React.FC = () => {
     QualityScore.CLASH_SCORE
   );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
-  const devColor = "#f3f4f6";
-  const selectedBorderColor = Colors.salmon;
 
   const getClashesForForna = () => {
     if (showClashes && myData) {
@@ -143,111 +137,6 @@ const SummaryPanel: React.FC = () => {
     });
   };
 
-  function toggle() {
-    setIs3Dview((is3Dview) => {
-      is3Dview = !is3Dview;
-      //console.log(is3Dview);
-      let switchViewButton = document.getElementById(
-        "switchViewButton"
-      ) as HTMLElement;
-      if (is3Dview) {
-        switchViewButton.textContent = "Switch to 2D view";
-      } else {
-        switchViewButton.textContent = "Switch to 3D view";
-      }
-      return is3Dview;
-    });
-  }
-
-  function colorColumn(selectedScore: QualityScore = QualityScore.CLASH_SCORE) {
-    const getEnumKeyByValue = (value: string): string | undefined => {
-      return Object.keys(QualityScore).find(
-        (key) => QualityScore[key as keyof typeof QualityScore] === value
-      );
-    };
-
-    const score = getEnumKeyByValue(selectedScore);
-
-    if (myData) {
-      document
-        .querySelectorAll(`td[class*="column-${score}"]`)
-        .forEach((cell, index) => {
-          const residue = myData.results.data[index];
-          if (residue) {
-            (cell as HTMLElement).style.backgroundColor = getColor(
-              residue,
-              selectedScore
-            );
-          }
-        });
-    }
-    return <div></div>;
-  }
-
-  const resetColumns = () => {
-    [
-      "CLASH_SCORE",
-      "BAD_ANGLES",
-      "BAD_BONDS",
-      "SUGAR_PUCKER_OUT",
-      "SUITENESS",
-    ].forEach((column) => {
-      document.querySelectorAll(`.column-${column}`).forEach((cell, index) => {
-        const isRowEven = index % 2 === 0;
-        (cell as HTMLElement).style.backgroundColor = isRowEven
-          ? "#ffffff"
-          : "#f3f4f6";
-      });
-    });
-  };
-
-  const handleClick = (
-    selectedScore: QualityScore,
-    event?: React.MouseEvent<HTMLTableHeaderCellElement>
-  ) => {
-    setQualityScore(selectedScore);
-    resetColumns();
-
-    let tableClashscore = document.getElementById(
-      "tableClashscore"
-    ) as HTMLElement;
-    let tableBadAngles = document.getElementById(
-      "tableBadAngles"
-    ) as HTMLElement;
-    let tableBadBonds = document.getElementById("tableBadBonds") as HTMLElement;
-    let tableSuiteness = document.getElementById(
-      "tableSuiteness"
-    ) as HTMLElement;
-    let tableSugarPuckerOut = document.getElementById(
-      "tableSugarPuckerOut"
-    ) as HTMLElement;
-    tableClashscore.style.backgroundColor = devColor;
-    tableClashscore.style.borderColor = "#d4d4d4";
-    tableClashscore.style.borderWidth = "1px";
-    tableBadAngles.style.backgroundColor = devColor;
-    tableBadAngles.style.borderColor = "#d4d4d4";
-    tableBadAngles.style.borderWidth = "1px";
-    tableBadBonds.style.backgroundColor = devColor;
-    tableBadBonds.style.borderColor = "#d4d4d4";
-    tableBadBonds.style.borderWidth = "1px";
-    tableSuiteness.style.backgroundColor = devColor;
-    tableSuiteness.style.borderColor = "#d4d4d4";
-    tableSuiteness.style.borderWidth = "1px";
-    tableSugarPuckerOut.style.backgroundColor = devColor;
-    tableSugarPuckerOut.style.borderColor = "#d4d4d4";
-    tableSugarPuckerOut.style.borderWidth = "1px";
-
-    if (selectedScore === QualityScore.CLASH_SCORE) {
-      tableClashscore.style.borderColor = selectedBorderColor;
-      tableClashscore.style.borderWidth = "3px";
-    } else if (selectedScore === QualityScore.BAD_ANGLES) {
-      tableBadAngles.style.borderColor = selectedBorderColor;
-      tableBadAngles.style.borderWidth = "3px";
-    } else {
-      tableBadBonds.style.borderColor = selectedBorderColor;
-      tableBadBonds.style.borderWidth = "3px";
-    }
-  };
 
   const toggleRangeMenuVisibility = () => {
     setshowRangeDetails((prevShowMenu) => !prevShowMenu);
@@ -280,11 +169,22 @@ const SummaryPanel: React.FC = () => {
           setChainsState(chains);
           console.log("data:", data);
 
-          if (data.metadata.status === "completed") {
+          if(data.metadata.status === "failed")
+          {
+            setMyError({
+              errorMessage: data.metadata.error_message,
+              statusCode: "500",
+            });
+            clearInterval(interval);
+            return;
+          }
+          else if (data.metadata.status === "completed") {
+            if (isLoading) setInitialQualityScore(data);
             clearInterval(interval); // Stop the interval loop
             setIsLoading(false);
           } else if (isLoading && data.metadata.status === "running" && data.results) {
             console.log("stop loading");
+            setInitialQualityScore(data);
             setIsLoading(false);
           }
         }
@@ -305,9 +205,15 @@ const SummaryPanel: React.FC = () => {
     return () => clearInterval(interval);
   }, [jobId]);
 
-  if (isLoading) {
-    return <Loading />;
-  }
+  const setInitialQualityScore = (data: SummaryJob) => {
+    if (data && data.metadata.analyzeNeighborhoods) {
+      setQualityScore(QualityScore.CLASH_SCORE);
+    } else {
+      setQualityScore(QualityScore.SUITENESS);
+    }
+  };
+
+  
 
   if (myError) {
     var message = myError.errorMessage;
@@ -315,173 +221,14 @@ const SummaryPanel: React.FC = () => {
     return <ErrorPage errorMessage={message} statusCode={code} />;
   }
 
+  if (isLoading) {
+    return <Loading />;
+  }
+
   if (!myData || !myData.results || !myData.results.data ) {
     return <ErrorPage />;
   }
 
-  // if (myData.metadata.status !== "completed") {
-  //   return <JobProcessing />;
-  // }
-
-  function makeTable(myData: SummaryJob) {
-    const indices: string[] = [];
-    const original_indices: number[] = [];
-
-    if (!myData.results || !myData.results.data) {
-      console.error("No data in myData.results.data");
-      return <ErrorPage />;
-    }
-
-    myData.results.data.forEach((residue) => {
-      if (residue) {
-        indices.push(residue.residue_number.toString());
-      } else {
-        console.warn("Unexpected residue format:", residue);
-      }
-    });
-
-    indices.forEach((index) => {
-      original_indices.push(myData.numeration[index]?.[0]);
-    });
-
-    {
-      {
-        colorGnodes();
-      }
-    }
-
-    // if (myData.results.mode === "fragment") {
-    //   const clashscore = myData.results.data?.[0].metrics.clashscore;
-    //   const pct_badangles = myData.results.data?.[0].metrics.pct_badangles;
-    //   const pct_badbonds = myData.results.data?.[0].metrics.pct_badbonds;
-    //   return (
-    //     <div className="max-h-[60vh] overflow-y-auto">
-    //       <table>
-    //         <tbody className="w-full">
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-gray-100 w-[70%] p-3 text-2xl font-semibold">
-    //               Residue numbers range
-    //             </th>
-    //             <td className="border border-neutral-300 bg-gray-100 w-[30%] text-2xl text-center">
-    //               {original_indices[0]} -{" "}
-    //               {original_indices[original_indices.length - 1]}
-    //             </td>
-    //           </tr>
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-    //               Clashscore
-    //             </th>
-    //             <td className="border border-neutral-300 bg-white text-2xl text-center">
-    //               {clashscore}
-    //             </td>
-    //           </tr>
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-gray-100 p-3 text-2xl font-semibold">
-    //               Bad angles [%]
-    //             </th>
-    //             <td className="border border-neutral-300 bg-gray-100 text-2xl text-center">
-    //               {pct_badangles}
-    //             </td>
-    //           </tr>
-    //           <tr>
-    //             <th className="border border-neutral-300 bg-white p-3 text-2xl font-semibold">
-    //               Bad bonds [%]
-    //             </th>
-    //             <td className="border border-neutral-300 bg-white text-2xl text-center">
-    //               {pct_badbonds}
-    //             </td>
-    //           </tr>
-    //         </tbody>
-    //       </table>
-    //     </div>
-    //   );
-    // } else if (myData.results.mode === "full") {
-      return (
-        <table className="text-center min-w-full text-wrap">
-          <thead className="sticky top-0">
-            <tr className="bg-gray-100 font-semibold">
-              <th className="border border-neutral-300 text-center py-2 px-1">
-                <div className="text-sm whitespace-normal">Residue numbers</div>
-              </th>
-              <th
-                id="tableClashscore"
-                className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                style={{ borderColor: selectedBorderColor, borderWidth: "3px" }}
-                onClick={(event) =>
-                  handleClick(QualityScore.CLASH_SCORE, event)
-                }
-              >
-                <div className="text-sm whitespace-normal">Clashscore</div>
-              </th>
-              <th
-                id="tableBadAngles"
-                className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                onClick={(event) => handleClick(QualityScore.BAD_ANGLES, event)}
-              >
-                <div className="text-sm whitespace-normal">Bad angles [%]</div>
-              </th>
-              <th
-                id="tableBadBonds"
-                className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                onClick={(event) => handleClick(QualityScore.BAD_BONDS, event)}
-              >
-                <div className="text-sm whitespace-normal">Bad bonds [%]</div>
-              </th>
-              <th
-                id="tableSuiteness"
-                className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                onClick={(event) => handleClick(QualityScore.SUITENESS, event)}
-              >
-                <div className="text-sm whitespace-normal">Suiteness</div>
-              </th>
-              <th
-                id="tableSugarPuckerOut"
-                className="border border-neutral-300 cursor-pointer text-center py-2 px-1"
-                onClick={(event) =>
-                  handleClick(QualityScore.SUGAR_PUCKER_OUT, event)
-                }
-              >
-                <div className="text-sm whitespace-normal">
-                  Sugar Pucker Outlier Type
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {myData.results.data.map((residue, index) => (
-              <tr
-                key={residue.residue_number}
-                className={
-                  residue.residue_number % 2 === 0 ? "bg-gray-100" : "bg-white"
-                }
-              >
-                <td className="border border-neutral-300">
-                  {original_indices[index]}
-                </td>
-                <td className="border border-neutral-300 column-CLASH_SCORE">
-                  {residue.metrics ? residue.metrics.clashscore : '-'}
-                </td>
-                <td className="border border-neutral-300 column-BAD_ANGLES">
-                  {residue.metrics ? residue.metrics.pct_badangles : '-'}
-                </td>
-                <td className="border border-neutral-300 column-BAD_BONDS">
-                  {residue.metrics ? residue.metrics.pct_badbonds : '-'}
-                </td>
-                <td className="border border-neutral-300 column-SUITENESS">
-                  {residue.residueMetrics ? residue.residueMetrics.suiteness : '-'}
-                </td>
-                <td className="border border-neutral-300 column-SUGAR_PUCKER_OUT">
-                  {residue.residueMetrics ? residue.residueMetrics.pucker_outlier_type : '-'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      );
-    // } else {
-    //   return <ErrorPage />;
-    // }
-  }
 
   function createRangeMenu() {
     return (
@@ -695,11 +442,19 @@ const SummaryPanel: React.FC = () => {
           className="flex-1 overflow-y-auto overflow-x-hidden"
         >
           <div className="flex flex-col min-h-full">
+            <div className="w-2/3 3xl:w-1/2">
+              <GlobalResultsTable 
+              modelMetrics={myData.results.modelMetrics} 
+              fragmentMetrics={myData.results.fragmentMetrics} />
+            </div>
             <div className="bg-transparent z-10">
               <div className="overflow-x-auto">
                 {/* residue table */}
                 <ResultsResidueTable
                 data={myData.results.data}
+                analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
+                selectedScore={selectedQualityScore}
+                setSelectedScore={setQualityScore}
                 />
               </div>
             </div>
@@ -732,7 +487,6 @@ const SummaryPanel: React.FC = () => {
                   setChains={setChainsState}
                   initialized={initialized}
                   setInitialized={setInitialized}
-                  is3dEnabled={is3Dview}
                   resultResidues={myData.results.data}
                   selectedQualityScore={selectedQualityScore}
                 />

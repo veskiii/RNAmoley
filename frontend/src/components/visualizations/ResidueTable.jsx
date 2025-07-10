@@ -106,11 +106,11 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
               key={`${selectedChain}-id-${index}`}
               className={[
                 "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
-                selectedResidueIds.includes(index + 1)
+                selectedResidueIds.includes(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-moley-backgroundLightGreen"
               ].join(" ")}
-              onClick={() => handleResidueClick(index + 1)}
+              onClick={() => handleResidueClick(nucleotide.index)}
             >
               {nucleotide.original_index}
             </td>
@@ -123,11 +123,11 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
               key={`${selectedChain}-name-${index}`}
               className={[
                 "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
-                selectedResidueIds.includes(index + 1)
+                selectedResidueIds.includes(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-gray-300"
               ].join(" ")}
-              onClick={() => handleResidueClick(index + 1)}
+              onClick={() => handleResidueClick(nucleotide.index)}
             >
               {nucleotide.base}
             </td>
@@ -142,11 +142,11 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
               key={`${selectedChain}-index-${index}`}
               className={[
                 "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
-                selectedResidueIds.includes(index + 1)
+                selectedResidueIds.includes(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-moley-backgroundLightGreen"
               ].join(" ")}
-              onClick={() => handleResidueClick(index + 1)}
+              onClick={() => handleResidueClick(nucleotide.index)}
             >
               {nucleotide.structure}
             </td>
@@ -160,7 +160,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
             <td
               key={`${selectedChain}-name-${index}`}
               className="w-12 p-2 bg-moley-backgroundLightGreen text-center"
-              onClick={() => handleStructuralElementClick(index + 1)}
+              onClick={() => handleStructuralElementClick(nucleotide.index)}
             >
               {nucleotide.structuralElements && nucleotide.structuralElements.length > 0
                                                     ? nucleotide.structuralElements

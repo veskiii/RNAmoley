@@ -34,11 +34,12 @@ export function createAnalysisWorker() {
     radius: number;
     interval: number;
     metadata: Metadata;
+    analyzeSphereFilesEnabled: boolean;
   }>(
     "analysis",
     async (job) => {
-      const { jobID, modelNumber, residues, radius, interval, metadata } = job.data;
-      await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata);
+      const { jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled } = job.data;
+      await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled);
     },
     {
       connection: {
@@ -58,7 +59,8 @@ export async function addAnalysisTask(
   residues: ChainElement[],
   radius: number,
   interval: number,
-  metadata: Metadata
+  metadata: Metadata,
+  analyzeSphereFilesEnabled: boolean
 ) {
   await analysisQueue.add("analyze-structure", {
     jobID,
@@ -67,6 +69,7 @@ export async function addAnalysisTask(
     radius,
     interval,
     metadata,
+    analyzeSphereFilesEnabled,
   }, {jobId: jobID});
 }
   
@@ -77,11 +80,10 @@ async function performAnalysis(
   residues: ChainElement[],
   radius: number,
   interval: number,
-  metadata: Metadata
+  metadata: Metadata,
+  analyzeSphereFilesEnabled: boolean
 ) {
   try {
-    const analyzeSphereFilesEnabled = (radius < 0 || interval < 0) ? false : true;
-
     const analysisOutput = await analyzeStructure(
       jobID,
       modelNumber,
@@ -121,7 +123,11 @@ export async function analyzeStructure(
   metadata.status = "running";
   await saveMetadata(jobID, metadata);
 
-  const oneLineAnalysis = await fetchOneLineAnalysis(jobID, modelNumber);
+  await writeSelectedResiduesToFile(jobID, modelNumber, residues);
+  await createFragmentPDB(jobID, modelNumber);
+  const fragmentMetrics = await fetchFragmentMetrics(jobID, modelNumber);
+
+  const modelMetrics = await fetchModelMetrics(jobID, modelNumber);
   const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber);
 
   const numeration = await fetchNumeration(jobID, modelNumber);
@@ -160,13 +166,15 @@ export async function analyzeStructure(
 
   await saveResults(jobID, {
     data: initialData,
-    modelMetrics: oneLineAnalysis,
+    modelMetrics: modelMetrics,
+    fragmentMetrics: fragmentMetrics,
   });
 
   if (!analyzeSphereFilesEnabled) {
     return {
       data: initialData,
-      modelMetrics: oneLineAnalysis,
+      modelMetrics: modelMetrics,
+      fragmentMetrics: fragmentMetrics,
     };
   }
 
@@ -177,12 +185,14 @@ export async function analyzeStructure(
     files,
     jobID,
     initialData,
-    oneLineAnalysis
+    modelMetrics,
+    fragmentMetrics
   );
 
   return {
     data: results,
-    modelMetrics: oneLineAnalysis,
+    modelMetrics: modelMetrics,
+    fragmentMetrics: fragmentMetrics,
   };
 }
 
@@ -190,7 +200,8 @@ async function analyzeSphereFilesIncremental(
   files: string[],
   jobID: UUID,
   initialData: nucleotideResult[],
-  modelMetrics: metrics
+  modelMetrics: metrics,
+  fragmentMetrics: metrics
 ): Promise<nucleotideResult[]> {
   const resultMap = new Map<number, nucleotideResult>();
   initialData.forEach((res) => resultMap.set(res.residue_number, { ...res }));
@@ -244,6 +255,7 @@ async function analyzeSphereFilesIncremental(
     await saveResults(jobID, {
       data: sortedResults,
       modelMetrics,
+      fragmentMetrics,
     });
   }
 
@@ -303,12 +315,26 @@ async function fetchResidueAnalysis(
   return (await residueAnalysis.json()) as residueMetrics[];
 }
 
-async function fetchOneLineAnalysis(
+async function fetchModelMetrics(
   jobID: UUID,
   modelNumber: string
 ): Promise<metrics> {
   const response = await fetch(
     `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/models/${modelNumber}.pdb`,
+    { keepalive: true }
+  );
+  if (!response.ok) {
+    throw new Error("One-line analysis error: " + response.statusText);
+  }
+  return (await response.json()) as metrics;
+}
+
+async function fetchFragmentMetrics(
+  jobID: UUID,
+  modelNumber: string
+): Promise<metrics> {
+  const response = await fetch(
+    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/models/${modelNumber}_fragment.pdb`,
     { keepalive: true }
   );
   if (!response.ok) {
@@ -405,4 +431,26 @@ const findAnnotationByChainAndResidue = (
         nucleotideIndex <= range.end
     )
   );
+}
+
+async function writeSelectedResiduesToFile(
+  jobID: UUID,
+  modelNumber: string,
+  residues: ChainElement[]
+): Promise<void> {
+  const residuesFilePath = `${JOBS_DIR}/${jobID}/models/${modelNumber}_residues.json`;
+  await fs.writeFile(residuesFilePath, JSON.stringify(residues, null, 2));
+}
+
+async function createFragmentPDB(
+  jobID: UUID,
+  modelNumber: string
+) {
+  const fragment = await fetch(
+    `${TOOLS_URL}/fragment?id=${jobID}&modelNumber=${modelNumber}`,
+    { method: "POST" }
+  );
+  if (!fragment.ok) {
+    throw new Error("Fragment extraction error: " + fragment.statusText);
+  }
 }

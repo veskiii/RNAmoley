@@ -4,7 +4,6 @@ import { randomUUID } from "crypto";
 import { getJobsQuery, getJobByIdQuery, createJobQuery } from "./queries.js";
 import {
   ALLOWED_EXTENSIONS,
-  analyzeStructureFragment,
   deleteFile,
   deleteJobDirectory,
   fetchJSONFile,
@@ -14,19 +13,15 @@ import {
   MAX_FILE_SIZE,
   moveToJobDirectroy,
   saveOriginalNumeration,
-  uploadFile,
   uploadFileFromPDBCode,
-  saveJSONFileModels,
-  saveJSONFileRoot,
   validateFile,
   saveMetadata,
   fetchModelFileAsString,
   readMetadata,
   readResults,
-  saveResults,
-  analyzeStructureWalkingSphere,
   createZip,
   getDemoFiles,
+  JOBS_DIR,
 } from "./utils.js";
 import fetch from "node-fetch";
 import type { UUID } from "crypto";
@@ -36,12 +31,13 @@ import type {
   ChainElement,
   Job,
   Metadata,
-  nucleotideResult,
   splitModelsResponse,
   StructuralElement,
 } from "./types.js";
 import { TOOLS_URL } from "../server.js";
 import { addAnalysisTask } from "./analysis.js";
+import { existsSync } from "fs";
+import { join } from "path";
 
 export async function getJobs(req: Request, res: Response) {
   db.query(getJobsQuery, (err, result) => {
@@ -148,7 +144,12 @@ export async function getJobById(req: Request, res: Response) {
       return;
     }
 
-    const results = await readResults(id);
+    // check if results file exists
+    const resultsFilePath = join(JOBS_DIR, id, "results.json");
+    let results: Analysis_results | null = null;
+    if (existsSync(resultsFilePath)) {
+      results = await readResults(id);
+    }
 
     const jobResponse: Job = {
       id: result.rows[0].id,
@@ -601,11 +602,14 @@ export async function analyzeStructure(req: Request, res: Response) {
     return;
   }
 
+  analyzeNeighborhoods = (radius < 0 || interval < 0) ? false : true;
+  metadata.analyzeNeighborhoods = analyzeNeighborhoods;
+
   metadata.status = "starting";
   metadata.last_used_model = parseInt(modelNumber);
   await saveMetadata(id, metadata);
 
-  addAnalysisTask(id, modelNumber, residues, radius, interval, metadata);
+  addAnalysisTask(id, modelNumber, residues, radius, interval, metadata, analyzeNeighborhoods);
 
   db.query(getJobByIdQuery, [id], async (err, result) => {
     if (err) {

@@ -252,15 +252,6 @@ export async function runMotifExtractor(id: string, numberOfModels: number) {
   const results = [];
 
   for (let i = 1; i <= numberOfModels; i++) {
-    // const motifExtractor = spawnSync(
-    //   "motif-extractor",
-    //   [`--dbn`, `${JOBS_DIR}/${id}/models/${i}.dot`],
-    //   { encoding: "utf-8" }
-    // );
-    // const stdout = motifExtractor.stdout.toString();
-    // const result = await formatOutput(stdout);
-    // parse output to list of structural elements
-    // skip first three lines - dotbracket, sequence, and name
     const output = await retrieveMotifsFromJson(
       `${JOBS_DIR}/${id}/models/${i}.json`
     );
@@ -314,3 +305,33 @@ export async function walkingSphere(
   console.log(`Walking sphere on model ${modelNumber} of ${id} finished.`);
   return { success: true };
 }
+
+export async function runFragmentExtraction(
+  id: string,
+  modelNumber: string
+) {
+  console.log(`Running fragment extraction on model ${modelNumber} of ${id}...`);
+
+  const fragment = spawnSync(`${SCRIPTS_DIR}/Extract_fragment.py`, [
+    `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
+    `${JOBS_DIR}/${id}/models/${modelNumber}_residues.json`,
+    `${JOBS_DIR}/${id}/models/${modelNumber}_fragment.pdb`,
+  ], { encoding: "utf-8" });
+
+  // console.log("stdout:", fragment.stdout);
+  // console.error("stderr:", fragment.stderr);
+  if (fragment.error) {
+    console.error("Error running fragment extraction: ", fragment.error);
+    throw fragment.error;
+  }
+
+  try {
+    await fs.access(`${JOBS_DIR}/${id}/models/${modelNumber}_fragment.pdb`);
+  } catch (e) {
+    console.error("Fragment file was not created!");
+    throw new Error("Fragment file was not created!");
+  }
+
+  return { success: true };
+}
+

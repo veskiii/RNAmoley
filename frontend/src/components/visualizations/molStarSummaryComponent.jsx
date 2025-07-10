@@ -41,7 +41,6 @@ const Molstar = (props) => {
     setInitialized,
     chains,
     setChains,
-    is3dEnabled,
     resultResidues,
     selectedQualityScore,
   } = props;
