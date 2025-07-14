@@ -9,8 +9,8 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
     const chainsSet = new Set();
-    console.log(data.length);
-    console.log(data);
+    // console.log(data.length);
+    // console.log(data);
     data.forEach((nucleotide) => {
       if (nucleotide.chainID) {
         chainsSet.add(nucleotide.chainID);
@@ -73,7 +73,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
   }, [chainOptions]);
 
   useEffect(() => {
-    console.log("ResidueTable rerendered");
+    // console.log("ResidueTable rerendered");
   }, [selectedChain]);
 
   useEffect(() => {

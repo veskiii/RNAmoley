@@ -186,6 +186,8 @@ const FornacSummaryComponent = ({
       );
       // @ts-ignore
       setAnimation ? container.startAnimation() : container.stopAnimation();
+
+      colorGnodes();
     }
   }, [
     labelInterval,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "../common/loading";
 import "../../App.css";
@@ -44,6 +44,7 @@ const SummaryPanel: React.FC = () => {
     QualityScore.CLASH_SCORE
   );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
+  const hasStoppedLoading = useRef(false);
 
   const getClashesForForna = () => {
     if (showClashes && myData) {
@@ -78,7 +79,7 @@ const SummaryPanel: React.FC = () => {
   const colorGnodes = () => {
     if (!myData || !myData.results || !myData.results.data) {
       console.warn("No data in myData.results.data");
-      return <ErrorPage />;
+      return;
     }
     // if (myData.results.mode === "fragment" || myData.results.mode === "full") {
       //@ts-ignore
@@ -119,6 +120,8 @@ const SummaryPanel: React.FC = () => {
     showClashes,
     directionArrows,
     setAnimation,
+    selectedQualityScore,
+    myData,
   ]);
 
   const getColorMap = () => {
@@ -164,29 +167,42 @@ const SummaryPanel: React.FC = () => {
           clearInterval(interval);
           return;
         } else {
-          setMyData(data);
-          const chains = transformJobToChains(data);
-          setChainsState(chains);
+            setMyData((prevData) => {
+            if (JSON.stringify(prevData) !== JSON.stringify(data)) {
+              const chains = transformJobToChains(data);
+              setChainsState((prevChains) => 
+              JSON.stringify(prevChains) !== JSON.stringify(chains) ? chains : prevChains
+              );
+              return data;
+            }
+            return prevData;
+            });
           console.log("data:", data);
 
-          if(data.metadata.status === "failed")
-          {
+            if (data.metadata.status === "failed") {
             setMyError({
               errorMessage: data.metadata.error_message,
               statusCode: "500",
             });
             clearInterval(interval);
             return;
-          }
-          else if (data.metadata.status === "completed") {
-            if (isLoading) setInitialQualityScore(data);
-            clearInterval(interval); // Stop the interval loop
-            setIsLoading(false);
-          } else if (isLoading && data.metadata.status === "running" && data.results) {
-            console.log("stop loading");
-            setInitialQualityScore(data);
-            setIsLoading(false);
-          }
+            }
+            if (
+              data.metadata.status === "running" &&
+              data.results &&
+              isLoading &&
+              !hasStoppedLoading.current
+            ) {
+              console.log("stop loading ", isLoading);
+              setInitialQualityScore(data);
+              setIsLoading(false);
+              hasStoppedLoading.current = true;
+            }
+            if (data.metadata.status === "completed") {
+              if (isLoading) setInitialQualityScore(data);
+              clearInterval(interval);
+              setIsLoading(false);
+            }
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
