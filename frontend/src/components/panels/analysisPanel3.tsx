@@ -324,7 +324,7 @@ const Panel: React.FC = () => {
     }
   }
 
-  const removeSelectedFragment = ( selectedFragmentName: string ) => {
+  const removeSelectedFragment = ( selectedFragmentName: string, otherFragmentsToRemove?: string[] ) => {
     console.log("Removing fragment:", selectedFragmentName);
     // Get the fragment to remove
     const fragmentToRemove = selectedFragments.find(
@@ -347,11 +347,11 @@ const Panel: React.FC = () => {
                 selectedFragments.some(
                   (f) =>
                     f.name !== selectedFragmentName &&
+                    (otherFragmentsToRemove == null || !otherFragmentsToRemove?.includes(f.name)) &&
                     f.chainName === fragmentToRemove.chainName &&
                     f.residues.includes(nucleotide.index)
                 ) === false
               ) {
-                console.log("Deselecting nucleotide:", nucleotide.index);
                 return { ...nucleotide, selected: false };
               }
               return nucleotide;

@@ -73,7 +73,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           if (allResiduesSelected) {
             // Dla każdego elementu strukturalnego klikniętego nukleotydu wywołaj deselectFragment
             clickedStructuralNames.forEach(name => {
-              deselectFragment(name);
+              deselectFragment(name, clickedStructuralNames);
             });
           } else {
             // Dla każdego elementu strukturalnego klikniętego nukleotydu wywołaj selectFragment
