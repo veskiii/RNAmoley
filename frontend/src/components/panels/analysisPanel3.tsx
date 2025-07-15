@@ -26,6 +26,10 @@ import ResidueTable from "../visualizations/ResidueTable";
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
+
+  const [sphereRadius, setSphereRadius] = useState<number>(5);
+  const [sphereInterval, setSphereInterval] = useState<number>(1);
+
   const [labelInterval, setLabelInterval] = useState(10);
   const [numbering, setNumbering] = useState(false);
   const [nodeOutline, setNodeOutline] = useState(true);
@@ -101,30 +105,34 @@ const Panel: React.FC = () => {
 
   async function handleNavigate() {
     if (useWalkingSphere) {
-      const radius = parseInt(
-        "5"
-      );
-      const interval = parseInt(
-        "1"
-      );
-      if (radius < 1) {
+      if (sphereRadius < 1) {
         alert(
-          `Invalid radius value: ${radius}. Enter value greater or equal 1.`
+          `Invalid radius value: ${sphereRadius}. Enter value greater or equal 1.`
         );
         return;
-      } else if (interval < 1) {
+      } else if (sphereInterval < 1) {
         alert(
-          `Invalid interval value: ${interval}. Enter value greater or equal 1.`
+          `Invalid interval value: ${sphereInterval}. Enter value greater or equal 1.`
         );
         return;
-      } 
+      }
+      await sendDataToAnalyze(
+        useWalkingSphere,
+        jobID,
+        selectedModel,
+        selectedList,
+        sphereRadius,
+        sphereInterval
+      );
     }
-    await sendDataToAnalyze(
-      useWalkingSphere,
-      jobID,
-      selectedModel,
-      selectedList
-    );
+    else {
+      await sendDataToAnalyze(
+        useWalkingSphere,
+        jobID,
+        selectedModel,
+        selectedList
+      );
+    }
     navigate(`/summary/${jobID}`);
     
   }
@@ -429,7 +437,104 @@ const Panel: React.FC = () => {
           >
             {/* Scrollowalna zawartość sidebar'a */}
             <div className="rounded-scrollbar overflow-auto flex-1">
-              {/* ...tutaj Twoja zawartość sidebar'a... */}
+              {/* Neighborhood sphere group */}
+              {useWalkingSphere && (
+                <div className="mb-4 p-2 bg-white rounded shadow">
+                  <h3 className="font-bold mb-2">Neighborhood sphere</h3>
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium mb-1">Radius</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={sphereRadius}
+                      onChange={e => setSphereRadius(parseInt(e.target.value))}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Interval</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={sphereInterval}
+                      onChange={e => setSphereInterval(parseInt(e.target.value))}
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Fornac group */}
+              <div className="mb-4 p-2 bg-white rounded shadow">
+                <h3 className="font-bold mb-2">Fornac settings</h3>
+                <div className="flex flex-col gap-2">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={numbering}
+                      onChange={e => setNumbering(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Numbering
+                  </label>
+                  {numbering && (
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Label interval</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={labelInterval}
+                        onChange={e => setLabelInterval(Number(e.target.value))}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    </div>
+                  )}
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={nodeOutline}
+                      onChange={e => setNodeOutline(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Node outline
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={nodeLabel}
+                      onChange={e => setNodeLabel(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Node label
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={directionArrows}
+                      onChange={e => setDirectionArrows(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Direction arrows
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={links}
+                      onChange={e => setLinks(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Show links
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={animation}
+                      onChange={e => setAnimation(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Animation
+                  </label>
+                </div>
+              </div>
             </div>
             {/* Przycisk Analyze na dole sidebar'a */}
             <div className="mt-4 flex justify-center">

@@ -58,7 +58,9 @@ export async function sendDataToAnalyze(
   analyzeNeighborhoods: boolean,
   jobID: string | undefined,
   selectedModel: number,
-  selectedList: ChainElement[]
+  selectedList: ChainElement[],
+  sphereRadius?: number,
+  sphereInterval?: number
 ): Promise<string | void> {
 
   if (!jobID) {
@@ -73,17 +75,11 @@ export async function sendDataToAnalyze(
     interval: -1,
   };
 
-  if (analyzeNeighborhoods) {
-    const radius = parseInt(
-      "5"
-    );
-    const interval = parseInt(
-      "1"
-    );
+  if (analyzeNeighborhoods && sphereRadius && sphereInterval) {
     jobToPost = {
       ...jobToPost,
-      radius: radius,
-      interval: interval,
+      radius: sphereRadius,
+      interval: sphereInterval,
     };
   }
 
