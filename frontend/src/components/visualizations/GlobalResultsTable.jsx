@@ -1,4 +1,3 @@
-import { mode } from "d3";
 import React from "react";
 
 const fieldLabels = {
@@ -40,9 +39,9 @@ const GlobalResultsTable = ({ modelMetrics, fragmentMetrics }) => (
     <table className="min-w-full border border-gray-300 rounded-lg">
         <thead>
             <tr>
-                <th className="px-4 py-2 border-b border-gray-300 bg-gray-100 text-left font-semibold">Parameter</th>
-                <th className="px-4 py-2 border-b border-gray-300 bg-gray-100 text-left font-semibold">Model Value</th>
-                <th className="px-4 py-2 border-b border-gray-300 bg-gray-100 text-left font-semibold">Fragment Value</th>
+                <th className="px-4 py-2 border-b border-gray-300 bg-moley-backgroundGreen text-left font-semibold">Parameter</th>
+                <th className="px-4 py-2 border-b border-gray-300 bg-moley-backgroundGreen text-left font-semibold">Model Value</th>
+                <th className="px-4 py-2 border-b border-gray-300 bg-moley-backgroundGreen text-left font-semibold">Fragment Value</th>
             </tr>
         </thead>
         <tbody>
