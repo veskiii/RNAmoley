@@ -444,6 +444,87 @@ const SummaryPanel: React.FC = () => {
             {/* Scrollowalna zawartość sidebar'a */}
             <div className="rounded-scrollbar overflow-auto flex-1">
               {/* ...tutaj zawartość sidebar'a... */}
+              {/* Fornac group */}
+              <div className="mb-4 p-2 bg-white rounded shadow">
+                <h3 className="font-bold mb-2">Fornac settings</h3>
+                <div className="flex flex-col gap-2">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={numbering}
+                      onChange={e => setNumbering(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Numbering
+                  </label>
+                  {numbering && (
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Label interval</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={labelInterval}
+                        onChange={e => setLabelInterval(Number(e.target.value))}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    </div>
+                  )}
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={nodeOutline}
+                      onChange={e => setNodeOutline(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Node outline
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={nodeLabel}
+                      onChange={e => setNodeLabel(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Node label
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={directionArrows}
+                      onChange={e => setDirectionArrows(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Direction arrows
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={links}
+                      onChange={e => setLinks(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Show links
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={showClashes}
+                      onChange={e => setShowClashes(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Show Clashes
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={animation}
+                      onChange={e => setAnimation(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Animation
+                  </label>
+                </div>
+              </div>
             </div>
             {/* Przyciski pobierania*/}
             <div className="mt-4 flex justify-center">
@@ -489,7 +570,7 @@ const SummaryPanel: React.FC = () => {
                   links={links}
                   showClashes={showClashes}
                   directionArrows={directionArrows}
-                  setAnimation={false}
+                  setAnimation={animation}
                   job={myData}
                   colorGnodes={colorGnodes}
                 />
