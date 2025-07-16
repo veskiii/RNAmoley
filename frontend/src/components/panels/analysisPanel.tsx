@@ -57,6 +57,7 @@ const Panel: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
   const isDisabled = !(selectedList.length > 0);
   const [sidebarTab, setSidebarTab] = useState(0);
+  const [modelSelections, setModelSelections] = useState<Record<number, {chainsState: Chain[], selectedFragments: SelectedFragment[]}>>({});
 
   useEffect(() => {
     setSelectedChain(chainsState[0]?.name.slice(-1) || "");
@@ -139,13 +140,42 @@ const Panel: React.FC = () => {
     
   }
 
-  const handleSetSelectedModel = (e: SelectChangeEvent) => {
-    setSelectedModel(parseInt(e.target.value));
-  };
+  useEffect(() => {
+    if (!selectedModel) return;
+    setModelSelections(prev => ({
+      ...prev,
+      [selectedModel]: {
+        chainsState,
+        selectedFragments,
+      }
+    }));
+  }, [chainsState, selectedFragments, selectedModel]);
 
   const changeModel = (model: number) => {
     if (!jobID || model === selectedModel) return;
-    loadData(jobID, model);
+    setModelSelections(prev => ({
+      ...prev,
+      [selectedModel]: {
+        chainsState,
+        selectedFragments,
+      }
+    }));
+    loadData(jobID, model).then(() => {
+      const saved = modelSelections[model];
+      if (saved) {
+        setChainsState(saved.chainsState);
+        setSelectedFragments(saved.selectedFragments);
+      } else {
+        setChainsState(prev =>
+          prev.map(chain => ({
+            ...chain,
+            nucleotides: chain.nucleotides.map(n => ({ ...n, selected: false }))
+          }))
+        );
+        setSelectedFragments([]);
+      }
+      setSelectedModel(model);
+    });
   };
 
   const selectFragment = (name: string, chainName: string, residueIds: number[]) => {
