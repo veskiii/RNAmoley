@@ -9,8 +9,8 @@ import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import Typography from "@mui/material/Typography";
-import { SelectChangeEvent } from "@mui/material/Select";
-import { Job, Chain, Nucleotide } from "../utils/types";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import { Job, Chain, Nucleotide, SelectedFragment, ChainElement } from "../utils/types";
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors";
@@ -20,10 +20,16 @@ import ErrorPage from "../common/ErrorPage";
 import RangeSelecting from "../common/rangeSelecting";
 import HomeIcon from "../common/homeIcon";
 import SmallScreenPage from "../common/smallScreenPage";
+import TopPanel from "../common/topPanel";
+import ResidueTable from "../visualizations/ResidueTable";
 
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
+
+  const [sphereRadius, setSphereRadius] = useState<number>(5);
+  const [sphereInterval, setSphereInterval] = useState<number>(1);
+
   const [labelInterval, setLabelInterval] = useState(10);
   const [numbering, setNumbering] = useState(false);
   const [nodeOutline, setNodeOutline] = useState(true);
@@ -31,11 +37,10 @@ const Panel: React.FC = () => {
   const [links, setLinks] = useState(true);
   const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
-  const [is3Dview, setIs3Dview] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [selectedModel, setSelectedModel] = useState<number>(1);
-  const [analyzeWholeStructure, setAnalyzeWholeStructure] = useState(false);
+  const [useWalkingSphere, setUseWalkingSphere] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>(
     chainsState[0]?.name.slice(-1) || ""
   );
@@ -43,13 +48,15 @@ const Panel: React.FC = () => {
   const [inputValueEnd, setInputValueEnd] = useState<string>("");
   const [minId, setMinId] = useState<string>("");
   const [maxId, setMaxId] = useState<string>("");
-  const [selectedList, setSelectedList] = useState<number[]>([]);
+  const [selectedList, setSelectedList] = useState<ChainElement[]>([]);
+  const [selectedFragments, setSelectedFragments] = useState<SelectedFragment[]>([]);
   const [isViewInitialized, setIsViewInitialized] = useState<boolean>(true);
   const { jobId } = useParams();
   const jobID = jobId;
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const isDisabled = !(analyzeWholeStructure || selectedList.length > 0);
+  const isDisabled = !(selectedList.length > 0);
+  const [sidebarTab, setSidebarTab] = useState(0);
 
   useEffect(() => {
     setSelectedChain(chainsState[0]?.name.slice(-1) || "");
@@ -65,23 +72,6 @@ const Panel: React.FC = () => {
 
   const handleChange = (event: SelectChangeEvent) => {
     setSelectedChain(event.target.value);
-  };
-
-  const handleAnalyzeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!analyzeWholeStructure) {
-      setSelectedList([]);
-      setChainsState((prevChains) => {
-        const newChains = prevChains.map((chain) => ({
-          ...chain,
-          nucleotides: chain.nucleotides.map((nucleotide) => ({
-            ...nucleotide,
-            selected: false,
-          })),
-        }));
-        return newChains;
-      });
-    }
-    setAnalyzeWholeStructure(e.target.checked);
   };
 
   //do placeholder z max i min original_id nukleotydów podanego chain
@@ -104,8 +94,10 @@ const Panel: React.FC = () => {
     try {
       const data = await fetchJobData(jobID, model);
       setMyData(data);
+      console.log(data);
       const chains = transformJobToChains(data);
       setChainsState(chains);
+      setSelectedModel(model);
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -113,42 +105,38 @@ const Panel: React.FC = () => {
     }
   }
 
-  function handleNavigate() {
-    if (analyzeWholeStructure) {
-      const radius = parseInt(
-        (document.getElementById("radiusInput") as HTMLInputElement).value
-      );
-      const interval = parseInt(
-        (document.getElementById("intervalInput") as HTMLInputElement).value
-      );
-      if (radius < 1) {
+  async function handleNavigate() {
+    if (useWalkingSphere) {
+      if (sphereRadius < 1) {
         alert(
-          `Invalid radius value: ${radius}. Enter value greater or equal 1.`
+          `Invalid radius value: ${sphereRadius}. Enter value greater or equal 1.`
         );
         return;
-      } else if (interval < 1) {
+      } else if (sphereInterval < 1) {
         alert(
-          `Invalid interval value: ${interval}. Enter value greater or equal 1.`
+          `Invalid interval value: ${sphereInterval}. Enter value greater or equal 1.`
         );
         return;
-      } else {
-        // sendDataToAnalyze(
-        //   analyzeWholeStructure,
-        //   jobID,
-        //   selectedModel,
-        //   selectedList
-        // );
-        navigate(`/summary/${jobID}`);
       }
-    } else {
-      // sendDataToAnalyze(
-      //   analyzeWholeStructure,
-      //   jobID,
-      //   selectedModel,
-      //   selectedList
-      // );
-      navigate(`/summary/${jobID}`);
+      await sendDataToAnalyze(
+        useWalkingSphere,
+        jobID,
+        selectedModel,
+        selectedList,
+        sphereRadius,
+        sphereInterval
+      );
     }
+    else {
+      await sendDataToAnalyze(
+        useWalkingSphere,
+        jobID,
+        selectedModel,
+        selectedList
+      );
+    }
+    navigate(`/summary/${jobID}`);
+    
   }
 
   const handleSetSelectedModel = (e: SelectChangeEvent) => {
@@ -160,18 +148,275 @@ const Panel: React.FC = () => {
     loadData(jobID, model);
   };
 
+  const selectFragment = (name: string, chainName: string, residueIds: number[]) => {
+    // check if all residues are already selected
+    const allSelected = residueIds.every((id) =>
+      chainsState.some(
+        (chain) =>
+          chain.name.slice(-1) === chainName &&
+          chain.nucleotides.some((nucleotide) => nucleotide.index === id && nucleotide.selected)
+      )
+    );
+    if (allSelected) {
+      // If all residues are selected, dont do anything
+      return;
+    } else if (selectedFragments.some(f => f.name === name && f.chainName === chainName)) {
+      // If fragment with the same name and chain already exists, update it
+      setSelectedFragments((prev) =>
+        prev.map((f) =>
+          f.name === name && f.chainName === chainName
+            ? {
+                ...f,
+                deselectedResidues: [],
+              }
+            : f
+        )
+      );
+    } else {
+      // Otherwise, set selected fragment
+      setSelectedFragments((prev) => [
+        ...prev,
+        { name, chainName, residues: residueIds, deselectedResidues: [] },
+      ]);
+    }
+
+    // Zaznacz odpowiednie nukleotydy w chainsState
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {
+        if (chain.name.slice(-1) === chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) =>
+              residueIds.includes(nucleotide.index)
+                ? { ...nucleotide, selected: true }
+                : nucleotide
+            ),
+          };
+        }
+        return chain;
+      })
+    );
+  };
+
+  const selectResidue = (chainName: string, residueId: number) => {
+    // check if residue is already selected
+    const isSelected = chainsState.some(
+      (chain) =>
+        chain.name.slice(-1) === chainName &&
+        chain.nucleotides.some((nucleotide) => nucleotide.index === residueId && nucleotide.selected)
+    );
+    if (isSelected) {
+      // If residue is already selected, deselect it
+      deselectResidue(chainName, residueId);
+      return;
+    }
+    // Otherwise, select the residue
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {   
+        if (chain.name.slice(-1) === chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              if (nucleotide.index === residueId) {
+                return { ...nucleotide, selected: true };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      }
+    )
+    );
+    // check if residue is part of any selected fragment
+    const fragment = selectedFragments.find(
+      (f) =>
+        f.chainName === chainName && f.residues.includes(residueId)
+    );
+    if (fragment) {
+      // If residue is part of a fragment, remove it from deselected residues
+      setSelectedFragments((prev) =>
+        prev.map((f) =>
+          f.name === fragment.name
+            ? {
+                ...f,
+                deselectedResidues: f.deselectedResidues.filter(
+                  (id) => id !== residueId
+                ),
+              }
+            : f
+        )
+      );
+    } else {
+      const selectionFragments = selectedFragments
+        .filter(f => f.chainName === chainName && f.name.startsWith("Selection"));
+
+      let allResidues = [
+        ...selectionFragments.flatMap(f => f.residues.filter(id => !f.deselectedResidues?.includes(id))),
+        residueId,
+      ];
+
+      allResidues = Array.from(new Set(allResidues)).sort((a, b) => a - b);
+
+      const ranges: number[][] = [];
+      let rangeStart = allResidues[0];
+      let prev = allResidues[0];
+      for (let i = 1; i < allResidues.length; i++) {
+        if (allResidues[i] === prev + 1) {
+          prev = allResidues[i];
+        } else {
+          ranges.push([rangeStart, prev]);
+          rangeStart = prev = allResidues[i];
+        }
+      }
+      ranges.push([rangeStart, prev]);
+
+      setSelectedFragments(prev =>
+        [
+          ...prev.filter(f => !(f.chainName === chainName && f.name.startsWith("Selection"))),
+          ...ranges.map(([start, end]) => ({
+        name: start === end ? `Selection ${start}` : `Selection ${start}-${end}`,
+        chainName,
+        residues: Array.from({ length: end - start + 1 }, (_, i) => start + i),
+        deselectedResidues: [],
+          })),
+        ]
+      );
+    }
+  }
+
+  const deselectResidue = (chainName: string, residueId: number) => {
+    // check selected fragments if residue is part of any
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {
+        if (chain.name.slice(-1) === chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              if (nucleotide.index === residueId) {
+                return { ...nucleotide, selected: false };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      })
+    );
+    const fragment = selectedFragments.find(
+      (f) =>
+        f.chainName === chainName && f.residues.includes(residueId)
+    );
+    if (fragment) {
+      // Sprawdź, czy po dodaniu residueId do deselectedResidues będą identyczne z residues
+      const newDeselected = [...fragment.deselectedResidues, residueId];
+      const residuesSorted = [...fragment.residues].sort((a, b) => a - b);
+      const deselectedSorted = [...newDeselected].sort((a, b) => a - b);
+      const allDeselected =
+        residuesSorted.length === deselectedSorted.length &&
+        residuesSorted.every((val, idx) => val === deselectedSorted[idx]);
+
+      if (allDeselected) {
+        removeSelectedFragment(fragment.name);
+      } else {
+        // If residue is part of a fragment, add it to deselected residues
+        setSelectedFragments((prev) =>
+          prev.map((f) =>
+            f.name === fragment.name
+              ? {
+                  ...f,
+                  deselectedResidues: newDeselected,
+                }
+              : f
+          )
+        );
+      }
+    }
+  }
+
+  const removeSelectedFragment = ( selectedFragmentName: string, otherFragmentsToRemove?: string[] ) => {
+    console.log("Removing fragment:", selectedFragmentName);
+    // Get the fragment to remove
+    const fragmentToRemove = selectedFragments.find(
+      (f) => f.name === selectedFragmentName
+    );
+    console.log("Fragment to remove:", fragmentToRemove);
+    if (!fragmentToRemove) return;
+    // Remove the fragment from selected fragments
+    setSelectedFragments((prev) =>
+      prev.filter((f) => f.name !== selectedFragmentName)
+    );
+    // Deselect all residues in the removed fragment, excluding those that are part of other fragments
+    setChainsState((prevChains) =>
+      prevChains.map((chain) => {
+        if (chain.name.slice(-1) === fragmentToRemove.chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              if ( fragmentToRemove.residues.includes(nucleotide.index) &&
+                selectedFragments.some(
+                  (f) =>
+                    f.name !== selectedFragmentName &&
+                    (otherFragmentsToRemove == null || !otherFragmentsToRemove?.includes(f.name)) &&
+                    f.chainName === fragmentToRemove.chainName &&
+                    f.residues.includes(nucleotide.index)
+                ) === false
+              ) {
+                return { ...nucleotide, selected: false };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      }));
+  }
+
+  const formatResidueRanges = (residues: number[]): string => {
+    if (!residues || residues.length === 0) return "";
+    const sorted = [...residues].sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = sorted[0];
+    let end = sorted[0];
+
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === end + 1) {
+        end = sorted[i];
+      } else {
+        ranges.push(start === end ? `${getResidueByIndex(start).original_index}` : `${getResidueByIndex(start).original_index}-${getResidueByIndex(end).original_index}`);
+        start = end = sorted[i];
+      }
+    }
+    ranges.push(start === end ? `${getResidueByIndex(start).original_index}` : `${getResidueByIndex(start).original_index}-${getResidueByIndex(end).original_index}`);
+    return ranges.join(",");
+  }
+
+  const getResidueByIndex = (index: number): Nucleotide => {
+    for (const chain of chainsState) {
+      const nucleotide = chain.nucleotides.find(n => n.index === index);
+      if (nucleotide) {
+        return nucleotide;
+      }
+    }
+    throw new Error(`Residue with index ${index} not found`);
+  }
+
   useEffect(() => {
     if (!jobID) return;
     loadData(jobID, 1);
   }, [jobID]);
 
   useEffect(() => {
-    const idList: number[] = chainsState.flatMap((chain) =>
+    const selectedChainElements: ChainElement[] = chainsState.flatMap((chain) =>
       chain.nucleotides
         .filter((nucleotide) => nucleotide.selected)
-        .map((nucleotide) => nucleotide.index)
+        .map((nucleotide) => ({
+          chainID: chain.name.slice(-1),
+          residueID: nucleotide.index,
+        }))
     );
-    setSelectedList(idList);
+    console.log("Selected IDs:", selectedChainElements);
+    setSelectedList(selectedChainElements);
   }, [chainsState]);
 
   if (error) return <ErrorPage errorMessage={error} />;
@@ -179,178 +424,161 @@ const Panel: React.FC = () => {
     return <Loading page="Analysis panel" />;
   }
   return (
-    <div>
-      <div className="desktop-content flex h-screen w-screen flex-row overflow-hidden">
+    <div className="desktop-content h-screen w-screen overflow-hidden">
+      {/* Top panel */}
+      <div className="sticky top-0 z-50 bg-white">
+        <TopPanel />
+      </div>
+
+      {/* Side view + Main content */}
+      <div className="flex overflow-hidden h-[calc(100vh-64px)]">
+        {/* Sidebar */}
         <div className="w-80">
-          <div className="w-[700px] bg-white items-start">
-            <div className="h-[70px] flex flex-row gap-8 pl-4">
-              <Logo />
-              <div className="flex flex-row gap-8">
-                <HomeIcon />
-                <HelpIcon />
-              </div>
-            </div>
-          </div>
           <div
-            className="flex flex-col h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
-            style={{ background: Colors.backgroundBeige }}
+            className="flex flex-col  bg-moley-backgroundGreen h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
           >
-            <div className="rounded-scrollbar overflow-auto h-[70%]">
-              <Accordion defaultExpanded>
-                <AccordionSummary
-                  aria-controls="panel2-content"
-                  id="panel2-header"
+            {/* Inside sidebar */}
+            <div className="rounded-scrollbar overflow-auto flex-1">
+              {/* Tabs */}
+              <div className="flex mb-4">
+                <div
+                  className={`flex-1 py-2 rounded-tl-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  onClick={() => setSidebarTab(0)}
                 >
-                  <Typography>Analyze structure</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography component="div">
-                    <div>
-                      <label className="options">
-                        <input
-                          type="checkbox"
-                          id="analyze_whole_structure"
-                          checked={analyzeWholeStructure}
-                          onChange={handleAnalyzeChange}
-                        />{" "}
-                        Analyze whole structure
-                      </label>
-                      <div>
-                        <div>
-                          <label className="options">
-                            Model{""}
-                            <input
-                              className="mx-5 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                              type="number"
-                              min="1"
-                              max={myData.metadata.model_count}
-                              value={selectedModel}
-                              onChange={handleSetSelectedModel}
-                            />
-                          </label>
-
-                          <button
-                            className=" right-2 rounded-lg p-4 text-lg font-semibold text-black flex justify-center items-center h-10 my-1"
-                            onClick={() => changeModel(selectedModel)}
-                          >
-                            Change model
-                          </button>
-                        </div>
-
-                        {analyzeWholeStructure && (
-                          <div>
-                            <div>
-                              <label className="options">
-                                Radius{""}
-                                <input
-                                  id="radiusInput"
-                                  className="mx-4 my-2 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                                  type="number"
-                                  defaultValue={5}
-                                  min="1"
-                                />
-                              </label>
-                            </div>
-
-                            <div>
-                              <label className="options">
-                                Interval{""}
-                                <input
-                                  id="intervalInput"
-                                  className="ml-3 w-[50%] border-gray-300 border-2 pl-2 justify-center p-1 rounded-lg"
-                                  type="number"
-                                  defaultValue={1}
-                                  min="1"
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                  Models
+                </div>
+                <div
+                  className={`flex-1 py-2 rounded-tr-lg text-center ${sidebarTab === 1 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  onClick={() => setSidebarTab(1)}
+                >
+                  Settings
+                </div>
+              </div>
+              {/* Inside tabs */}
+              
+              {sidebarTab === 0 && (
+                <>
+                  {Array.from({ length: myData.metadata.model_count }, (_, i) => (
+                    <div
+                      key={"model" + (i + 1)}
+                      className={`mb-4 p-2 bg-white rounded shadow cursor-pointer transition-all ${
+                        selectedModel === i + 1 ? "border-2 border-moley-darkGreen" : "border border-transparent"
+                      }`}
+                      onClick={() => changeModel(i + 1)}
+                    >
+                      Model {i + 1}
                     </div>
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
-              {!is3Dview && (
-                <Accordion>
-                  <AccordionSummary
-                    aria-controls="panel1-content"
-                    id="panel1-header"
-                  >
-                    <Typography>Fornac options</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography component="div">
-                      <div>
-                        <FornaControls
-                          labelInterval={labelInterval}
-                          setLabelInterval={setLabelInterval}
-                          numbering={numbering}
-                          setNumbering={setNumbering}
-                          nodeOutline={nodeOutline}
-                          setNodeOutline={setNodeOutline}
-                          nodeLabel={nodeLabel}
-                          setNodeLabel={setNodeLabel}
-                          links={links}
-                          setLinks={setLinks}
-                          directionArrows={directionArrows}
-                          setDirectionArrows={setDirectionArrows}
-                          animation={animation}
-                          setAnimation={setAnimation}
+                  ))}
+                </>
+              )}
+              {sidebarTab === 1 && (
+                <>
+                  {/* Neighborhood sphere group */}
+                  {useWalkingSphere && (
+                    <div className="mb-4 p-2 bg-white rounded shadow">
+                      <h3 className="font-bold mb-2">Neighborhood sphere</h3>
+                      <div className="mb-2">
+                        <label className="block text-sm font-medium mb-1">Radius</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={sphereRadius}
+                          onChange={e => setSphereRadius(parseInt(e.target.value))}
+                          className="w-full border rounded px-2 py-1"
                         />
                       </div>
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
-              )}
-              {!is3Dview && (
-                <Accordion>
-                  <AccordionSummary
-                    aria-controls="panel1-content"
-                    id="panel1-header"
-                  >
-                    <Typography>How to use fornac</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography component="div">
-                      <div className="mt-5 mb-5">
-                        [left click] select single node
-                        <br />
-                        [ctrl + left click] select/deselect multiple nodes
-                        <br />
-                        [left click + drag] drag object
-                        <br />
-                        [ctrl + left click + drag] box selecting
-                        <br />
-                        [c] center the graph
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Interval</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={sphereInterval}
+                          onChange={e => setSphereInterval(parseInt(e.target.value))}
+                          className="w-full border rounded px-2 py-1"
+                        />
                       </div>
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
+                    </div>
+                  )}
+                  {/* Fornac group */}
+                  <div className="mb-4 p-2 bg-white rounded shadow">
+                    <h3 className="font-bold mb-2">Fornac settings</h3>
+                    <div className="flex flex-col gap-2">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={numbering}
+                          onChange={e => setNumbering(e.target.checked)}
+                          className="mr-2"
+                        />
+                        Numbering
+                      </label>
+                      {numbering && (
+                        <div className="mb-2">
+                          <label className="block text-sm font-medium mb-1">Label interval</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={labelInterval}
+                            onChange={e => setLabelInterval(Number(e.target.value))}
+                            className="w-full border rounded px-2 py-1"
+                          />
+                        </div>
+                      )}
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={nodeOutline}
+                          onChange={e => setNodeOutline(e.target.checked)}
+                          className="mr-2"
+                        />
+                        Node outline
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={nodeLabel}
+                          onChange={e => setNodeLabel(e.target.checked)}
+                          className="mr-2"
+                        />
+                        Node label
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={directionArrows}
+                          onChange={e => setDirectionArrows(e.target.checked)}
+                          className="mr-2"
+                        />
+                        Direction arrows
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={links}
+                          onChange={e => setLinks(e.target.checked)}
+                          className="mr-2"
+                        />
+                        Show links
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={animation}
+                          onChange={e => setAnimation(e.target.checked)}
+                          className="mr-2"
+                        />
+                        Animation
+                      </label>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
-            <div
-              className="relative flex flex-col h-[20%] ml-4 my-4"
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              {isDisabled && isHovered && (
-                <div
-                  id="analyzeButtonTooltip"
-                  className="absolute bottom-full mb-2 mx-auto text-sm bg-white text-black rounded bg-opacity-70 shadow-xl p-2 z-40"
-                  style={{ left: "45%", transform: "translateX(-50%)" }}
-                >
-                  Select fragment to analyze or check option 'Analyze whole
-                  structure' to run analysis.
-                </div>
-              )}
+            {/* Analyze button */}
+            <div className="mt-4 flex justify-center">
               <button
-                id="analyzeButton"
-                type="submit"
+                className="bg-moley-darkGreen hover:bg-moley-green text-white font-bold py-2 px-6 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isDisabled}
-                className={`font-bold rounded-lg p-2 z-10 text-black flex justify-center items-center h-auto w-[90%] my-1
-          ${isDisabled ? "bg-gray-400 cursor-not-allowed" : ""}
-          transition-colors text-2xl text-black`}
                 onClick={handleNavigate}
               >
                 Analyze
@@ -358,53 +586,102 @@ const Panel: React.FC = () => {
             </div>
           </div>
         </div>
-        <div key={myData.id} className="flex-grow relative overflow-hidden">
-          <div className="h-full">
-            {myData ? (
-              <div id="container">
-                <div className="flex pt-1.5 pr-1.5 h-[70px]">
-                  <button
-                    id="switchViewButton"
-                    onClick={() => {
-                      setIs3Dview(!is3Dview);
-                      setIsViewInitialized(false);
-                    }}
-                    disabled={!isViewInitialized}
-                    className="w-[auto] font-medium absolute right-2 rounded-lg text-2xl text-black flex justify-center items-center h-10 my-1 px-4"
-                  >
-                    Switch to {is3Dview ? "2D " : "3D "} view
-                  </button>
-                </div>
-                <div className="top-0 h-[20%] flex-grow bg-transparent z-100">
-                  {/* <RangeSelecting
-                    chains={chainsState}
+
+        {/* Main content */}
+        <div
+          key={myData.id}
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+        >
+          {/* Analyze neighborhood switch */}
+            <div className="flex items-center gap-2 p-4">
+            <label htmlFor="sequential-toggle" className="font-semibold">
+              Analyze residue neighborhoods
+            </label>
+            <input
+              id="sequential-toggle"
+              type="checkbox"
+              checked={useWalkingSphere}
+              onChange={e => setUseWalkingSphere(e.target.checked)}
+              className="w-5 h-5 accent-moley-accentGreen"
+            />
+            </div>
+          {myData ? (
+            <div className="flex flex-col min-h-full">
+              <div className="bg-transparent z-10">
+                <div className="overflow-x-auto">
+                  <ResidueTable
+                    data={chainsState}
                     selectedChain={selectedChain}
-                    minId={minId}
-                    maxId={maxId}
-                    inputValueStart={inputValueStart}
-                    inputValueEnd={inputValueEnd}
-                    setChainsState={setChainsState}
-                    setMinId={setMinId}
-                    setMaxId={setMaxId}
-                    setInputValueStart={setInputValueStart}
-                    setInputValueEnd={setInputValueEnd}
-                    handleChange={handleChange}
-                    handleInputChangeStart={handleInputChangeStart}
-                    handleInputChangeEnd={handleInputChangeEnd}
-                  /> */}
-                </div>
-                {is3Dview && (
-                  <Molstar
-                    useInterface={true}
-                    file={myData.pdb_file_string}
-                    chains={chainsState}
-                    selectResidue={setChainsState}
-                    initialized={initialized}
-                    setInitialized={setInitialized}
-                    setIsViewInitialized={setIsViewInitialized}
+                    selectedResidueIds={selectedList.filter(ce => ce.chainID === selectedChain).map(ce => ce.residueID)}
+                    selectResidue={selectResidue}
+                    selectFragment={selectFragment}
+                    deselectResidue={deselectResidue}
+                    deselectFragment={removeSelectedFragment}
                   />
-                )}
-                {!is3Dview && (
+                </div>
+              </div>
+              <div className="flex flex-row bg-transparent z-10">
+                <RangeSelecting
+                  chains={chainsState}
+                  selectedChain={selectedChain}
+                  minId={minId}
+                  maxId={maxId}
+                  inputValueStart={inputValueStart}
+                  inputValueEnd={inputValueEnd}
+                  setMinId={setMinId}
+                  setMaxId={setMaxId}
+                  setInputValueStart={setInputValueStart}
+                  setInputValueEnd={setInputValueEnd}
+                  handleChange={handleChange}
+                  handleInputChangeStart={handleInputChangeStart}
+                  handleInputChangeEnd={handleInputChangeEnd}
+                  selectFragment={selectFragment}
+                />
+                <div className="bg-moley-backgroundGreen h-48 m-2 w-full overflow-y-auto p-2 rounded-md">
+                  {selectedFragments.length === 0 ? (
+                    <span >No fragments selected</span>
+                  ) : (
+                    <table className="w-full">
+                      <thead>
+                        <tr>
+                          <th></th>
+                          <th className="text-left">Name</th>
+                          <th className="text-left">Chain</th>
+                          <th className="text-left">Residues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedFragments.map((fragment, idx) => (
+                          <tr key={fragment.name + fragment.chainName + idx}>
+                            <td>
+                              <div
+                                className="ml-2 px-1 py-1 bg-white text-center text-red-600 rounded hover:bg-gray-200"
+                                onClick={() => removeSelectedFragment(fragment.name)}
+                                title="Usuń fragment"
+                              >
+                                X
+                              </div>
+                            </td>
+                            <td>{fragment.name}</td>
+                            <td>{fragment.chainName}</td>
+                            <td>
+                              {formatResidueRanges(fragment.residues)}
+                              {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
+                                <span className="ml-2 text-xs text-yellow-200">
+                                  (except: {formatResidueRanges(fragment.deselectedResidues)})
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+              {/* Forna + Molstar */}
+              <div className="flex flex-row h-[60vh] min-h-[400px]">
+                <div className="w-1/2 h-full p-5">
                   <FornaComponent
                     chains={chainsState}
                     setChains={setChainsState}
@@ -415,15 +692,26 @@ const Panel: React.FC = () => {
                     links={links}
                     directionArrows={directionArrows}
                     setAnimation={animation}
-                    selectedChain={selectedChain}
                     setIsViewInitialized={setIsViewInitialized}
                   />
-                )}
+                </div>
+                <div className="w-1/2 h-full p-5">
+                  <Molstar
+                    useInterface={true}
+                    file={myData.pdb_file_string}
+                    chains={chainsState}
+                    selectResidue={selectResidue}
+                    deselectResidue={deselectResidue}
+                    initialized={initialized}
+                    setInitialized={setInitialized}
+                    setIsViewInitialized={setIsViewInitialized}
+                  />
+                </div>
               </div>
-            ) : (
-              <Loading />
-            )}
-          </div>
+            </div>
+          ) : (
+            <Loading />
+          )}
         </div>
       </div>
       <SmallScreenPage />

@@ -296,7 +296,16 @@ export async function createJob(req: Request, res: Response) {
   var numberOfModels = 1;
   const splitResponse = await fetch(`${TOOLS_URL}/split?id=${id}`, {
     method: "POST",
+  }).catch((error) => {
+    console.error("Error during splitting:", error);
+    deleteJobDirectory(id);
+    res.status(500).send({ error: "PDB file splitting error." });
+    return;
   });
+  if(!splitResponse) {
+    console.error("Split response is undefined.");
+    return;
+  }
   numberOfModels = ((await splitResponse.json()) as splitModelsResponse)
     .numberOfModels;
 
