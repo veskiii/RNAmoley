@@ -488,17 +488,27 @@ const Panel: React.FC = () => {
               
               {sidebarTab === 0 && (
                 <>
-                  {Array.from({ length: myData.metadata.model_count }, (_, i) => (
-                    <div
-                      key={"model" + (i + 1)}
-                      className={`mb-4 p-2 bg-white rounded shadow cursor-pointer transition-all ${
-                        selectedModel === i + 1 ? "border-2 border-moley-darkGreen" : "border border-transparent"
-                      }`}
-                      onClick={() => changeModel(i + 1)}
-                    >
-                      Model {i + 1}
-                    </div>
-                  ))}
+                  {Array.from({ length: myData.metadata.model_count }, (_, i) => {
+                    const modelNum = i + 1;
+                    const hasSelections = modelSelections[modelNum]?.selectedFragments?.length > 0;
+                    return (
+                      <div
+                        key={"model" + modelNum}
+                        className={`mb-4 p-2 bg-white rounded shadow cursor-pointer transition-all ${
+                          selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
+                        } flex items-center justify-between`}
+                        onClick={() => changeModel(modelNum)}
+                      >
+                        <span>Model {modelNum}</span>
+                        {hasSelections && (
+                          <span
+                            className="ml-2 w-3 h-3 rounded-full bg-moley-accentGreen inline-block"
+                            title="Wybrano fragmenty"
+                          ></span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </>
               )}
               {sidebarTab === 1 && (
