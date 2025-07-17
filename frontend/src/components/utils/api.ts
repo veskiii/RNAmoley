@@ -36,6 +36,7 @@ export async function fetchJobData(
 export async function fetchMyData(jobID: string | undefined) {
   console.log(`Sending request to /api/v1/jobs/${jobID}`);
 
+  // TODO: czy tego potrzebuje? Wywalilo bez powodu
   // Safari doesnt support AbortSignal
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -57,8 +58,7 @@ export async function fetchMyData(jobID: string | undefined) {
 export async function sendDataToAnalyze(
   analyzeNeighborhoods: boolean,
   jobID: string | undefined,
-  selectedModel: number,
-  selectedList: ChainElement[],
+  selectedModels: Record<number, ChainElement[]>,
   sphereRadius?: number,
   sphereInterval?: number
 ): Promise<string | void> {
@@ -69,8 +69,7 @@ export async function sendDataToAnalyze(
 
   let jobToPost: JobToPost = {
     id: jobID,
-    residues: selectedList,
-    modelNumber: selectedModel,
+    models: selectedModels,
     radius: -1,
     interval: -1,
   };

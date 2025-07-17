@@ -16,6 +16,7 @@ import {
     saveMetadata,
     saveResults,
     fetchJSONFile,
+    updateModelMetadata,
 } from "./utils.js";
 import { Queue, Worker } from "bullmq";
 
@@ -29,8 +30,7 @@ export const analysisQueue = new Queue("analysis", {
 export function createAnalysisWorker() {
   const worker = new Worker<{
     jobID: UUID;
-    modelNumber: string;
-    residues: ChainElement[];
+    models: Record<number, ChainElement[]>;
     radius: number;
     interval: number;
     metadata: Metadata;
@@ -38,8 +38,20 @@ export function createAnalysisWorker() {
   }>(
     "analysis",
     async (job) => {
-      const { jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled } = job.data;
-      await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled);
+      const { jobID, models, radius, interval, metadata, analyzeSphereFilesEnabled } = job.data;
+
+      for (const [modelNumber, residues] of Object.entries(models)) {
+        await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled);
+      }
+      const allFailed = Object.values(metadata.resultsStatus || {}).every(
+        (status) => status.status === "failed"
+      );
+      if (allFailed) {
+        metadata.status = "failed";
+      } else { 
+        metadata.status = "completed";
+      }
+      await saveMetadata(jobID, metadata);
     },
     {
       connection: {
@@ -55,8 +67,7 @@ export function createAnalysisWorker() {
 
 export async function addAnalysisTask(
   jobID: UUID,
-  modelNumber: string,
-  residues: ChainElement[],
+  models: Record<number, ChainElement[]>,
   radius: number,
   interval: number,
   metadata: Metadata,
@@ -64,8 +75,7 @@ export async function addAnalysisTask(
 ) {
   await analysisQueue.add("analyze-structure", {
     jobID,
-    modelNumber,
-    residues,
+    models,
     radius,
     interval,
     metadata,
@@ -98,15 +108,13 @@ async function performAnalysis(
       throw new Error("Analysis output is empty or undefined");
     }
 
-    await saveResults(jobID, analysisOutput);
-    metadata.status = "completed";
-    metadata.last_used_model = parseInt(modelNumber);
+    await saveResults(jobID, modelNumber, analysisOutput);
+    updateModelMetadata(metadata, modelNumber, "completed");
     await saveMetadata(jobID, metadata);
 
   } catch (error) {
     console.error("Error during analysis:", error);
-    metadata.status = "failed";
-    metadata.error_message = error instanceof Error ? error.message : String(error);
+    updateModelMetadata(metadata, modelNumber, "failed", error instanceof Error ? error.message : String(error));
     await saveMetadata(jobID, metadata);
   }
 }
@@ -120,7 +128,8 @@ export async function analyzeStructure(
   metadata: Metadata,
   analyzeSphereFilesEnabled: boolean
 ): Promise<Analysis_results> {
-  metadata.status = "running";
+  updateModelMetadata(metadata, modelNumber, "starting");
+  metadata.status = "starting";
   await saveMetadata(jobID, metadata);
 
   await writeSelectedResiduesToFile(jobID, modelNumber, residues);
@@ -164,11 +173,15 @@ export async function analyzeStructure(
     };
   });
 
-  await saveResults(jobID, {
+  await saveResults(jobID, modelNumber, {
     data: initialData,
     modelMetrics: modelMetrics,
     fragmentMetrics: fragmentMetrics,
   });
+
+  updateModelMetadata(metadata, modelNumber, "running");
+  metadata.status = "running";
+  await saveMetadata(jobID, metadata);
 
   if (!analyzeSphereFilesEnabled) {
     return {
@@ -180,10 +193,11 @@ export async function analyzeStructure(
 
   await createWalkingSphere(jobID, modelNumber, residues, radius, interval);
 
-  const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
+  const files = await fs.readdir(`${JOBS_DIR}/${jobID}/${modelNumber}_sphere`);
   const results = await analyzeSphereFilesIncremental(
     files,
     jobID,
+    modelNumber,
     initialData,
     modelMetrics,
     fragmentMetrics
@@ -199,6 +213,7 @@ export async function analyzeStructure(
 async function analyzeSphereFilesIncremental(
   files: string[],
   jobID: UUID,
+  modelNumber: string,
   initialData: nucleotideResult[],
   modelMetrics: metrics,
   fragmentMetrics: metrics
@@ -212,7 +227,7 @@ async function analyzeSphereFilesIncremental(
     const batchTasks = batchFiles.map((file) => async () => {
       try {
         const res = await fetch(
-          `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/sphere/${file}`,
+          `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelNumber}_sphere/${file}`,
           { keepalive: true }
         );
 
@@ -252,7 +267,7 @@ async function analyzeSphereFilesIncremental(
     const sortedResults = Array.from(resultMap.values()).sort(
       (a, b) => a.residue_number - b.residue_number
     );
-    await saveResults(jobID, {
+    await saveResults(jobID, modelNumber, {
       data: sortedResults,
       modelMetrics,
       fragmentMetrics,

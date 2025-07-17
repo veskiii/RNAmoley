@@ -90,8 +90,7 @@ export interface ChainElement {
 
 export interface JobToPost {
   id: string;
-  residues: ChainElement[];
-  modelNumber: number;
+  models: Record<number, ChainElement[]>;
   radius: number;
   interval: number;
 }

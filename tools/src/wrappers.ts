@@ -284,7 +284,7 @@ export async function walkingSphere(
 
   // delete old sphere folder if exists
   try {
-    await fs.rm(`${JOBS_DIR}/${id}/sphere`, { recursive: true });
+    await fs.rm(`${JOBS_DIR}/${id}/${modelNumber}_sphere`, { recursive: true });
   } catch (error) {
     console.log("Sphere folder does not exist, continuing...");
   }
@@ -292,7 +292,7 @@ export async function walkingSphere(
   const sphere = spawnSync(`${SCRIPTS_DIR}/Walking_sphere.py`, [
     `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
     `${JOBS_DIR}/${id}/models/${modelNumber}_residues.json`,
-    `${JOBS_DIR}/${id}/sphere`,
+    `${JOBS_DIR}/${id}/${modelNumber}_sphere`,
     radius.toString(),
     interval.toString(),
   ]);

@@ -107,6 +107,22 @@ const Panel: React.FC = () => {
   }
 
   async function handleNavigate() {
+    const selectedModelsMap: Record<number, ChainElement[]> = {};
+    Object.entries(modelSelections).forEach(([modelNum, selection]) => {
+      const selected = selection.chainsState.flatMap(chain =>
+        chain.nucleotides
+          .filter(n => n.selected)
+          .map(n => ({
+            chainID: chain.name.slice(-1),
+            residueID: n.index,
+          }))
+      );
+      if (selected.length > 0) {
+        selectedModelsMap[Number(modelNum)] = selected;
+      }
+    });
+    console.log("Selected models map:", selectedModelsMap);
+
     if (useWalkingSphere) {
       if (sphereRadius < 1) {
         alert(
@@ -122,8 +138,7 @@ const Panel: React.FC = () => {
       await sendDataToAnalyze(
         useWalkingSphere,
         jobID,
-        selectedModel,
-        selectedList,
+        selectedModelsMap,
         sphereRadius,
         sphereInterval
       );
@@ -132,8 +147,7 @@ const Panel: React.FC = () => {
       await sendDataToAnalyze(
         useWalkingSphere,
         jobID,
-        selectedModel,
-        selectedList
+        selectedModelsMap
       );
     }
     navigate(`/summary/${jobID}`);
