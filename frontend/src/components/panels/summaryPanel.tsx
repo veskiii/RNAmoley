@@ -484,12 +484,35 @@ const SummaryPanel: React.FC = () => {
                     return (
                       <div
                         key={"model" + modelNum}
-                        className={`mb-4 p-2 bg-white rounded shadow cursor-pointer transition-all ${
-                          selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
+                        className={`mb-4 p-2 bg-white rounded shadow transition-all
+                          ${myData && myData.metadata.resultsStatus && ["created", "starting"].includes(myData.metadata.resultsStatus[modelNum].status) ?
+                              "cursor-not-allowed" : "cursor-pointer"}
+                          ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
                         } flex items-center justify-between`}
                         onClick={() => changeModel(modelNum)}
                       >
-                        Model {modelNum}
+                        <span>Model {modelNum}</span>
+                        {myData && myData.metadata.resultsStatus && (
+                          <div className="flex flex-col items-end">
+                            <span
+                              className={`ml-2 p-2 rounded-full inline-block
+                                ${["created", "starting"].includes(myData.metadata.resultsStatus[modelNum].status) ?
+                              "bg-yellow-300 text-black" :
+                              myData.metadata.resultsStatus[modelNum].status === "running" ? "bg-blue-500 text-white" :
+                              myData.metadata.resultsStatus[modelNum].status === "completed" ? "bg-green-600 text-white" :
+                              myData.metadata.resultsStatus[modelNum].status === "failed" ? "bg-red-500 text-white" : ""}`}
+                              title={myData.metadata.resultsStatus[modelNum].status}
+                            >{["created", "starting"].includes(myData.metadata.resultsStatus[modelNum].status) ?
+                              "Queued" :
+                              myData.metadata.resultsStatus[modelNum].status === "running" ? "Running" :
+                              myData.metadata.resultsStatus[modelNum].status === "completed" ? "Completed" :
+                              myData.metadata.resultsStatus[modelNum].status === "failed" ? "Failed" : ""}
+                            </span>
+                            {myData.metadata.resultsStatus[modelNum].status === "failed" && (
+                              <div className="text-red-500 text-sm mt-1">${myData.metadata.resultsStatus[modelNum].error_message}</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
