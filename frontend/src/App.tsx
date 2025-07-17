@@ -46,7 +46,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/analysisPanel/:jobId" element={<Panel />} />
-          <Route path="/summary/:jobId" element={<SummaryPanel />} />
+          <Route path="/summary/:jobId/:modelNumber" element={<SummaryPanel />} />
           <Route path="/jobProcessing" element={<JobProcessing />} />
           <Route path="/errorPage" element={<ErrorPage />} />
           <Route path="/help" element={<HelpPage />} />
