@@ -159,6 +159,7 @@ const Molstar = (props) => {
   }, [initialized, resultResidues, selectedQualityScore]);
 
   useEffect(() => {
+    console.log("Initializing Molstar plugin...");
     if (plugin.current) {
       console.log("Plugin already initialized");
       return;

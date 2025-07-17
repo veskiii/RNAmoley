@@ -33,8 +33,8 @@ export async function fetchJobData(
   }
 }
 
-export async function fetchMyData(jobID: string | undefined) {
-  console.log(`Sending request to /api/v1/jobs/${jobID}`);
+export async function fetchMyData(jobID: string | undefined, modelNumber: number) {
+  console.log(`Sending request to /api/v1/jobs/${jobID}/${modelNumber}`);
 
   // TODO: czy tego potrzebuje? Wywalilo bez powodu
   // Safari doesnt support AbortSignal
@@ -42,7 +42,7 @@ export async function fetchMyData(jobID: string | undefined) {
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(`${API_URL}/jobs/${jobID}`, {
+    const response = await fetch(`${API_URL}/jobs/${jobID}/${modelNumber}`, {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);

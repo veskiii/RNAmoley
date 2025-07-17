@@ -150,7 +150,8 @@ const Panel: React.FC = () => {
         selectedModelsMap
       );
     }
-    navigate(`/summary/${jobID}`);
+    const firstModel = Object.keys(selectedModelsMap)[0];
+    navigate(`/summary/${jobID}/${firstModel}`);
     
   }
 

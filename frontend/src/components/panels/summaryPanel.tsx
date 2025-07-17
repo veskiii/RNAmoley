@@ -25,7 +25,10 @@ import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 
 const SummaryPanel: React.FC = () => {
-  const { jobId } = useParams();
+  const { jobId, modelNumber } = useParams();
+  const [selectedModel, setSelectedModel] = useState<number>(
+    modelNumber ? parseInt(modelNumber) : 1
+  );
   const [myData, setMyData] = useState<SummaryJob>();
   const [myError, setMyError] = useState<ErrorPageProps | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
@@ -44,6 +47,7 @@ const SummaryPanel: React.FC = () => {
     QualityScore.CLASH_SCORE
   );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
+  const [sidebarTab, setSidebarTab] = useState(0);
   const hasStoppedLoading = useRef(false);
 
   const getClashesForForna = () => {
@@ -154,7 +158,7 @@ const SummaryPanel: React.FC = () => {
     async function fetchData() {
       //console.log("Start to fetch data");
       try {
-        const response = await fetchMyData(jobId);
+        const response = await fetchMyData(jobId, selectedModel);
         const data = await response.json();
         if (!response.ok) {
           // console.log(
@@ -219,7 +223,7 @@ const SummaryPanel: React.FC = () => {
 
     // Cleanup interval when component unmounts or jobId changes
     return () => clearInterval(interval);
-  }, [jobId]);
+  }, [jobId, selectedModel]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
@@ -366,6 +370,19 @@ const SummaryPanel: React.FC = () => {
       setter(e.target.checked);
     };
 
+    const changeModel = (modelNum: number) => {
+      if (
+        myData &&
+        myData.metadata.resultsStatus &&
+        myData.metadata.resultsStatus[modelNum.toString()] &&
+        !["running", "completed"].includes(myData.metadata.resultsStatus[modelNum.toString()].status)
+      ) {
+        return;
+      }
+      setInitialized(false);
+      setSelectedModel(modelNum);
+    }
+
   function createFornacDisplayDetails() {
     return (
       <div>
@@ -443,88 +460,125 @@ const SummaryPanel: React.FC = () => {
           >
             {/* Scrollowalna zawartość sidebar'a */}
             <div className="rounded-scrollbar overflow-auto flex-1">
-              {/* ...tutaj zawartość sidebar'a... */}
-              {/* Fornac group */}
-              <div className="mb-4 p-2 bg-white rounded shadow">
-                <h3 className="font-bold mb-2">Fornac settings</h3>
-                <div className="flex flex-col gap-2">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={numbering}
-                      onChange={e => setNumbering(e.target.checked)}
-                      className="mr-2"
-                    />
-                    Numbering
-                  </label>
-                  {numbering && (
-                    <div className="mb-2">
-                      <label className="block text-sm font-medium mb-1">Label interval</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={labelInterval}
-                        onChange={e => setLabelInterval(Number(e.target.value))}
-                        className="w-full border rounded px-2 py-1"
-                      />
-                    </div>
-                  )}
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={nodeOutline}
-                      onChange={e => setNodeOutline(e.target.checked)}
-                      className="mr-2"
-                    />
-                    Node outline
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={nodeLabel}
-                      onChange={e => setNodeLabel(e.target.checked)}
-                      className="mr-2"
-                    />
-                    Node label
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={directionArrows}
-                      onChange={e => setDirectionArrows(e.target.checked)}
-                      className="mr-2"
-                    />
-                    Direction arrows
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={links}
-                      onChange={e => setLinks(e.target.checked)}
-                      className="mr-2"
-                    />
-                    Show links
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showClashes}
-                      onChange={e => setShowClashes(e.target.checked)}
-                      className="mr-2"
-                    />
-                    Show Clashes
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={animation}
-                      onChange={e => setAnimation(e.target.checked)}
-                      className="mr-2"
-                    />
-                    Animation
-                  </label>
+              {/* Tabs */}
+              <div className="flex mb-4">
+                <div
+                  className={`flex-1 py-2 rounded-tl-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  onClick={() => setSidebarTab(0)}
+                >
+                  Models
+                </div>
+                <div
+                  className={`flex-1 py-2 rounded-tr-lg text-center ${sidebarTab === 1 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  onClick={() => setSidebarTab(1)}
+                >
+                  Settings
                 </div>
               </div>
+              {/* Inside tabs */}
+              
+              {sidebarTab === 0 && (
+                <>
+                  {Array.from({ length: myData.metadata.model_count }, (_, i) => {
+                    const modelNum = i + 1;
+                    return (
+                      <div
+                        key={"model" + modelNum}
+                        className={`mb-4 p-2 bg-white rounded shadow cursor-pointer transition-all ${
+                          selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
+                        } flex items-center justify-between`}
+                        onClick={() => changeModel(modelNum)}
+                      >
+                        Model {modelNum}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              {/* Fornac group */}
+              {sidebarTab === 1 && (
+              <>
+                <div className="mb-4 p-2 bg-white rounded shadow">
+                  <h3 className="font-bold mb-2">Fornac settings</h3>
+                  <div className="flex flex-col gap-2">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={numbering}
+                        onChange={e => setNumbering(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Numbering
+                    </label>
+                    {numbering && (
+                      <div className="mb-2">
+                        <label className="block text-sm font-medium mb-1">Label interval</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={labelInterval}
+                          onChange={e => setLabelInterval(Number(e.target.value))}
+                          className="w-full border rounded px-2 py-1"
+                        />
+                      </div>
+                    )}
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={nodeOutline}
+                        onChange={e => setNodeOutline(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Node outline
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={nodeLabel}
+                        onChange={e => setNodeLabel(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Node label
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={directionArrows}
+                        onChange={e => setDirectionArrows(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Direction arrows
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={links}
+                        onChange={e => setLinks(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Show links
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={showClashes}
+                        onChange={e => setShowClashes(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Show Clashes
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={animation}
+                        onChange={e => setAnimation(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Animation
+                    </label>
+                  </div>
+                </div>
+              </>)}
             </div>
             {/* Przyciski pobierania*/}
             <div className="mt-4 flex justify-center">
@@ -578,6 +632,7 @@ const SummaryPanel: React.FC = () => {
               <div className="w-1/2 h-full p-5">
                 {getColorMap()}
                 <Molstar
+                  key={JSON.stringify(myData.results.data)}
                   useInterface={true}
                   file={myData.pdb_file_string}
                   chains={chainsState}
