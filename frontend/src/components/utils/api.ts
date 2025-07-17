@@ -33,15 +33,16 @@ export async function fetchJobData(
   }
 }
 
-export async function fetchMyData(jobID: string | undefined) {
-  console.log(`Sending request to /api/v1/jobs/${jobID}`);
+export async function fetchMyData(jobID: string | undefined, modelNumber: number) {
+  console.log(`Sending request to /api/v1/jobs/${jobID}/${modelNumber}`);
 
+  // TODO: czy tego potrzebuje? Wywalilo bez powodu
   // Safari doesnt support AbortSignal
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(`${API_URL}/jobs/${jobID}`, {
+    const response = await fetch(`${API_URL}/jobs/${jobID}/${modelNumber}`, {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -57,8 +58,9 @@ export async function fetchMyData(jobID: string | undefined) {
 export async function sendDataToAnalyze(
   analyzeNeighborhoods: boolean,
   jobID: string | undefined,
-  selectedModel: number,
-  selectedList: ChainElement[]
+  selectedModels: Record<number, ChainElement[]>,
+  sphereRadius?: number,
+  sphereInterval?: number
 ): Promise<string | void> {
 
   if (!jobID) {
@@ -67,23 +69,16 @@ export async function sendDataToAnalyze(
 
   let jobToPost: JobToPost = {
     id: jobID,
-    residues: selectedList,
-    modelNumber: selectedModel,
+    models: selectedModels,
     radius: -1,
     interval: -1,
   };
 
-  if (analyzeNeighborhoods) {
-    const radius = parseInt(
-      "5"
-    );
-    const interval = parseInt(
-      "1"
-    );
+  if (analyzeNeighborhoods && sphereRadius && sphereInterval) {
     jobToPost = {
       ...jobToPost,
-      radius: radius,
-      interval: interval,
+      radius: sphereRadius,
+      interval: sphereInterval,
     };
   }
 

@@ -115,23 +115,36 @@ export async function saveMetadata(jobID: UUID, metadata: Metadata) {
   );
 }
 
+export function updateModelMetadata(
+  metadata: Metadata, 
+  modelNumber: string, 
+  status: `created` | `starting` | `running` | `completed` | `failed`,
+  errorMessage?: string) {
+  if (!metadata.resultsStatus) {
+    metadata.resultsStatus = {};
+  }
+  metadata.resultsStatus[modelNumber] = { modelNumber, status, error_message: errorMessage };
+  return metadata;
+}
+
 export async function readMetadata(jobID: UUID): Promise<Metadata> {
   const data = await fs.readFile(`${JOBS_DIR}/${jobID}/metadata.json`);
   return JSON.parse(data.toString());
 }
 
-export async function saveResults(jobID: UUID, results: Analysis_results) {
+export async function saveResults(jobID: UUID, modelNumber: string, results: Analysis_results) {
   await fs.writeFile(
-    `${JOBS_DIR}/${jobID}/results.json`,
+    `${JOBS_DIR}/${jobID}/${modelNumber}_results.json`,
     JSON.stringify(results)
   );
 }
 
 export async function readResults(
-  jobID: UUID
+  jobID: UUID,
+  modelNumber: string
 ): Promise<Analysis_results | null> {
   try {
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/results.json`);
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${modelNumber}_results.json`);
     return JSON.parse(data.toString());
   } catch (error: any) {
     if (error.code === "ENOENT") {
@@ -282,158 +295,6 @@ export async function saveOriginalNumeration(
   }
 
   return numeration;
-}
-
-export async function analyzeStructureFragment(
-  jobID: UUID,
-  modelNumber: string,
-  residueIds: number[]
-): Promise<metrics> {
-  const pdbFile = await fs.readFile(
-    `${JOBS_DIR}/${jobID}/models/${modelNumber}.pdb`,
-    "utf8"
-  );
-  const textByLine = pdbFile.split("\n");
-  var newPdbFile = "";
-  textByLine.forEach((line) => {
-    if (
-      line.startsWith("ATOM") &&
-      !residueIds.includes(parseInt(line.substring(23, 26)))
-    ) {
-    } else {
-      newPdbFile += line + "\n";
-    }
-  });
-
-  //save the new file
-  await fs.writeFile(`${JOBS_DIR}/${jobID}/${jobID}_selected.pdb`, newPdbFile);
-
-  // run clashscore
-  const res = await fetch(
-    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${jobID}_selected.pdb`
-  );
-  const data: metrics = (await res.json()) as metrics;
-  return data;
-}
-
-const findResidueInResidueAnalysis = (
-  residues: residueMetrics[],
-  residueNumber: number
-): residueMetrics | undefined => {
-  return residues.find((residue) => {
-    const match = residue.residue.match(/\s+(\d+)\s+/);
-    return match ? Number(match[1]) === residueNumber : false;
-  });
-};
-
-const processInBatches = async (
-  tasks: (() => Promise<any>)[],
-  batchSize: number
-) => {
-  let results: any[] = [];
-  for (let i = 0; i < tasks.length; i += batchSize) {
-    const batch = tasks.slice(i, i + batchSize).map((task) => task());
-    const batchResults = await Promise.allSettled(batch);
-    results.push(...batchResults);
-  }
-  return results;
-};
-
-export async function analyzeStructureWalkingSphere(
-  jobID: UUID,
-  modelNumber: string,
-  radius: number,
-  interval: number,
-  metadata: Metadata
-): Promise<Analysis_results> {
-  // fetch metadata
-  metadata.status = "running";
-  await saveMetadata(jobID, metadata);
-
-  // call tools to create a directory of pdb files
-  const walkingSphere = await fetch(
-    `${TOOLS_URL}/sphere?id=${jobID}&modelNumber=${modelNumber}&radius=${radius}&interval=${interval}`,
-    { method: "POST" }
-  );
-  if (!walkingSphere.ok) {
-    metadata.status = "failed";
-    await saveMetadata(jobID, metadata);
-    throw new Error("Sphere error: " + walkingSphere.statusText);
-  }
-
-  // run residue-analysis
-  const residueAnalysis = await fetch(
-    `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/models/1.pdb`, // TODO: hardcoded model number
-    { keepalive: true }
-  );
-  if (!residueAnalysis.ok) {
-    metadata.status = "failed";
-    await saveMetadata(jobID, metadata);
-    throw new Error("Residue analysis error: " + residueAnalysis.statusText);
-  }
-
-  const residueAnalysisArray =
-    (await residueAnalysis.json()) as residueMetrics[];
-
-  // for each file in the directory, run clashscore
-  const result = {} as Analysis_results;
-  // result.mode = "full";
-  result.data = [];
-
-  const files = await fs.readdir(`${JOBS_DIR}/${jobID}/sphere`);
-  const promises = files.map((file) => async () => {
-    try {
-      console.log(
-        `Fetching ${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/sphere/${file}`
-      );
-      const res = await fetch(
-        `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/sphere/${file}`,
-        { keepalive: true }
-      );
-
-      if (!res.ok) {
-        throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
-      } else {
-        console.log("Molprobity analysis successful.");
-      }
-
-      const tmpMetrics: metrics = (await res.json()) as metrics;
-      const nucleotideNumber = parseInt(file.split(".")[0] ?? "");
-      const residueMetrics = findResidueInResidueAnalysis(
-        residueAnalysisArray,
-        nucleotideNumber
-      );
-
-      return {
-        residue_number: nucleotideNumber,
-        metrics: tmpMetrics,
-        residueMetrics: residueMetrics,
-      } as nucleotideResult;
-    } catch (error) {
-      console.error(`Error processing file ${file}:`, error);
-      return null;
-    }
-  });
-
-  const promisesResults = await processInBatches(promises, 10);
-
-  const results = promisesResults
-    .filter(
-      (p): p is PromiseFulfilledResult<nucleotideResult> =>
-        p.status === "fulfilled"
-    )
-    .map((p) => p.value)
-    .filter((result) => result !== null);
-
-  // sort results by residue number
-  results.sort((a, b) => a.residue_number - b.residue_number);
-
-  result.data.push(...results);
-
-  metadata.status = "completed";
-  await saveMetadata(jobID, metadata);
-
-  return result;
 }
 
 // zip whole job directory and return a blob

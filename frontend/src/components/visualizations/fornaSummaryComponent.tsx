@@ -94,6 +94,8 @@ const FornacSummaryComponent = ({
       console.error("Błąd przy dodawaniu RNA:", error);
     }
     setContainer(container);
+
+    colorGnodes();
   }, [chains, labelInterval]); // Emp
 
   const addRNAtoContainer = (container: any, chain: Chain) => {
@@ -186,6 +188,8 @@ const FornacSummaryComponent = ({
       );
       // @ts-ignore
       setAnimation ? container.startAnimation() : container.stopAnimation();
+
+      colorGnodes();
     }
   }, [
     labelInterval,

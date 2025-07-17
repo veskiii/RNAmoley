@@ -2,8 +2,8 @@ import { useState, createContext, ReactNode } from "react";
 import "./App.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Dashboard from "./components/panels/submitPanel";
-import Panel from "./components/panels/analysisPanel3";
-import SummaryPanel from "./components/panels/summaryPanel3";
+import Panel from "./components/panels/analysisPanel";
+import SummaryPanel from "./components/panels/summaryPanel";
 import JobProcessing from "./components/common/JobProcessing";
 import ErrorPage from "./components/common/ErrorPage";
 import HelpPage from "./components/common/helpPage";
@@ -46,7 +46,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/analysisPanel/:jobId" element={<Panel />} />
-          <Route path="/summary/:jobId" element={<SummaryPanel />} />
+          <Route path="/summary/:jobId/:modelNumber" element={<SummaryPanel />} />
           <Route path="/jobProcessing" element={<JobProcessing />} />
           <Route path="/errorPage" element={<ErrorPage />} />
           <Route path="/help" element={<HelpPage />} />

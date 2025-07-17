@@ -22,7 +22,6 @@ const FornacWrapper = ({
   links,
   directionArrows,
   setAnimation,
-  selectedChain,
   setIsViewInitialized,
 }: {
   chains: Chain[];
@@ -34,7 +33,6 @@ const FornacWrapper = ({
   links: boolean;
   directionArrows: boolean;
   setAnimation: boolean;
-  selectedChain: string;
   setIsViewInitialized: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const error = null;
@@ -51,6 +49,7 @@ const FornacWrapper = ({
   const debounceTimeout = useRef(null);
 
   useEffect(() => {
+    console.log("useEffect chains");
     let observer: MutationObserver | null = null;
     let globalObserver: MutationObserver | null = null;
 
@@ -261,6 +260,7 @@ const FornacWrapper = ({
           ))}
       </div> */}
       <Fornac
+        key={JSON.stringify(chains)}
         chains={chains}
         setChains={setChains}
         labelInterval={labelInterval}

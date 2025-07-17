@@ -90,8 +90,7 @@ export interface ChainElement {
 
 export interface JobToPost {
   id: string;
-  residues: ChainElement[];
-  modelNumber: number;
+  models: Record<number, ChainElement[]>;
   radius: number;
   interval: number;
 }
@@ -145,8 +144,17 @@ export interface SummaryJob {
   pdb_file_string: string;
 }
 
+export interface ModelStatus {
+  modelNumber: string;
+  status: `created` | `starting` | `running` | `completed` | `failed`;
+  error_message?: string;
+}
+
 export interface Metadata {
   status: string;
+  resultsStatus?: Record<string, ModelStatus>;
+  model_count: number;
+  error_message?: string;
   analyzeNeighborhoods?: boolean;
 }
 

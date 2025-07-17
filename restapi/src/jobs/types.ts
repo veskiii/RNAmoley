@@ -1,4 +1,5 @@
 import type { UUID } from "crypto";
+import type { Mode } from "fs";
 
 interface Atom {
   serial: number;
@@ -68,10 +69,16 @@ export interface StructuralElement {
   residues: RangeOfResidues[] | undefined;
 }
 
+export interface ModelStatus {
+  modelNumber: string;
+  status: `created` | `starting` | `running` | `completed` | `failed`;
+  error_message?: string;
+}
+
 export interface Metadata {
   status: `created` | `starting` | `running` | `completed` | `failed`;
+  resultsStatus?: Record<string, ModelStatus>;
   model_count: number;
-  last_used_model?: number;
   error_message?: string;
   analyzeNeighborhoods?: boolean;
 }
