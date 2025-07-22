@@ -613,7 +613,7 @@ const Panel: React.FC = () => {
                           onChange={e => setLinks(e.target.checked)}
                           className="mr-2"
                         />
-                        Show links
+                        Show connectivity
                       </label>
                       <label>
                         <input

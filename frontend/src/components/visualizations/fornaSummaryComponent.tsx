@@ -77,12 +77,17 @@ const FornacSummaryComponent = ({
       // Dodaj standardowe łańcuchy (nie-hybrydowe)
       chains.forEach((chain) => {
         if (!hybridizedChains || chain.sequence !== hybridizedChains.sequence) {
+          console.log("Adding chain:", chain.name);
+          console.log("Chain sequence:", chain.sequence);
+          console.log("Chain dotBracket:", chain.dotBracket);
+          console.log("Chain nucleotides:", chain.nucleotides);
           addRNAtoContainer(container, chain);
         }
       });
 
       // Dodaj RNA połączony z hybrydyzowanych łańcuchów, jeśli istnieje
       if (hybridizedChains !== null) {
+        console.log("Adding hybridized RNA:", hybridizedChains);
         addRNAtoContainer(container, {
           name: "hybrid",
           sequence: hybridizedChains.sequence,
@@ -107,7 +112,58 @@ const FornacSummaryComponent = ({
 
     container.addRNA(options.structure, options);
 
-    d3.selectAll('line.link[link_type="external"]').style("stroke", "purple");
+    const createZigzagPath = (x1: number, y1: number, x2: number, y2: number) => {
+      const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+      const segments = Math.max(4, Math.floor(length / 8));
+      const amplitude = 1;
+      
+      let path = `M${x1},${y1}`;
+      
+      for (let i = 1; i < segments; i++) {
+        const t = i / segments;
+        const x = x1 + t * (x2 - x1);
+        const y = y1 + t * (y2 - y1);
+        
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lineLength = Math.sqrt(dx * dx + dy * dy);
+        const perpX = (-dy / lineLength) * amplitude;
+        const perpY = (dx / lineLength) * amplitude;
+        
+        const offset = (i % 2 === 0) ? 1 : -1;
+        path += ` L${x + offset * perpX},${y + offset * perpY}`;
+      }
+      
+      path += ` L${x2},${y2}`;
+      return path;
+    };
+
+    d3.selectAll('line.link[link_type="external"]')
+      .each(function() {
+        const line = d3.select(this);
+        const x1 = parseFloat(line.attr("x1"));
+        const y1 = parseFloat(line.attr("y1"));
+        const x2 = parseFloat(line.attr("x2"));
+        const y2 = parseFloat(line.attr("y2"));
+        
+        if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
+          const zigzagPath = createZigzagPath(x1, y1, x2, y2);
+          
+          const parentElement = (this as Element).parentNode as Element;
+          if (parentElement) {
+            d3.select(parentElement)
+              .append("path")
+              .attr("d", zigzagPath)
+              .attr("class", "clash-zigzag")
+              .style("stroke", "purple")
+              .style("stroke-width", "1.5px")
+              .style("fill", "none")
+              .style("stroke-linecap", "round");
+          }
+          
+          line.remove();
+        }
+      });
 
     var nodes = d3.selectAll("circle.fornac-node");
     nodes.select("title").text("No data");

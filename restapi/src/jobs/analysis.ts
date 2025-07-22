@@ -156,7 +156,7 @@ export async function analyzeStructure(
     );
     const structuralElements = findStructuralElementsForNucleotide(
       motifs,
-      original_index
+      residueNumber
     );
 
     return {
