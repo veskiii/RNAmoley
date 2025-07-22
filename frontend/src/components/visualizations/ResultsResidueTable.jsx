@@ -35,13 +35,16 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     if (data) {
       document
         .querySelectorAll(`td[class*="column-${score}"]`)
-        .forEach((cell, index) => {
-          const residue = data[index];
-          if (residue) {
-            cell.style.backgroundColor = getColor(
-              residue,
-              selectedScore
-            );
+        .forEach((cell) => {
+          const keyAttr = cell.getAttribute("data-residue-number");
+          if (keyAttr) {
+            const residue = data.find(nuc => String(nuc.residue_number) === keyAttr);
+            if (residue) {
+              cell.style.backgroundColor = getColor(
+                residue,
+                selectedScore
+              );
+            }
           }
         });
     }
@@ -218,6 +221,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-CLASH_SCORE"
                 }
@@ -244,6 +248,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_ANGLES"
                 }
@@ -272,6 +277,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_BONDS"
                 }
@@ -299,6 +305,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUITENESS"
                 }
@@ -319,6 +326,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUGAR_PUCKER_OUT"
                 }
