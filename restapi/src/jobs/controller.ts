@@ -38,6 +38,7 @@ import { TOOLS_URL } from "../server.js";
 import { addAnalysisTask } from "./analysis.js";
 import { existsSync } from "fs";
 import { join } from "path";
+import { addCreateJobTask } from "./jobCreation.js";
 
 export async function getJobs(req: Request, res: Response) {
   db.query(getJobsQuery, (err, result) => {
@@ -171,6 +172,33 @@ export async function getJobById(req: Request, res: Response) {
   });
 }
 
+export async function getJobCreation(req: Request, res: Response) {
+  const jobID = req.params.id as UUID;
+  // read metadata and return it
+  if (!jobID) {
+    res.status(400).send({ error: "Job ID is required." });
+    return;
+  }
+
+  let metadata: Metadata;
+  try {
+    metadata = await readMetadata(jobID);
+    if (!metadata) {
+      res.status(500).send({ error: "Metadata file not found." });
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(404).send({ error: "Job not found." });
+    return;
+  }
+
+  return res.status(200).json({
+    id: jobID,
+    metadata: metadata,
+  });
+}
+
 export async function createJob(req: Request, res: Response) {
   const rnaFile = req.file as Express.Multer.File;
   var pdbCode = req.body.pdbCode;
@@ -191,7 +219,6 @@ export async function createJob(req: Request, res: Response) {
   var id: UUID;
   var newFilename: string;
   var originalFilename: string;
-  var finalFilename: string;
   var originalExtension: string;
 
   if (!rnaFile && pdbCode === "" && demoFileName === "None") {
@@ -253,180 +280,28 @@ export async function createJob(req: Request, res: Response) {
   await moveToJobDirectroy(newFilename, id);
 
   const metadata: Metadata = {
-    status: "running",
+    status: "creating",
     model_count: 1,
   };
 
-  saveMetadata(id, metadata);
+  await saveMetadata(id, metadata);
 
-  // if not pdb, convert to pdb
-  console.log(originalExtension);
-  if (originalExtension != "pdb") {
-    const convertResponse = await fetch(
-      `${TOOLS_URL}/convert?id=${id}&filename=${newFilename}`,
-      {
-        method: "POST",
-      }
-    );
+  addCreateJobTask(
+    id,
+    originalFilename,
+    originalExtension,
+    newFilename,
+    jobname,
+    metadata
+  );
 
-    if (!convertResponse.ok) {
-      console.error("Conversion error");
-      deleteJobDirectory(id);
-      res.status(500).send({ error: "CIF to PDB conversion error." });
-      return;
-    } else {
-      console.log("Conversion successful.");
-    }
-
-    finalFilename = newFilename.split(".")[0] + ".pdb";
-  } else {
-    finalFilename = newFilename;
-  }
-
-  // check if pdb file exists after conversion
-  const pdbFile = await fetchPdbFileAsJSON(id);
-  if (!pdbFile) {
-    console.error("PDB file not found after conversion.");
-    deleteJobDirectory(id);
-    res.status(500).send({ error: "Conversion error." });
-    return;
-  }
-
-  // split file into models
-  var numberOfModels = 1;
-  const splitResponse = await fetch(`${TOOLS_URL}/split?id=${id}`, {
-    method: "POST",
-  }).catch((error) => {
-    console.error("Error during splitting:", error);
-    deleteJobDirectory(id);
-    res.status(500).send({ error: "PDB file splitting error." });
-    return;
+  return res.status(202).json({
+    id: id,
+    original_filename: originalFilename,
+    name: jobname,
+    metadata: metadata,
+    message: "Job creation is in progress. Please check back later.",
   });
-  if(!splitResponse) {
-    console.error("Split response is undefined.");
-    return;
-  }
-  numberOfModels = ((await splitResponse.json()) as splitModelsResponse)
-    .numberOfModels;
-
-  // save the original numeration of all the models
-  const newNumeration = await saveOriginalNumeration(id, numberOfModels);
-  if (!newNumeration) {
-    console.error("Numeration error");
-    deleteJobDirectory(id);
-    res.status(500).send({ error: "Numeration error" });
-    return;
-  }
-
-  // temporary fix for very very large structures
-  //@ts-ignore
-  // const wait = (ms) => {
-  //   return new Promise((resolve) => setTimeout(resolve, ms));
-  // };
-  // await wait(5000);
-
-  // run clean up script on  all the models
-  const correctResponse = await fetch(
-    `${TOOLS_URL}/correct?id=${id}&numberOfModels=${numberOfModels}`,
-    {
-      method: "POST",
-    }
-  );
-  if (!correctResponse.ok) {
-    deleteJobDirectory(id);
-    res
-      .status(500)
-      .send({ error: "An error occurred while cleaning up the files." });
-    return;
-  }
-
-  // annotate all the models
-  const annotateResponse = await fetch(
-    `${TOOLS_URL}/annotate?id=${id}&numberOfModels=${numberOfModels}`,
-    {
-      method: "POST",
-    }
-  );
-
-  if (!annotateResponse.ok) {
-    console.error("Annotation error");
-    //deleteJobDirectory(id);
-    res.status(500).send({ error: "Annotation error" });
-    return;
-  } else {
-    console.log("Annotation successful.");
-  }
-  const annotateResult: Annotation[][] =
-    (await annotateResponse.json()) as Annotation[][];
-
-  // extract motifs
-  const extractMotifsResponse = await fetch(
-    `${TOOLS_URL}/extractMotifs?id=${id}&numberOfModels=${numberOfModels}`,
-    {
-      method: "POST",
-    }
-  );
-
-  if (!extractMotifsResponse.ok) {
-    console.error("Motif extraction error");
-    //deleteJobDirectory(id);
-    res.status(500).send({ error: "Motif extraction error" });
-    return;
-  } else {
-    console.log("Motif extraction successful.");
-  }
-  const extractMotifsResult: StructuralElement[][] =
-    (await extractMotifsResponse.json()) as StructuralElement[][];
-
-  // create a metadata file for the job
-  metadata.model_count = numberOfModels;
-  metadata.status = "completed";
-
-  db.query(
-    createJobQuery,
-    [id, originalFilename, jobname],
-    async (err, result) => {
-      if (err) {
-        console.error(err);
-        deleteJobDirectory(id);
-        res.status(500).send({ error: "Database error." });
-        return;
-      }
-
-      // get the first model as blob
-      const blob = await fetchModelFileAsString(id, "1");
-
-      // get the first model as json
-      const pdbFile = await fetchPdbFileAsJSON(id, "1");
-
-      // send fields from result with annotatnion and numeration for the first model
-      const jobResponse: Job = {
-        id: result.rows[0].id,
-        original_filename: result.rows[0].original_filename,
-        name: result.rows[0].name,
-        metadata: metadata,
-        model_number: 1,
-        created_at: result.rows[0].created_at,
-        updated_at: result.rows[0].updated_at,
-        annotation: annotateResult[0] ? annotateResult[0] : [],
-        numeration: newNumeration[0]
-          ? Object.fromEntries(newNumeration[0])
-          : {},
-        motifs: extractMotifsResult[0] ? extractMotifsResult[0] : [],
-        pdb_file: pdbFile
-          ? pdbFile
-          : {
-              atoms: [],
-              seqRes: { serNum: 0, chainID: "", numRes: 0, resNames: [] },
-              residues: [],
-              chains: new Map(),
-            },
-        pdb_file_string: blob,
-      };
-      saveMetadata(id, metadata);
-      res.status(201).json(jobResponse);
-    }
-  );
 }
 
 export async function analyzeStructure(req: Request, res: Response) {

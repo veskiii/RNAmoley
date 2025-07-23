@@ -76,7 +76,7 @@ export interface ModelStatus {
 }
 
 export interface Metadata {
-  status: `created` | `starting` | `running` | `completed` | `failed`;
+  status: `creating` | `created` | `starting` | `running` | `completed` | `failed`;
   resultsStatus?: Record<string, ModelStatus>;
   model_count: number;
   error_message?: string;

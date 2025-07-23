@@ -16,6 +16,17 @@ export const createJob = async (formData: FormData): Promise<any> => {
   return response.json();
 };
 
+export const fetchJobCreation = async (jobID: string | undefined): Promise<any> => {
+  if (!jobID) {
+    throw new Error("Job ID is required");
+  }
+  const response = await fetch(`${API_URL}/jobs/${jobID}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch job: ${response.statusText}`);
+  }
+  return response.json();
+};
+
 export async function fetchJobData(
   jobID: string | undefined,
   model: number = 1

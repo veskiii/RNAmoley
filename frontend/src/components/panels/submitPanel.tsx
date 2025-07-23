@@ -10,7 +10,7 @@ import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import HelpIcon from "../common/helpIcon";
 import Logo from "../common/logo";
-import { createJob } from "../utils/api";
+import { createJob, fetchJobCreation } from "../utils/api";
 import { isFileValid } from "../utils/fileValidation";
 
 const Dashboard: React.FC = () => {
@@ -39,15 +39,42 @@ const Dashboard: React.FC = () => {
     formData.append("radioButton", radiobutton || "None");
     try {
       const response = await createJob(formData);
-      if (context) {
-        context.setId(response.id);
-        navigate(`/analysisPanel/${response.id}`);
+      if (response && response.id) {
+        if (context) context.setId(response.id);
+        // Polling status
+        const pollInterval = 2000;
+        let attempts = 0;
+        const maxAttempts = 60; // max 2 min
+        const checkStatus = async () => {
+          try {
+            // Zakładam, że istnieje funkcja getJobStatus(jobId)
+            const statusResp = await fetchJobCreation(response.id);
+            if (statusResp.metadata.status === "created") {
+              navigate(`/analysisPanel/${response.id}`);
+            } else if (statusResp.metadata.status === "failed") {
+              setIsSubmitting(false);
+              console.error(statusResp.metadata.error_message);
+              alert("Job creation failed.");
+            } else if (attempts < maxAttempts) {
+              attempts++;
+              setTimeout(checkStatus, pollInterval);
+            } else {
+              setIsSubmitting(false);
+              alert("Job timeout. Try again later.");
+            }
+          } catch (err: any) {
+            setIsSubmitting(false);
+            alert(`Failed to check job status\n${err.message}`);
+          }
+        };
+        checkStatus();
+      } else {
+        setIsSubmitting(false);
+        alert("No job ID returned.");
       }
     } catch (error: any) {
       setIsSubmitting(false);
       alert(`Failed to create job\n${error.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

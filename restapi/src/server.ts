@@ -5,6 +5,7 @@ import { router as jobRoutes } from "./jobs/routes.js";
 import { cleanUpJobs } from "./jobs/controller.js";
 import cors from "cors";
 import { createAnalysisWorker } from "./jobs/analysis.js";
+import { createJobCreationWorker } from "./jobs/jobCreation.js";
 
 const app = express();
 app.use(express.json());
@@ -46,6 +47,7 @@ setInterval(() => {
   cleanUpJobs();
 }, 1000 * 60 * 60 * 24);
 
+createJobCreationWorker();
 createAnalysisWorker();
 
 app.listen(PORT, HOST, () => {
