@@ -22,7 +22,12 @@ export interface Annotation {
 }
 
 export interface Numeration {
-  [key: string]: [number, string];
+  [residueNumber: number]: {
+    original_residue_number: number;
+    original_chain_id: string;
+    new_residue_number: number;
+    new_chain_id: string;
+  };
 }
 
 export interface Metadata {

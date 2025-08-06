@@ -85,25 +85,29 @@ export const performJobCreation = async (job:NewJob) => {
         handleAnalysisError(job.id, job.metadata, "Failed to fetch PDB file.");
         return;
     }
+    else {
+        console.log(`PDB file for job ${job.id} fetched successfully.`);
+    }
 
     // Split file into models
-    const numberOfModels = await splitFileIntoModels(job.id);
+    const numberOfModels = await splitFileIntoModels(job.id, job.original_extension);
     console.log(`Number of models: ${numberOfModels} in job ${job.id}`);
 
     job.metadata.model_count = numberOfModels;
     await saveMetadata(job.id, job.metadata);
 
-    // Save original numeration
-    const newNumeration = await saveOriginalNumeration(job.id, numberOfModels);
-    if (!newNumeration) {
-        handleAnalysisError(job.id, job.metadata, "Failed to save original numeration.");
-        return;
+    // Correct models
+    await correctModels(job.id, job.metadata, numberOfModels, job.original_extension);
+
+    if (job.original_extension !== "pdb") {
+      // convert models to PDB
+      for (let i = 0; i < numberOfModels; i++) {
+        const modelPath = `models/${i + 1}.${job.original_extension}`;
+        await convertToPDB(job.id, job.metadata, modelPath);
+      }
     }
 
-    // Correct models
-    await correctModels(job.id, job.metadata, numberOfModels);
-
-    var annotations = await annotateModels(job.id, job.metadata, numberOfModels);
+    var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension);
     if (!annotations) {
         handleAnalysisError(job.id, job.metadata, "Failed to annotate models.");
         return;
@@ -135,9 +139,9 @@ const convertToPDB = async (jobId: UUID, metadata: Metadata, newFilename: string
     }
 }
 
-const splitFileIntoModels = async (jobId : UUID) : Promise<number> => {
+const splitFileIntoModels = async (jobId : UUID, sourceFormat: string) : Promise<number> => {
     var numberOfModels = 1;
-      const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}`, {
+      const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}&sourceFormat=${sourceFormat}`, {
         method: "POST",
       });
       numberOfModels = ((await splitResponse.json()) as splitModelsResponse)
@@ -145,9 +149,9 @@ const splitFileIntoModels = async (jobId : UUID) : Promise<number> => {
     return numberOfModels;
 }
 
-const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number) => {
+const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string) => {
     const correctResponse = await fetch(
-        `${TOOLS_URL}/correct?id=${jobId}&numberOfModels=${numberOfModels}`,
+        `${TOOLS_URL}/correct?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}`,
         {
             method: "POST",
         }
@@ -158,9 +162,9 @@ const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: nu
     }
 }
 
-const annotateModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number): Promise<Annotation[][] | undefined> => {
+const annotateModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string): Promise<Annotation[][] | undefined> => {
     const annotateResponse = await fetch(
-        `${TOOLS_URL}/annotate?id=${jobId}&numberOfModels=${numberOfModels}`,
+        `${TOOLS_URL}/annotate?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}`,
         {
           method: "POST",
         }

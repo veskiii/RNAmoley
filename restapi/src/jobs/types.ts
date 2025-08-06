@@ -137,6 +137,15 @@ export interface Analysis_results {
   fragmentMetrics: metrics;
 }
 
+export interface Numeration {
+  [residueNumber: number]: {
+    original_residue_number: number;
+    original_chain_id: string;
+    new_residue_number: number;
+    new_chain_id: string;
+  };
+}
+
 export interface Job {
   id: string;
   original_filename: string;
@@ -146,7 +155,7 @@ export interface Job {
   created_at: string;
   updated_at: string;
   annotation: Annotation[];
-  numeration: { [key: string]: [number, string] };
+  numeration: Numeration;
   motifs: StructuralElement[];
   pdb_file: PDBFile;
   pdb_file_string: string;

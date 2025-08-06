@@ -184,7 +184,7 @@ const Molstar = (props) => {
               setSelected((prevSelected) => {
                 // Nowe wybrane
                 const newSelected = localSelected.map(sel => {
-                  const wasSelected = chains.find( c => c.name.slice(-1) === sel.chain)
+                  const wasSelected = chains.find( c => c.name === sel.chain)
                     .nucleotides.some(
                       nucleotide =>
                         nucleotide.index === sel.position &&

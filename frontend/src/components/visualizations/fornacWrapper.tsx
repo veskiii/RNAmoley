@@ -76,7 +76,7 @@ const FornacWrapper = ({
             }
           } else if (nodeNameAttr && hybridizedName.includes(nodeNameAttr)) {
             found_chain = chains.find(
-              (chain) => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2)
+              (chain) => chain.name === nodeNameAttr.slice(-3, -2)
             );
             if (found_chain) {
               let found_nucleotide = found_chain.nucleotides[numIndex - 1];
@@ -85,10 +85,10 @@ const FornacWrapper = ({
                 selectedIndices.add(found_nucleotide.index);
               } else {
                 found_chain = chains.find(
-                  (chain) => chain.name.slice(-1) === nodeNameAttr.slice(-1)
+                  (chain) => chain.name === nodeNameAttr.slice(-1)
                 );
                 let prevChain = chains.find(
-                  (chain) => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2)
+                  (chain) => chain.name === nodeNameAttr.slice(-3, -2)
                 );
                 if (found_chain && prevChain)
                   found_nucleotide =

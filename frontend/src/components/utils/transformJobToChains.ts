@@ -54,7 +54,7 @@ export function transformJobToChains(job: Job): Chain[] {
       const numerationKey = Object.keys(job.numeration).find(
         (key) =>
           parseInt(key, 10) === id &&
-          job.numeration[key][1] === annotation.name.slice(-1)
+          job.numeration[parseInt(key, 10)].new_chain_id === annotation.name
       );
       // console.log("numeration key: " + numerationKey);
       if (numerationKey) {
@@ -67,7 +67,7 @@ export function transformJobToChains(job: Job): Chain[] {
 
         const nucleotide: Nucleotide = {
           index: index,
-          original_index: job.numeration[numerationKey][0],
+          original_index: job.numeration[parseInt(numerationKey, 10)].original_residue_number,
           base: annotation.sequnece[i],
           structure: annotation.dotbracket[i],
           selected: false,
@@ -78,6 +78,10 @@ export function transformJobToChains(job: Job): Chain[] {
       id++;
     }
     if (chain.nucleotides.length !== chain.sequence.length) {
+      console.error(
+        `Chain ${chain.name} has different number of nucleotides than sequence length.`
+      );
+      console.error(chain);
       throw new Error(
         "Number of nucleotides do not match length of the sequence."
       );

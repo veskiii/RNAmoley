@@ -9,6 +9,7 @@ import type {
   ChainElement,
   Annotation,
   StructuralElement,
+  Numeration,
 } from "./types.js";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
 import {
@@ -145,8 +146,12 @@ export async function analyzeStructure(
 
   const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
     const residueNumber = extractResidueNumber(res.residue);
-    const original_index = numeration[residueNumber]?.[0] ?? -1;
-    const chainID = extractChainID(res.residue);
+    const residueNumeration = numeration[residueNumber];
+    if (!residueNumeration) {
+      throw new Error(`Numeration not found for residue number ${residueNumber}`);
+    }
+    const original_index = residueNumeration.original_residue_number;
+    const chainID = residueNumeration.new_chain_id;
     const base = extractBase(res.residue);
     const secondaryStructure = findAnnotationByChainAndResidue(
       annotations,
@@ -164,9 +169,9 @@ export async function analyzeStructure(
       original_index: original_index,
       base: base,
       structure: secondaryStructure,
-      chainID: numeration[residueNumber]?.[1] ? chainID : "",
+      chainID: numeration[residueNumber]?.original_chain_id ? chainID : "",
       selected: residues.some(
-        (r) => r.chainID === chainID && r.residueID === extractResidueNumber(res.residue)
+        (r) => r.chainID === chainID && r.residueID === residueNumber
       ),
       structuralElements: structuralElements,
       residueMetrics: res,
@@ -280,18 +285,15 @@ async function analyzeSphereFilesIncremental(
 }
 
 function extractResidueNumber(residue: string): number {
-  const match = residue.match(/\s+(\d+)\s+/);
-  return match ? Number(match[1]) : -1;
+  return Number(residue.substring(2,6));
 }
 
 function extractChainID(residue: string): string {
-  const match = residue.match(/^\s*(\S+)/);
-  return match && match[1] ? match[1] : "";
+  return residue.substring(0,2);
 }
 
 function extractBase(residue: string): string {
-  const match = residue.match(/\s+([A-Za-z])\s*$/);
-  return match && match[1] ? match[1] : "";
+  return residue.substring(10,11);
 }
 
 
@@ -361,7 +363,7 @@ async function fetchFragmentMetrics(
 async function fetchNumeration(
   jobID: UUID,
   modelNumber: string
-): Promise<{ [key: string]: [number, string] }> {
+): Promise<Numeration> {
   const numeration = await fetchJSONFile(
     jobID,
     `${modelNumber}_numeration.json`,
@@ -405,24 +407,27 @@ async function fetchMotifs(
 
 const findAnnotationByChainAndResidue = (
   annotations: Annotation[],
-  numeration: { [key: string]: [number, string] },
+  numeration: Numeration,
   chainID: string,
   residueID: number): string => {
     const annotation = annotations.find(
-      (a) => a.name?.slice(-1) === chainID
+      (a) => a.name === chainID
     );
     if (!annotation) {
+      console.warn(`No annotation found for chain -${chainID}-`);
       return "";
     }
     // jeszcze uwzglednic ze to musi byc pozycja w tym chainie
     const firstPositionInChain = Object.entries(numeration)
-      .filter(([_, value]) => value[1] === chainID)
+      .filter(([_, value]) => value.new_chain_id === chainID)
       .map(([key]) => Number(key))
       .reduce((min, curr) => (curr < min ? curr : min), Infinity);
     const positionInAnnotation = Object.keys(numeration).find(
-      (key) => numeration[key]?.[0] === residueID && numeration[key][1] === chainID
+      (key) => numeration[parseInt(key, 10)]?.original_residue_number === residueID 
+      && numeration[parseInt(key, 10)]?.new_chain_id === chainID
     );
     if (!positionInAnnotation) {
+      console.warn(`No position found for residue ${residueID} in chain ${chainID}`);
       return "";
     }
 
