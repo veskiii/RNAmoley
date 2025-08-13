@@ -83,6 +83,7 @@ export interface Nucleotide {
 
 export interface Chain {
   name: string;
+  original_name: string;
   nucleotides: Nucleotide[];
   sequence: string;
   dotBracket: string;

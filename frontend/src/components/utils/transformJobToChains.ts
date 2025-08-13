@@ -40,9 +40,17 @@ export function transformJobToChains(job: Job): Chain[] {
         "Sequence length and dotBracket length are not equal or 0."
       );
     }
+    const foundKey = Object.keys(job.numeration).find(
+      (key: string) => job.numeration[Number(key)].new_chain_id === annotation.name
+    );
+    const originalChainKey: number | undefined = foundKey !== undefined ? Number(foundKey) : undefined;
+    const original_chain_id = originalChainKey
+      ? job.numeration[originalChainKey].original_chain_id
+      : undefined;
 
     const chain: Chain = {
       name: annotation.name,
+      original_name: original_chain_id || annotation.name,
       sequence: annotation.sequnece,
       dotBracket: annotation.dotbracket,
       nucleotides: [],

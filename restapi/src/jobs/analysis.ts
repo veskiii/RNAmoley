@@ -148,7 +148,8 @@ export async function analyzeStructure(
     const residueNumber = extractResidueNumber(res.residue);
     const residueNumeration = numeration[residueNumber];
     if (!residueNumeration) {
-      throw new Error(`Numeration not found for residue number ${residueNumber}`);
+      console.error(`Numeration not found for residue number ${residueNumber}, skipping this residue`);
+      return null;
     }
     const original_index = residueNumeration.original_residue_number;
     const chainID = residueNumeration.new_chain_id;
@@ -169,14 +170,15 @@ export async function analyzeStructure(
       original_index: original_index,
       base: base,
       structure: secondaryStructure,
-      chainID: numeration[residueNumber]?.original_chain_id ? chainID : "",
+      chainID:  chainID,
+      original_chain_id: residueNumeration.original_chain_id,
       selected: residues.some(
         (r) => r.chainID === chainID && r.residueID === residueNumber
       ),
       structuralElements: structuralElements,
       residueMetrics: res,
     };
-  });
+  }).filter((item): item is nucleotideResult => item !== null);
 
   await saveResults(jobID, modelNumber, {
     data: initialData,

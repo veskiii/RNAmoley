@@ -94,7 +94,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                         sx={{ height: "40px", maxWidth: 120 }}
                     >
                         {chains.map((chain) => (
-                            <MenuItem key={chain.name} value={chain.name}>{chain.name}</MenuItem>
+                            <MenuItem key={chain.name} value={chain.name}>{chain.original_name}</MenuItem>
                         ))}
                     </Select>
                 </FormControl>

@@ -124,6 +124,7 @@ export interface nucleotideResult {
   base: string;
   structure: string;
   chainID: string;
+  original_chain_id: string;
   selected: boolean;
   structuralElements: StructuralElement[];
   metrics?: metrics;

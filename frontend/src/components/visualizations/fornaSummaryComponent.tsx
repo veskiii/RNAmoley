@@ -90,6 +90,7 @@ const FornacSummaryComponent = ({
         console.log("Adding hybridized RNA:", hybridizedChains);
         addRNAtoContainer(container, {
           name: "hybrid",
+          original_name: "hybrid",
           sequence: hybridizedChains.sequence,
           dotBracket: hybridizedChains.dotBracket,
           nucleotides: [], // Domyślne wartości

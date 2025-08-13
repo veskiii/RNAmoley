@@ -8,19 +8,20 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
 
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
-    const chainsSet = new Set();
-    // console.log(data.length);
-    // console.log(data);
+    const chainsMap = new Map();
     data.forEach((nucleotide) => {
-      if (nucleotide.chainID) {
-        chainsSet.add(nucleotide.chainID);
+      if (nucleotide.chainID && !chainsMap.has(nucleotide.chainID)) {
+      chainsMap.set(nucleotide.chainID, {
+        chainID: nucleotide.chainID,
+        original_chain_id: nucleotide.original_chain_id,
+      });
       }
     });
-    return Array.from(chainsSet);
+    return Array.from(chainsMap.values());
   }, [data]);
 
   const [selectedChain, setSelectedChain] = useState(() =>
-    chainOptions.length > 0 ? chainOptions[0] : ""
+    chainOptions.length > 0 ? chainOptions[0].chainID : ""
   );
 
   function colorColumn(selectedScore = QualityScore.CLASH_SCORE) {
@@ -70,8 +71,11 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
   };
 
   useEffect(() => {
-    if (chainOptions.length > 0 && !chainOptions.includes(selectedChain)) {
-      setSelectedChain(chainOptions[0]);
+    if (
+      chainOptions.length > 0 &&
+      !chainOptions.some(option => option.chainID === selectedChain)
+    ) {
+      setSelectedChain(chainOptions[0].chainID);
     }
   }, [chainOptions]);
 
@@ -138,9 +142,9 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           value={selectedChain}
           onChange={(e) => setSelectedChain(e.target.value)}
         >
-          {chainOptions.map((chainId) => (
-            <option key={chainId} value={chainId}>
-              {chainId}
+          {chainOptions.map((chain) => (
+            <option key={chain.chainID} value={chain.chainID}>
+              {chain.original_chain_id}
             </option>
           ))}
         </select>
