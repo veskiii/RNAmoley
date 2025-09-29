@@ -29,71 +29,53 @@ export function transformJobToChains(job: Job): Chain[] {
     throw new Error("Numeration is undefined or empty.");
   }
 
-  let id = 1;
-  job.annotation.forEach((annotation) => {
-    if (
-      annotation.sequnece.length !== annotation.dotbracket.length ||
-      annotation.sequnece.length === 0 ||
-      annotation.dotbracket.length === 0
-    ) {
-      throw new Error(
-        "Sequence length and dotBracket length are not equal or 0."
-      );
-    }
-    const foundKey = Object.keys(job.numeration).find(
-      (key: string) => job.numeration[Number(key)].new_chain_id === annotation.name
-    );
-    const originalChainKey: number | undefined = foundKey !== undefined ? Number(foundKey) : undefined;
-    const original_chain_id = originalChainKey
-      ? job.numeration[originalChainKey].original_chain_id
-      : undefined;
 
+  // create chain
+  // get all chain ids from numeration
+  const chainIds = new Set<string>();
+  Object.values(job.numeration).forEach((item) => {
+    if (item.auth_chain_id) {
+      chainIds.add(item.auth_chain_id);
+    }
+  });
+
+  // for each chain id create chain
+  chainIds.forEach((chainId) => {
+    const annotationForChain = job.annotation.find(
+      (ann) => ann.name === chainId
+    );
     const chain: Chain = {
-      name: annotation.name,
-      original_name: original_chain_id || annotation.name,
-      sequence: annotation.sequnece,
-      dotBracket: annotation.dotbracket,
+      name: chainId,
+      original_name: chainId,
+      sequence: annotationForChain ? annotationForChain.sequnece : "",
+      dotBracket: annotationForChain ? annotationForChain.dotbracket : "",
       nucleotides: [],
     };
 
-    console.log(job);
+    // get all nucleotides from numeration with this chain id
+    Object.keys(job.numeration).forEach((key) => {
+      const item = job.numeration[Number(key)];
+      if (item.auth_chain_id === chainId) {
+        // for each nucleotide create nucleotide
+        const nucleotide: Nucleotide = {
+          index: item.annotator_residue_number,
+          original_index: item.auth_residue_number,
+          base: item.annotator_nucleotide_name,
+          structure: item.annotator_dotbracket,
+          selected: false,
+          structuralElements: [],
+        };
 
-    for (let i = 0; i < annotation.sequnece.length; i++) {
-      const numerationKey = Object.keys(job.numeration).find(
-        (key) =>
-          parseInt(key, 10) === id &&
-          job.numeration[parseInt(key, 10)].new_chain_id === annotation.name
-      );
-      // console.log("numeration key: " + numerationKey);
-      if (numerationKey) {
-        const index = parseInt(numerationKey, 10);
-        // TODO: does index continue on different chains
-        const structuralElements = findStructuralElementsForNucleotide(
+        // find structural elements for this nucleotide
+        nucleotide.structuralElements = findStructuralElementsForNucleotide(
           job.motifs,
-          index
+          nucleotide.index
         );
 
-        const nucleotide: Nucleotide = {
-          index: index,
-          original_index: job.numeration[parseInt(numerationKey, 10)].original_residue_number,
-          base: annotation.sequnece[i],
-          structure: annotation.dotbracket[i],
-          selected: false,
-          structuralElements: structuralElements,
-        };
         chain.nucleotides.push(nucleotide);
       }
-      id++;
-    }
-    if (chain.nucleotides.length !== chain.sequence.length) {
-      console.error(
-        `Chain ${chain.name} has different number of nucleotides than sequence length.`
-      );
-      console.error(chain);
-      throw new Error(
-        "Number of nucleotides do not match length of the sequence."
-      );
-    }
+    });
+
     chains.push(chain);
   });
 

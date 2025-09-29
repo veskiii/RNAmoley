@@ -115,7 +115,7 @@ const Panel: React.FC = () => {
           .filter(n => n.selected)
           .map(n => ({
             chainID: chain.name,
-            residueID: n.index,
+            residueID: n.original_index,
           }))
       );
       if (selected.length > 0) {

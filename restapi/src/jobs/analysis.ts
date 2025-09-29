@@ -10,6 +10,7 @@ import type {
   Annotation,
   StructuralElement,
   Numeration,
+  NumerationItem,
 } from "./types.js";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
 import {
@@ -145,21 +146,19 @@ export async function analyzeStructure(
   const motifs = await fetchMotifs(jobID, modelNumber);
 
   const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
-    const residueNumber = extractResidueNumber(res.residue);
-    const residueNumeration = numeration[residueNumber];
+    const original_index = extractResidueNumber(res.residue);
+    const chainID = extractChainID(res.residue);
+    const residueNumeration = Object.values(numeration).find(
+      (n: NumerationItem) => n.auth_residue_number === original_index && n.auth_chain_id === chainID);
+
     if (!residueNumeration) {
-      console.error(`Numeration not found for residue number ${residueNumber}, skipping this residue`);
+      console.error(`Numeration not found for residue  ${res.residue}, skipping this residue`);
       return null;
     }
-    const original_index = residueNumeration.original_residue_number;
-    const chainID = residueNumeration.new_chain_id;
-    const base = extractBase(res.residue);
-    const secondaryStructure = findAnnotationByChainAndResidue(
-      annotations,
-      numeration,
-      chainID,
-      original_index
-    );
+    const residueNumber = residueNumeration.annotator_residue_number;
+    // const chainID = residueNumeration.new_chain_id;
+    const base = residueNumeration.annotator_nucleotide_name;
+    const secondaryStructure = residueNumeration.annotator_dotbracket;
     const structuralElements = findStructuralElementsForNucleotide(
       motifs,
       residueNumber
@@ -173,13 +172,14 @@ export async function analyzeStructure(
       chainID:  chainID,
       original_chain_id: residueNumeration.original_chain_id,
       selected: residues.some(
-        (r) => r.chainID === chainID && r.residueID === residueNumber
+        (r) => r.chainID === chainID && r.residueID === original_index
       ),
       structuralElements: structuralElements,
       residueMetrics: res,
     };
   }).filter((item): item is nucleotideResult => item !== null);
 
+  console.log(`Saving results for job ${jobID}, model ${modelNumber}. Number of residues: ${initialData.length}`);
   await saveResults(jobID, modelNumber, {
     data: initialData,
     modelMetrics: modelMetrics,
@@ -243,8 +243,17 @@ async function analyzeSphereFilesIncremental(
         }
 
         const tmpMetrics: metrics = (await res.json()) as metrics;
-        const nucleotideNumber = parseInt(file.split(".")[0] ?? "");
-        const initialNucleotideResults = resultMap.get(nucleotideNumber);
+        const [chainId, originalNumberStr] = file.split(".")[0]?.split("_") ?? [];
+        const originalNumber = parseInt(originalNumberStr ?? "");
+        // find in initialData the nucleotide with this original index and chain id
+        if (!chainId || isNaN(originalNumber)) {
+          throw new Error(`Invalid file name format: ${file}`);
+        }
+        const initialNucleotide = initialData.find((n) => n.original_index === originalNumber && n.chainID === chainId);
+        if (!initialNucleotide) {
+          throw new Error(`Initial nucleotide not found for chain ${chainId} and index ${originalNumber} in file ${file}`);
+        }
+        const initialNucleotideResults = resultMap.get(initialNucleotide.residue_number);
 
         return {
           ...initialNucleotideResults,
@@ -274,6 +283,8 @@ async function analyzeSphereFilesIncremental(
     const sortedResults = Array.from(resultMap.values()).sort(
       (a, b) => a.residue_number - b.residue_number
     );
+
+    console.log(`Saving results for job ${jobID}, model ${modelNumber}. Number of residues: ${sortedResults.length}`);
     await saveResults(jobID, modelNumber, {
       data: sortedResults,
       modelMetrics,
@@ -291,14 +302,8 @@ function extractResidueNumber(residue: string): number {
 }
 
 function extractChainID(residue: string): string {
-  return residue.substring(0,2);
+  return residue.substring(0,2).trim();
 }
-
-function extractBase(residue: string): string {
-  return residue.substring(10,11);
-}
-
-
 
 async function createWalkingSphere(
   jobID: UUID,
@@ -406,36 +411,6 @@ async function fetchMotifs(
   }
   return motifs;
 }
-
-const findAnnotationByChainAndResidue = (
-  annotations: Annotation[],
-  numeration: Numeration,
-  chainID: string,
-  residueID: number): string => {
-    const annotation = annotations.find(
-      (a) => a.name === chainID
-    );
-    if (!annotation) {
-      console.warn(`No annotation found for chain -${chainID}-`);
-      return "";
-    }
-    // jeszcze uwzglednic ze to musi byc pozycja w tym chainie
-    const firstPositionInChain = Object.entries(numeration)
-      .filter(([_, value]) => value.new_chain_id === chainID)
-      .map(([key]) => Number(key))
-      .reduce((min, curr) => (curr < min ? curr : min), Infinity);
-    const positionInAnnotation = Object.keys(numeration).find(
-      (key) => numeration[parseInt(key, 10)]?.original_residue_number === residueID 
-      && numeration[parseInt(key, 10)]?.new_chain_id === chainID
-    );
-    if (!positionInAnnotation) {
-      console.warn(`No position found for residue ${residueID} in chain ${chainID}`);
-      return "";
-    }
-
-    const positionInAnnotationChain = parseInt(positionInAnnotation, 10) - firstPositionInChain + 1;
-    return annotation.dotbracket?.[positionInAnnotationChain - 1] || "";
-  }
 
   export function findStructuralElementsForNucleotide(
   elements: StructuralElement[],

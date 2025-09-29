@@ -26,6 +26,23 @@ interface StructuralElement {
   residues: RangeOfResidues[] | undefined;
 }
 
+interface NumerationItem {
+  annotator_residue_number: number;
+  annotator_nucleotide_name: string;
+  annotator_dotbracket: string;
+  label_chain_id: string | undefined;
+  label_residue_number: number | undefined;
+  auth_chain_id: string;
+  auth_residue_number: number;
+  auth_nucleotide_name: string;
+  moley_residue_number?: number;
+  moley_chain_id?: string;
+}
+
+interface NumerationMap {
+  [annotator_residue_number: number]: NumerationItem;
+}
+
 const MOTIF_TYPE_NAME_MAP = {
   Stem: "S",
   SingleStrand: "SS",
@@ -144,6 +161,12 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
         }
       }
     }
+
+    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/models/${i}.json`));
+    const numerationFilename = `${i}_numeration.json`;
+    const numerationString = JSON.stringify(numeration);
+    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/models`, numerationFilename);
+    await fs.writeFile(numerationFilePath, numerationString);
 
     // parse output as list of annotations
     // every 3 lines is a new annotation
@@ -280,6 +303,35 @@ const retrieveMotifsFromJson = async (
   }
 
   return structuralElements;
+};
+
+const retrieveNumerationFromJson = async (
+  filePath: string
+): Promise<NumerationMap> => {
+  const rawData = await fs.readFile(filePath, "utf-8");
+  const jsonData = JSON.parse(rawData);
+
+  const numerationMap: NumerationMap = {};
+
+  if (jsonData.bpseq_index) {
+    Object.entries(jsonData.bpseq_index).forEach(([annotator_residue_number, value]: [string, any]) => {
+      // get nucleotide name from jsonData.bpseq.sequence
+      const annotator_nucleotide_name = jsonData.bpseq?.sequence?.[Number(annotator_residue_number) - 1] ?? "N";
+      const annotator_dotbracket = jsonData.bpseq?.dot_bracket?.structure?.[Number(annotator_residue_number) - 1] ?? ".";
+      numerationMap[Number(annotator_residue_number)] = {
+        annotator_residue_number: Number(annotator_residue_number),
+        annotator_nucleotide_name: annotator_nucleotide_name,
+        annotator_dotbracket: annotator_dotbracket,
+        label_chain_id: value.label?.chain ?? undefined,
+        label_residue_number: value.label?.number ?? undefined,
+        auth_chain_id: value.auth.chain,
+        auth_residue_number: value.auth.number,
+        auth_nucleotide_name: value.auth.name,
+      };
+    });
+  }
+
+  return numerationMap;
 };
 
 export async function runMotifExtractor(id: string, numberOfModels: number) {

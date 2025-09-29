@@ -138,14 +138,23 @@ export interface Analysis_results {
   fragmentMetrics: metrics;
 }
 
-export interface Numeration {
-  [residueNumber: number]: {
-    original_residue_number: number;
-    original_chain_id: string;
-    new_residue_number: number;
-    new_chain_id: string;
-  };
+export interface NumerationItem {
+  annotator_residue_number: number;
+  annotator_nucleotide_name: string;
+  annotator_dotbracket: string;
+  label_chain_id: string | undefined;
+  label_residue_number: number | undefined;
+  auth_chain_id: string;
+  auth_residue_number: number;
+  auth_nucleotide_name: string;
+  moley_residue_number?: number;
+  moley_chain_id?: string;
 }
+
+export interface Numeration {
+  [annotator_residue_number: number]: NumerationItem;
+}
+
 
 export interface Job {
   id: string;

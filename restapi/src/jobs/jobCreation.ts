@@ -96,8 +96,15 @@ export const performJobCreation = async (job:NewJob) => {
     job.metadata.model_count = numberOfModels;
     await saveMetadata(job.id, job.metadata);
 
+    var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension);
+    if (!annotations) {
+        handleAnalysisError(job.id, job.metadata, "Failed to annotate models.");
+        return;
+    }
+
+
     // Correct models
-    await correctModels(job.id, job.metadata, numberOfModels, job.original_extension);
+    // await correctModels(job.id, job.metadata, numberOfModels, job.original_extension);
 
     if (job.original_extension !== "pdb") {
       // convert models to PDB
@@ -107,11 +114,11 @@ export const performJobCreation = async (job:NewJob) => {
       }
     }
 
-    var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension);
-    if (!annotations) {
-        handleAnalysisError(job.id, job.metadata, "Failed to annotate models.");
-        return;
-    }
+    // var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension);
+    // if (!annotations) {
+    //     handleAnalysisError(job.id, job.metadata, "Failed to annotate models.");
+    //     return;
+    // }
 
     var structuralElements = await extractStructuralElements(job.id, job.metadata, numberOfModels);
     if (!structuralElements) {
