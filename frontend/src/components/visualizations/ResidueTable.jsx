@@ -10,7 +10,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
     return <p>No data available</p>;
   }
   const selectedChainData = data.find(
-    (chain) => chain.name.slice(-1) === selectedChain
+    (chain) => chain.name === selectedChain
   );
   if (!selectedChainData) {
     return <p>No data available for the selected chain {selectedChain}</p>;
@@ -21,7 +21,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
     console.log(data);
     // setData(prevChains =>
       data.map(chain => {
-        if (chain.name.slice(-1) === selectedChain) {
+        if (chain.name === selectedChain) {
           return {
             ...chain,
             nucleotides: chain.nucleotides.map(nucleotide => {
@@ -50,7 +50,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
     console.log(data);
     // setData(prevChains =>
       data.map(chain => {
-        if (chain.name.slice(-1) === selectedChain) {
+        if (chain.name === selectedChain) {
           const clickedNucleotide = chain.nucleotides.find( nucleotide => nucleotide.index === index);
           const clickedStructuralNames = clickedNucleotide.structuralElements.map(el => el.name);
           const SEResidues = chain.nucleotides.filter(nucleotide =>

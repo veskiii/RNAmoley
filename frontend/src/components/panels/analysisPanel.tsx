@@ -42,7 +42,7 @@ const Panel: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<number>(1);
   const [useWalkingSphere, setUseWalkingSphere] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>(
-    chainsState[0]?.name.slice(-1) || ""
+    chainsState[0]?.name|| ""
   );
   const [inputValueStart, setInputValueStart] = useState<string>("");
   const [inputValueEnd, setInputValueEnd] = useState<string>("");
@@ -60,7 +60,7 @@ const Panel: React.FC = () => {
   const [modelSelections, setModelSelections] = useState<Record<number, {chainsState: Chain[], selectedFragments: SelectedFragment[]}>>({});
 
   useEffect(() => {
-    setSelectedChain(chainsState[0]?.name.slice(-1) || "");
+    setSelectedChain(chainsState[0]?.name || "");
   }, [myData]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
@@ -78,7 +78,7 @@ const Panel: React.FC = () => {
   //do placeholder z max i min original_id nukleotydów podanego chain
   useEffect(() => {
     chainsState.forEach((chain) => {
-      if (chain.name.slice(-1) === selectedChain) {
+      if (chain.name === selectedChain) {
         const indices = chain.nucleotides.map((nucleotide) => nucleotide.index);
         const min = Math.min(...indices);
         const max = Math.max(...indices);
@@ -113,8 +113,8 @@ const Panel: React.FC = () => {
         chain.nucleotides
           .filter(n => n.selected)
           .map(n => ({
-            chainID: chain.name.slice(-1),
-            residueID: n.index,
+            chainID: chain.name,
+            residueID: n.original_index,
           }))
       );
       if (selected.length > 0) {
@@ -198,7 +198,7 @@ const Panel: React.FC = () => {
     const allSelected = residueIds.every((id) =>
       chainsState.some(
         (chain) =>
-          chain.name.slice(-1) === chainName &&
+          chain.name === chainName &&
           chain.nucleotides.some((nucleotide) => nucleotide.index === id && nucleotide.selected)
       )
     );
@@ -228,7 +228,7 @@ const Panel: React.FC = () => {
     // Zaznacz odpowiednie nukleotydy w chainsState
     setChainsState((prevChains) =>
       prevChains.map((chain) => {
-        if (chain.name.slice(-1) === chainName) {
+        if (chain.name === chainName) {
           return {
             ...chain,
             nucleotides: chain.nucleotides.map((nucleotide) =>
@@ -247,7 +247,7 @@ const Panel: React.FC = () => {
     // check if residue is already selected
     const isSelected = chainsState.some(
       (chain) =>
-        chain.name.slice(-1) === chainName &&
+        chain.name === chainName &&
         chain.nucleotides.some((nucleotide) => nucleotide.index === residueId && nucleotide.selected)
     );
     if (isSelected) {
@@ -258,7 +258,7 @@ const Panel: React.FC = () => {
     // Otherwise, select the residue
     setChainsState((prevChains) =>
       prevChains.map((chain) => {   
-        if (chain.name.slice(-1) === chainName) {
+        if (chain.name === chainName) {
           return {
             ...chain,
             nucleotides: chain.nucleotides.map((nucleotide) => {
@@ -334,7 +334,7 @@ const Panel: React.FC = () => {
     // check selected fragments if residue is part of any
     setChainsState((prevChains) =>
       prevChains.map((chain) => {
-        if (chain.name.slice(-1) === chainName) {
+        if (chain.name === chainName) {
           return {
             ...chain,
             nucleotides: chain.nucleotides.map((nucleotide) => {
@@ -394,7 +394,7 @@ const Panel: React.FC = () => {
     // Deselect all residues in the removed fragment, excluding those that are part of other fragments
     setChainsState((prevChains) =>
       prevChains.map((chain) => {
-        if (chain.name.slice(-1) === fragmentToRemove.chainName) {
+        if (chain.name === fragmentToRemove.chainName) {
           return {
             ...chain,
             nucleotides: chain.nucleotides.map((nucleotide) => {
@@ -456,7 +456,7 @@ const Panel: React.FC = () => {
       chain.nucleotides
         .filter((nucleotide) => nucleotide.selected)
         .map((nucleotide) => ({
-          chainID: chain.name.slice(-1),
+          chainID: chain.name,
           residueID: nucleotide.index,
         }))
     );
@@ -613,7 +613,7 @@ const Panel: React.FC = () => {
                           onChange={e => setLinks(e.target.checked)}
                           className="mr-2"
                         />
-                        Show links
+                        Show connectivity
                       </label>
                       <label>
                         <input

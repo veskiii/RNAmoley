@@ -26,6 +26,23 @@ interface StructuralElement {
   residues: RangeOfResidues[] | undefined;
 }
 
+interface NumerationItem {
+  annotator_residue_number: number;
+  annotator_nucleotide_name: string;
+  annotator_dotbracket: string;
+  label_chain_id: string | undefined;
+  label_residue_number: number | undefined;
+  auth_chain_id: string;
+  auth_residue_number: number;
+  auth_nucleotide_name: string;
+  moley_residue_number?: number;
+  moley_chain_id?: string;
+}
+
+interface NumerationMap {
+  [annotator_residue_number: number]: NumerationItem;
+}
+
 const MOTIF_TYPE_NAME_MAP = {
   Stem: "S",
   SingleStrand: "SS",
@@ -43,29 +60,27 @@ async function formatOutput(output: string) {
 export async function runConverter(id: string, filename: string) {
   const filenameNoExt = filename.split(".")[0];
   console.log(`Converting ${filename} to pdb`);
-  const maxit = spawnSync("maxit", [
-    `-input`,
+
+  const gemmi = spawnSync("gemmi", [
+    "convert",
     `${JOBS_DIR}/${id}/${filename}`,
-    `-output`,
     `${JOBS_DIR}/${id}/${filenameNoExt}.pdb`,
-    "-o",
-    "2",
   ]);
-  if (maxit.error) {
-    console.error("Error running maxit: ", maxit.error);
+  if (gemmi.error) {
+    console.error("Error running gemmi: ", gemmi.error);
     return;
   }
 
-  const result = await formatOutput(maxit.stdout.toString());
+  const result = await formatOutput(gemmi.stdout.toString());
 
   return result;
 }
 
-export async function splitModels(id: string) {
+export async function splitModels(id: string, sourceFormat: string) {
   console.log(`Splitting ${JOBS_DIR}/${id}/${id}.pdb into models...`);
 
   const split = spawnSync(`${SCRIPTS_DIR}/Separate.py`, [
-    `${JOBS_DIR}/${id}/${id}.pdb`,
+    `${JOBS_DIR}/${id}/${id}.${sourceFormat}`,
     `${JOBS_DIR}/${id}/models`,
   ]);
   if (split.error) {
@@ -76,21 +91,27 @@ export async function splitModels(id: string) {
   const result = rawResult.substring(2, rawResult.length - 4);
   console.log("Split models - number of models:", result);
 
+  const numberOfModels = parseInt(result);
+  if (isNaN(numberOfModels) || numberOfModels < 1) {
+    console.error("Invalid number of models returned:", result);
+    throw new Error(`Invalid number of models: ${result}`);
+  }
+
   const response = {
-    numberOfModels: parseInt(result),
+    numberOfModels: numberOfModels,
   };
 
   return response;
 }
 
-export async function correctModels(id: string, numberOfModels: number) {
+export async function correctModels(id: string, numberOfModels: number, sourceFormat: string) {
   console.log(`Correcting ${id} models...`);
 
   for (let i = 1; i <= numberOfModels; i++) {
     console.log(`Correcting model ${i}...`);
     const correct = spawnSync(`${SCRIPTS_DIR}/Correction.py`, [
-      `${JOBS_DIR}/${id}/models/${i}.pdb`,
-      `${JOBS_DIR}/${id}/models/${i}.pdb`,
+      `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
+      `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
     ]);
     if (correct.error) {
       console.error("Error running correct: ", correct.error);
@@ -101,7 +122,7 @@ export async function correctModels(id: string, numberOfModels: number) {
   return { success: true };
 }
 
-export async function runAnnotator(id: string, numberOfModels: number) {
+export async function runAnnotator(id: string, numberOfModels: number, sourceFormat: string) {
   console.log(`Running annotator on ${id}...`);
   const results = [];
 
@@ -111,7 +132,7 @@ export async function runAnnotator(id: string, numberOfModels: number) {
       [
         "-j",
         `${JOBS_DIR}/${id}/models/${i}.json`,
-        `${JOBS_DIR}/${id}/models/${i}.pdb`,
+        `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
       ],
       { encoding: "utf-8" }
     );
@@ -121,12 +142,49 @@ export async function runAnnotator(id: string, numberOfModels: number) {
       .substring(2, result.length - 2)
       .split("\\n");
 
+      
+    const labelToAuthorMap: Record<string, string> = {};
+    if (sourceFormat === "cif") {
+      const numerationFilePath = resolve(`${JOBS_DIR}/${id}/models/${i}_numeration.json`);
+      let numerationData;
+      try {
+        const numerationRaw = await fs.readFile(numerationFilePath, "utf-8");
+        numerationData = JSON.parse(numerationRaw);
+      }
+      catch (error) {
+        console.error(`Error reading numeration file ${numerationFilePath}:`, error);
+      }
+      for (const residueNumber in numerationData) {
+        const item = numerationData[residueNumber];
+        if (item.original_label_asym_id && item.new_chain_id) {
+          labelToAuthorMap[item.original_label_asym_id] = item.new_chain_id;
+        }
+      }
+    }
+
+    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/models/${i}.json`));
+    const numerationFilename = `${i}_numeration.json`;
+    const numerationString = JSON.stringify(numeration);
+    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/models`, numerationFilename);
+    await fs.writeFile(numerationFilePath, numerationString);
+
     // parse output as list of annotations
     // every 3 lines is a new annotation
     const output: Annotation[] = [];
     for (let i = 0; i < resultSplit.length - 1; i += 3) {
+      if (resultSplit[i] == undefined) {
+        console.error(`Skipping undefined annotation at index ${i} in model ${i}`);
+        continue; 
+      }
+      let name = resultSplit[i]?.slice(-1);
+
+      if (name && labelToAuthorMap[name]) {
+        console.log(`Replacing label ${name} with author label ${labelToAuthorMap[name]} in model ${i}`);
+        name = labelToAuthorMap[name];
+      }
+
       output.push({
-        name: resultSplit[i],
+        name: name,
         sequnece: resultSplit[i + 1],
         dotbracket: resultSplit[i + 2],
       });
@@ -245,6 +303,35 @@ const retrieveMotifsFromJson = async (
   }
 
   return structuralElements;
+};
+
+const retrieveNumerationFromJson = async (
+  filePath: string
+): Promise<NumerationMap> => {
+  const rawData = await fs.readFile(filePath, "utf-8");
+  const jsonData = JSON.parse(rawData);
+
+  const numerationMap: NumerationMap = {};
+
+  if (jsonData.bpseq_index) {
+    Object.entries(jsonData.bpseq_index).forEach(([annotator_residue_number, value]: [string, any]) => {
+      // get nucleotide name from jsonData.bpseq.sequence
+      const annotator_nucleotide_name = jsonData.bpseq?.sequence?.[Number(annotator_residue_number) - 1] ?? "N";
+      const annotator_dotbracket = jsonData.bpseq?.dot_bracket?.structure?.[Number(annotator_residue_number) - 1] ?? ".";
+      numerationMap[Number(annotator_residue_number)] = {
+        annotator_residue_number: Number(annotator_residue_number),
+        annotator_nucleotide_name: annotator_nucleotide_name,
+        annotator_dotbracket: annotator_dotbracket,
+        label_chain_id: value.label?.chain ?? undefined,
+        label_residue_number: value.label?.number ?? undefined,
+        auth_chain_id: value.auth.chain,
+        auth_residue_number: value.auth.number,
+        auth_nucleotide_name: value.auth.name,
+      };
+    });
+  }
+
+  return numerationMap;
 };
 
 export async function runMotifExtractor(id: string, numberOfModels: number) {

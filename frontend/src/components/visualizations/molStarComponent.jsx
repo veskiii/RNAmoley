@@ -134,10 +134,16 @@ const Molstar = (props) => {
         .filter((nucleotide) => nucleotide.selected === true)
         .map((nucleotide) =>
           MS.struct.generator.atomGroups({
-            "residue-test": MS.core.rel.eq([
-              MS.struct.atomProperty.macromolecular.label_seq_id(),
-              nucleotide.index,
-            ]),
+            "residue-test": MS.core.logic.and([
+              MS.core.rel.eq([
+                MS.struct.atomProperty.macromolecular.label_seq_id(),
+                nucleotide.index,
+              ]),
+              MS.core.rel.eq([
+                MS.struct.atomProperty.macromolecular.label_asym_id(),
+                chain.name,
+              ])
+            ])
           })
         )
     );
@@ -184,7 +190,7 @@ const Molstar = (props) => {
               setSelected((prevSelected) => {
                 // Nowe wybrane
                 const newSelected = localSelected.map(sel => {
-                  const wasSelected = chains.find( c => c.name.slice(-1) === sel.chain)
+                  const wasSelected = chains.find( c => c.name === sel.chain)
                     .nucleotides.some(
                       nucleotide =>
                         nucleotide.index === sel.position &&

@@ -69,6 +69,10 @@ ENV PATH="$PATH:/usr/src/app/scripts"
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir numpy biopython
 
+# install gemmi
+RUN pip install git+https://github.com/project-gemmi/gemmi.git --config-settings=cmake.args=-DONLY_PROGRAM=ON
+
+
 # # Run the application as a non-root user.
 # RUN useradd -ms /bin/bash node
 # USER node

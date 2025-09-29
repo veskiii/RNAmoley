@@ -8,19 +8,20 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
 
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
-    const chainsSet = new Set();
-    // console.log(data.length);
-    // console.log(data);
+    const chainsMap = new Map();
     data.forEach((nucleotide) => {
-      if (nucleotide.chainID) {
-        chainsSet.add(nucleotide.chainID);
+      if (nucleotide.chainID && !chainsMap.has(nucleotide.chainID)) {
+      chainsMap.set(nucleotide.chainID, {
+        chainID: nucleotide.chainID,
+        original_chain_id: nucleotide.original_chain_id,
+      });
       }
     });
-    return Array.from(chainsSet);
+    return Array.from(chainsMap.values());
   }, [data]);
 
   const [selectedChain, setSelectedChain] = useState(() =>
-    chainOptions.length > 0 ? chainOptions[0] : ""
+    chainOptions.length > 0 ? chainOptions[0].chainID : ""
   );
 
   function colorColumn(selectedScore = QualityScore.CLASH_SCORE) {
@@ -35,13 +36,16 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     if (data) {
       document
         .querySelectorAll(`td[class*="column-${score}"]`)
-        .forEach((cell, index) => {
-          const residue = data[index];
-          if (residue) {
-            cell.style.backgroundColor = getColor(
-              residue,
-              selectedScore
-            );
+        .forEach((cell) => {
+          const keyAttr = cell.getAttribute("data-residue-number");
+          if (keyAttr) {
+            const residue = data.find(nuc => String(nuc.residue_number) === keyAttr);
+            if (residue) {
+              cell.style.backgroundColor = getColor(
+                residue,
+                selectedScore
+              );
+            }
           }
         });
     }
@@ -67,8 +71,11 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
   };
 
   useEffect(() => {
-    if (chainOptions.length > 0 && !chainOptions.includes(selectedChain)) {
-      setSelectedChain(chainOptions[0]);
+    if (
+      chainOptions.length > 0 &&
+      !chainOptions.some(option => option.chainID === selectedChain)
+    ) {
+      setSelectedChain(chainOptions[0].chainID);
     }
   }, [chainOptions]);
 
@@ -135,9 +142,9 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           value={selectedChain}
           onChange={(e) => setSelectedChain(e.target.value)}
         >
-          {chainOptions.map((chainId) => (
-            <option key={chainId} value={chainId}>
-              {chainId}
+          {chainOptions.map((chain) => (
+            <option key={chain.chainID} value={chain.chainID}>
+              {chain.original_chain_id}
             </option>
           ))}
         </select>
@@ -218,6 +225,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-CLASH_SCORE"
                 }
@@ -244,6 +252,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_ANGLES"
                 }
@@ -272,6 +281,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_BONDS"
                 }
@@ -299,6 +309,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUITENESS"
                 }
@@ -319,6 +330,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUGAR_PUCKER_OUT"
                 }

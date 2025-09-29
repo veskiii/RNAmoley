@@ -49,7 +49,6 @@ const FornacWrapper = ({
   const debounceTimeout = useRef(null);
 
   useEffect(() => {
-    console.log("useEffect chains");
     let observer: MutationObserver | null = null;
     let globalObserver: MutationObserver | null = null;
 
@@ -76,7 +75,7 @@ const FornacWrapper = ({
             }
           } else if (nodeNameAttr && hybridizedName.includes(nodeNameAttr)) {
             found_chain = chains.find(
-              (chain) => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2)
+              (chain) => chain.name === nodeNameAttr.slice(-3, -2)
             );
             if (found_chain) {
               let found_nucleotide = found_chain.nucleotides[numIndex - 1];
@@ -85,10 +84,10 @@ const FornacWrapper = ({
                 selectedIndices.add(found_nucleotide.index);
               } else {
                 found_chain = chains.find(
-                  (chain) => chain.name.slice(-1) === nodeNameAttr.slice(-1)
+                  (chain) => chain.name === nodeNameAttr.slice(-1)
                 );
                 let prevChain = chains.find(
-                  (chain) => chain.name.slice(-1) === nodeNameAttr.slice(-3, -2)
+                  (chain) => chain.name === nodeNameAttr.slice(-3, -2)
                 );
                 if (found_chain && prevChain)
                   found_nucleotide =
@@ -183,7 +182,6 @@ const FornacWrapper = ({
   //Na podstawie parametru selected w nucleotides (zaznacz) zmień klasę wierzchołków na grafie
   //Kolorowanie grafu poprzez zmianę klasy na podstawie zmiany selected
   useEffect(() => {
-    console.log("useEffect chains");
     // Wywołaj aktualizację przy zmianach w chains
     updateFornacSelection(chains, hybridizedName);
 

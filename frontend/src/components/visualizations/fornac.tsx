@@ -124,9 +124,9 @@ const FornaComponent = ({
           sequence: merged_sequence,
           name:
             "hybrydized_" +
-            hybridized_chains[0].name.slice(-1) +
+            hybridized_chains[0].name +
             "-" +
-            hybridized_chains[1].name.slice(-1),
+            hybridized_chains[1].name,
         };
         container.addRNA(options.structure, options);
         setHybridizedName([options.name]);

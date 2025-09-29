@@ -76,7 +76,7 @@ export interface ModelStatus {
 }
 
 export interface Metadata {
-  status: `created` | `starting` | `running` | `completed` | `failed`;
+  status: `creating` | `created` | `starting` | `running` | `completed` | `failed`;
   resultsStatus?: Record<string, ModelStatus>;
   model_count: number;
   error_message?: string;
@@ -124,6 +124,7 @@ export interface nucleotideResult {
   base: string;
   structure: string;
   chainID: string;
+  original_chain_id: string;
   selected: boolean;
   structuralElements: StructuralElement[];
   metrics?: metrics;
@@ -137,6 +138,24 @@ export interface Analysis_results {
   fragmentMetrics: metrics;
 }
 
+export interface NumerationItem {
+  annotator_residue_number: number;
+  annotator_nucleotide_name: string;
+  annotator_dotbracket: string;
+  label_chain_id: string | undefined;
+  label_residue_number: number | undefined;
+  auth_chain_id: string;
+  auth_residue_number: number;
+  auth_nucleotide_name: string;
+  moley_residue_number?: number;
+  moley_chain_id?: string;
+}
+
+export interface Numeration {
+  [annotator_residue_number: number]: NumerationItem;
+}
+
+
 export interface Job {
   id: string;
   original_filename: string;
@@ -146,7 +165,7 @@ export interface Job {
   created_at: string;
   updated_at: string;
   annotation: Annotation[];
-  numeration: { [key: string]: [number, string] };
+  numeration: Numeration;
   motifs: StructuralElement[];
   pdb_file: PDBFile;
   pdb_file_string: string;

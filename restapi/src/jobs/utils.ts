@@ -272,16 +272,23 @@ export async function saveOriginalNumeration(
       return;
     }
 
-    const newNumeration = new Map<string, [number, string]>();
-    var originalNumeration: Array<number> = [];
+    const newNumeration = new Map<string, [number, string, string]>();
+    var originalNumeration: Array<[number, string]> = [];
     var number = 1;
+    var chainLetter = "A";
 
     pdbFile.atoms.forEach((atom) => {
       if (["A", "C", "G", "U", ""].includes(atom.resName)) {
-        if (atom.resSeq != originalNumeration.at(-1)) {
-          originalNumeration.push(atom.resSeq);
-          newNumeration.set(number.toString(), [atom.resSeq, atom.chainID]);
+        if (atom.resSeq != originalNumeration.at(-1)?.[0]) {
+          if (atom.chainID !== originalNumeration.at(-1)?.[1]) {
+            chainLetter = String.fromCharCode(
+              chainLetter.charCodeAt(0) + 1
+            );
+          }
+          originalNumeration.push([atom.resSeq, atom.chainID]);
+          newNumeration.set(number.toString(), [atom.resSeq, atom.chainID, chainLetter]);
           number++;
+          
         }
       }
     });

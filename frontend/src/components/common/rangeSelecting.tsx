@@ -52,7 +52,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
         if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
 
             const selectedNucleotides = chains
-                .find(chain => chain.name.slice(-1) === selectedChain)
+                .find(chain => chain.name === selectedChain)
                 ?.nucleotides
                 .filter(nucleotide => nucleotide.index >= start && nucleotide.index <= end)
                 .map(nucleotide => nucleotide.index) || [];
@@ -66,7 +66,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
 
     useEffect(() => {
         chains.forEach((chain) => {
-            if (chain.name.slice(-1) === selectedChain) {
+            if (chain.name === selectedChain) {
                 const indices = chain.nucleotides.map(nucleotide => nucleotide.index);
                 const min = Math.min(...indices);
                 const max = Math.max(...indices);
@@ -87,14 +87,14 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                     <Select
                         labelId="demo-simple-select-label"
                         id="demo-simple-select"
-                        value={selectedChain || chains[0].name.slice(-1)}
+                        value={selectedChain || chains[0].name}
                         label="Chain"
                         onChange={handleChange}
                         className="p-0"
                         sx={{ height: "40px", maxWidth: 120 }}
                     >
                         {chains.map((chain) => (
-                            <MenuItem key={chain.name} value={chain.name.slice(-1)}>{chain.name.slice(-1)}</MenuItem>
+                            <MenuItem key={chain.name} value={chain.name}>{chain.original_name}</MenuItem>
                         ))}
                     </Select>
                 </FormControl>

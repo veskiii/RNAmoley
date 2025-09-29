@@ -19,6 +19,7 @@ app.get("/", (req, res) => {
 app.post("/annotate", (req, res) => {
   const id = req.query.id as string;
   const numberOfModels = req.query.numberOfModels as string;
+  const sourceFormat = req.query.sourceFormat as string;
 
   if (!id) {
     res.status(400).send("Annotator error: id is required");
@@ -31,7 +32,7 @@ app.post("/annotate", (req, res) => {
   }
   console.log("Annotating", id, numberOfModels);
 
-  runAnnotator(id, parseInt(numberOfModels))
+  runAnnotator(id, parseInt(numberOfModels), sourceFormat)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -88,13 +89,20 @@ app.post("/convert", (req, res) => {
 
 app.post("/split", (req, res) => {
   const id = req.query.id as string;
+  const sourceFormat = req.query.sourceFormat as string;
 
   if (!id) {
     res.status(400).send({ error: "Split error: id is required" });
     return;
   }
 
-  splitModels(id)
+  if (!sourceFormat) {
+    res.status(400).send({ error: "Split error: sourceFormat is required" });
+    return;
+  }
+  console.log("Splitting models for job", id, "with source format", sourceFormat);
+
+  splitModels(id, sourceFormat)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -106,6 +114,7 @@ app.post("/split", (req, res) => {
 app.post("/correct", (req, res) => {
   const id = req.query.id as string;
   const numberOfModels = req.query.numberOfModels as string;
+  const sourceFormat = req.query.sourceFormat as string;
 
   if (!id) {
     res.status(400).send({ error: "Correct error: id is required" });
@@ -119,7 +128,7 @@ app.post("/correct", (req, res) => {
     return;
   }
 
-  correctModels(id, parseInt(numberOfModels))
+  correctModels(id, parseInt(numberOfModels), sourceFormat)
     .then((output) => {
       res.status(200).send(output);
     })
