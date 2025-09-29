@@ -60,7 +60,6 @@ const Panel: React.FC = () => {
   const [modelSelections, setModelSelections] = useState<Record<number, {chainsState: Chain[], selectedFragments: SelectedFragment[]}>>({});
 
   useEffect(() => {
-    console.log(chainsState);
     setSelectedChain(chainsState[0]?.name || "");
   }, [myData]);
 

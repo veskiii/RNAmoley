@@ -77,17 +77,12 @@ const FornacSummaryComponent = ({
       // Dodaj standardowe łańcuchy (nie-hybrydowe)
       chains.forEach((chain) => {
         if (!hybridizedChains || chain.sequence !== hybridizedChains.sequence) {
-          console.log("Adding chain:", chain.name);
-          console.log("Chain sequence:", chain.sequence);
-          console.log("Chain dotBracket:", chain.dotBracket);
-          console.log("Chain nucleotides:", chain.nucleotides);
           addRNAtoContainer(container, chain);
         }
       });
 
       // Dodaj RNA połączony z hybrydyzowanych łańcuchów, jeśli istnieje
       if (hybridizedChains !== null) {
-        console.log("Adding hybridized RNA:", hybridizedChains);
         addRNAtoContainer(container, {
           name: "hybrid",
           original_name: "hybrid",
@@ -207,7 +202,6 @@ const FornacSummaryComponent = ({
     );
 
     if (hybridizedChains.length > 2) {
-      console.log("Możesz połączyć maksymalnie 2 łańcuchy hybrydowe");
       return null;
     }
 

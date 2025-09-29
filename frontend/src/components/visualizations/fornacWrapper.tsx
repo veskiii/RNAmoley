@@ -49,7 +49,6 @@ const FornacWrapper = ({
   const debounceTimeout = useRef(null);
 
   useEffect(() => {
-    console.log("useEffect chains");
     let observer: MutationObserver | null = null;
     let globalObserver: MutationObserver | null = null;
 
@@ -183,7 +182,6 @@ const FornacWrapper = ({
   //Na podstawie parametru selected w nucleotides (zaznacz) zmień klasę wierzchołków na grafie
   //Kolorowanie grafu poprzez zmianę klasy na podstawie zmiany selected
   useEffect(() => {
-    console.log("useEffect chains");
     // Wywołaj aktualizację przy zmianach w chains
     updateFornacSelection(chains, hybridizedName);
 
