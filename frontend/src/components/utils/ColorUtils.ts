@@ -37,26 +37,70 @@ export const rangeMap: Map<String, Range> = new Map([
       ],
     },
   ],
+  [
+    "Bad Angles",
+    {
+      ranges: [
+        [0, 1],
+        [1, 10],
+        [10, 30],
+        [30, 50],
+        [50, 100],
+      ],
+    },
+  ],
+  [
+    "Bad Bonds",
+    {
+      ranges: [
+        [0, 1],
+        [1, 10],
+        [10, 30],
+        [30, 50],
+        [50, 100],
+      ],
+    },
+  ],
 ]);
 
 function getRange(residue: Residue, givenQualityScore: QualityScore): number {
   if (givenQualityScore === QualityScore.BAD_BONDS) {
     if(!residue.metrics) return 0;
     var qualityScore = parseFloat(residue.metrics.pct_badbonds);
-    if (qualityScore < 0.01) {
+    var range = rangeMap.get("Bad Bonds");
+    const ranges = range?.ranges ?? [];
+    // @ts-ignore
+    if (qualityScore < ranges[0][1]) {
       return 1;
-    } else if (qualityScore >= 0.01 && qualityScore < 0.2) {
+      // @ts-ignore
+    } else if (qualityScore >= ranges[1][0] && qualityScore < ranges[1][1]) {
+      return 2;
+      // @ts-ignore
+    } else if (qualityScore >= ranges[2][0] && qualityScore < ranges[2][1]) {
       return 3;
+      // @ts-ignore
+    } else if (qualityScore >= ranges[3][0] && qualityScore < ranges[3][1]) {
+      return 4;
     } else {
       return 5;
     }
   } else if (givenQualityScore == QualityScore.BAD_ANGLES) {
     if(!residue.metrics) return 0;
     var qualityScore = parseFloat(residue.metrics.pct_badangles);
-    if (qualityScore < 0.1) {
+    var range = rangeMap.get("Bad Angles");
+    const ranges = range?.ranges ?? [];
+    // @ts-ignore
+    if (qualityScore < ranges[0][1]) {
       return 1;
-    } else if (qualityScore >= 0.1 && qualityScore < 0.5) {
+      // @ts-ignore
+    } else if (qualityScore >= ranges[1][0] && qualityScore < ranges[1][1]) {
+      return 2;
+      // @ts-ignore
+    } else if (qualityScore >= ranges[2][0] && qualityScore < ranges[2][1]) {
       return 3;
+      // @ts-ignore
+    } else if (qualityScore >= ranges[3][0] && qualityScore < ranges[3][1]) {
+      return 4;
     } else {
       return 5;
     }
