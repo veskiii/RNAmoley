@@ -1,36 +1,37 @@
 ARG NODE_VERSION=20.15.0
 ARG PNPM_VERSION=9.4.0
 
-FROM ubuntu:jammy
+FROM python:3.12-slim-bookworm
 
-# Use production node environment by default.
-SHELL ["/bin/bash", "-c"]
+# Use a portable shell until bash is installed.
+SHELL ["/bin/sh", "-c"]
 
 ## for apt to be noninteractive
 ENV DEBIAN_FRONTEND="noninteractive"
 ENV DEBCONF_NONINTERACTIVE_SEEN="true"
 # ENV NODE_ENV production
 
-RUN apt-get update && \
-    apt-get -y install sudo
-
-# install node and npm
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
     build-essential \
-    wget \
-    g++ \
-    gcc \
-    curl \
-    git \
-    python3.10-full \
-    python3-pip \
-    python3.10-dev \
-    python-is-python3 \
-    npm \
-    make \
-    gawk \
     bison \
-    flex
+    cmake \
+    curl \
+    flex \
+    g++ \
+    gawk \
+    gcc \
+    git \
+    graphviz \
+    gzip \
+    infernal \
+    make \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+SHELL ["/bin/bash", "-c"]
+
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # install node
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
@@ -60,17 +61,30 @@ ENV PATH="$PATH:$RCSBROOT/bin"
 WORKDIR /usr/src
 RUN git clone https://github.com/tzok/rnapolis-py
 WORKDIR /usr/src/rnapolis-py
-RUN sudo pip install .
+RUN python -m pip install --no-cache-dir \
+    appdirs \
+    biopython \
+    faiss-cpu \
+    graphviz \
+    mmcif \
+    numpy \
+    ordered-set \
+    orjson \
+    pandas \
+    pulp \
+    requests \
+    scikit-learn \
+    scipy \
+    tqdm \
+    ViennaRNA && \
+    python -m pip install --no-cache-dir .
 ENV PATH="$PATH:/root/.local/bin"
 
 # add scripts to path
 ENV PATH="$PATH:/usr/src/app/scripts"
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir numpy biopython
-
 # install gemmi
-RUN pip install git+https://github.com/project-gemmi/gemmi.git --config-settings=cmake.args=-DONLY_PROGRAM=ON
+RUN python -m pip install --no-cache-dir git+https://github.com/project-gemmi/gemmi.git --config-settings=cmake.args=-DONLY_PROGRAM=ON
 
 
 # # Run the application as a non-root user.
