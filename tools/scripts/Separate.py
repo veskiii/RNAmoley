@@ -4,6 +4,22 @@ import sys
 import os
 from pathlib import Path
 
+def read_pdb_content(file_handle):
+    """Read PDB lines and drop a CASP-style header if present."""
+    file_handle.seek(0)
+    lines = [line for line in file_handle if line.strip()]
+
+    if (
+        len(lines) >= 4
+        and lines[0].startswith('PFRMAT')
+        and lines[1].startswith('TARGET')
+        and lines[2].startswith('MODEL')
+        and lines[3].startswith('PARENT')
+    ):
+        return lines[4:]
+
+    return lines
+
 def detect_file_format(filepath):
     """Detect if file is PDB or CIF format based on extension and content"""
     extension = Path(filepath).suffix.lower()
@@ -85,14 +101,14 @@ def count_models_cif(file_handle):
 
 def separate_pdb_models(file_handle, output_folder, model_count):
     """Separate PDB models into individual files"""
+    lines = read_pdb_content(file_handle)
     
     if model_count == 1:
         # Single model file
         output_path = os.path.join(output_folder, "1.pdb")
         with open(output_path, "w") as f:
-            for line in file_handle:
-                if line.strip():  # Skip empty lines
-                    f.write(line)
+            for line in lines:
+                f.write(line)
             f.write("END\n")
     else:
         # Multiple models
@@ -100,7 +116,7 @@ def separate_pdb_models(file_handle, output_folder, model_count):
         output_path = os.path.join(output_folder, f"{current_model}.pdb")
         f = open(output_path, "w")
         
-        for line in file_handle:
+        for line in lines:
             if line.startswith('ENDMDL'):
                 f.write("END\n")
                 f.close()
