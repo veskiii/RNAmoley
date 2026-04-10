@@ -69,6 +69,8 @@ const FornacSummaryComponent = ({
       });
     };
 
+    d3.select("#rna_ss").selectAll("*").remove();
+
     // Initialize and store the container
     const container = initializeContainer();
     try {
@@ -76,7 +78,10 @@ const FornacSummaryComponent = ({
 
       // Dodaj standardowe łańcuchy (nie-hybrydowe)
       chains.forEach((chain) => {
-        if (!hybridizedChains || chain.sequence !== hybridizedChains.sequence) {
+        const isHybridSourceChain =
+          hybridizedChains?.sourceChainNames.includes(chain.name) ?? false;
+
+        if (!isHybridSourceChain) {
           addRNAtoContainer(container, chain);
         }
       });
@@ -97,11 +102,20 @@ const FornacSummaryComponent = ({
     setContainer(container);
 
     colorGnodes();
-  }, [chains, labelInterval]); // Emp
+  }, [chains, labelInterval, showClashes]); // Emp
 
   const addRNAtoContainer = (container: any, chain: Chain) => {
+    const normalizedStructure = normalizeDotBracket(chain.dotBracket);
+
+    if (normalizedStructure !== chain.dotBracket) {
+      console.warn(
+        `Chain ${chain.name} had invalid/unbalanced dot-bracket structure; sanitized before rendering`,
+        chain.dotBracket
+      );
+    }
+
     const options = {
-      structure: chain.dotBracket,
+      structure: normalizedStructure,
       sequence: chain.sequence,
       extraLinks: showClashes ? clashMap : [],
     };
@@ -184,15 +198,68 @@ const FornacSummaryComponent = ({
   /**
    * **Identyfikacja i łączenie łańcuchów hybrydowych**
    */
+  const normalizeDotBracket = (structure: string): string => {
+    const openerToCloser: Record<string, string> = {
+      "(": ")",
+      "[": "]",
+      "{": "}",
+      "<": ">",
+    };
+    const closerToOpener: Record<string, string> = {
+      ")": "(",
+      "]": "[",
+      "}": "{",
+      ">": "<",
+    };
+
+    const chars = Array.from(structure);
+    const stack: Array<{ char: string; idx: number }> = [];
+
+    chars.forEach((ch, idx) => {
+      if (openerToCloser[ch]) {
+        stack.push({ char: ch, idx });
+        return;
+      }
+
+      if (!closerToOpener[ch]) {
+        return;
+      }
+
+      const top = stack[stack.length - 1];
+      if (!top || top.char !== closerToOpener[ch]) {
+        chars[idx] = ".";
+        return;
+      }
+
+      stack.pop();
+    });
+
+    while (stack.length > 0) {
+      const unmatched = stack.pop();
+      if (unmatched) {
+        chars[unmatched.idx] = ".";
+      }
+    }
+
+    return chars.join("");
+  };
+
+
   const handleHybridChains = (
     chains: Chain[]
-  ): { sequence: string; dotBracket: string } | null => {
+  ):
+    | {
+        sequence: string;
+        dotBracket: string;
+        sourceChainNames: string[];
+      }
+    | null => {
     const isHybridized = (structure: string): boolean => {
       const countOpeners = Array.from(structure).filter((x) =>
-        ["(", "["].includes(x)
+        ["(", "[", "{", "<"].includes(x)
       ).length;
       const countClosers = Array.from(structure).filter((x) =>
-        [")", "]"].includes(x)
+        [")", "]", "}", ">"].includes(x)
       ).length;
       return countOpeners !== countClosers;
     };
@@ -201,15 +268,11 @@ const FornacSummaryComponent = ({
       isHybridized(chain.dotBracket)
     );
 
-    if (hybridizedChains.length > 2) {
-      return null;
-    }
-
-    if (hybridizedChains.length === 2) {
+    if (hybridizedChains.length >= 2) {
       return {
-        sequence: hybridizedChains[0].sequence + hybridizedChains[1].sequence,
-        dotBracket:
-          hybridizedChains[0].dotBracket + hybridizedChains[1].dotBracket,
+        sequence: hybridizedChains.map((chain) => chain.sequence).join(""),
+        dotBracket: hybridizedChains.map((chain) => chain.dotBracket).join(""),
+        sourceChainNames: hybridizedChains.map((chain) => chain.name),
       };
     }
 
@@ -234,6 +297,10 @@ const FornacSummaryComponent = ({
       // @ts-ignore
       container.displayDirectionArrows(directionArrows);
       d3.selectAll('line.link[link_type="external"]').style(
+        "visibility",
+        showClashes ? "visible" : "hidden"
+      );
+      d3.selectAll("path.clash-zigzag").style(
         "visibility",
         showClashes ? "visible" : "hidden"
       );

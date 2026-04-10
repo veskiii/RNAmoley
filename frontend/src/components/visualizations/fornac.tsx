@@ -45,7 +45,7 @@ const FornaComponent = ({
       animation: setAnimation,
       zoomable: true,
       labelInterval: labelInterval,
-      initialSize: [width, height + 150],
+      initialSize: [100, 40],
       numbering: numbering,
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
@@ -53,93 +53,139 @@ const FornaComponent = ({
       directionArrows: directionArrows,
     });
 
+    const normalizeDotBracket = (structure: string): string => {
+      const openerToCloser: Record<string, string> = {
+        "(": ")",
+        "[": "]",
+        "{": "}",
+        "<": ">",
+      };
+      const closerToOpener: Record<string, string> = {
+        ")": "(",
+        "]": "[",
+        "}": "{",
+        ">": "<",
+      };
+
+      const chars = Array.from(structure);
+      const stack: Array<{ char: string; idx: number }> = [];
+
+      chars.forEach((ch, idx) => {
+        if (openerToCloser[ch]) {
+          stack.push({ char: ch, idx });
+          return;
+        }
+
+        if (!closerToOpener[ch]) {
+          return;
+        }
+
+        const top = stack[stack.length - 1];
+        if (!top || top.char !== closerToOpener[ch]) {
+          chars[idx] = ".";
+          return;
+        }
+
+        stack.pop();
+      });
+
+      while (stack.length > 0) {
+        const unmatched = stack.pop();
+        if (unmatched) {
+          chars[unmatched.idx] = ".";
+        }
+      }
+
+      return chars.join("");
+    };
+
     const isHybridized = (structure: string): boolean => {
       const count_openers = Array.from(structure).filter(
-        (x) => x === "(" || x === "["
+        (x) => x === "(" || x === "[" || x === "{" || x === "<"
       ).length;
       const count_closers = Array.from(structure).filter(
-        (x) => x === ")" || x === "]"
+        (x) => x === ")" || x === "]" || x === "}" || x === ">"
       ).length;
       if (count_openers !== count_closers) return true;
       return false;
     };
 
-    const hybridized_chains: Chain[] = [];
+    const handleHybridChains = (
+      sourceChains: Chain[]
+    ):
+      | {
+          sequence: string;
+          dotBracket: string;
+          sourceChains: Chain[];
+          sourceChainNames: string[];
+        }
+      | null => {
+      const hybridizedChains = sourceChains.filter((chain) =>
+        isHybridized(chain.dotBracket)
+      );
 
-    chains.forEach((chain) => {
-      if (isHybridized(chain.dotBracket)) {
-        hybridized_chains.push(chain);
+      if (hybridizedChains.length >= 2) {
+        return {
+          sequence: hybridizedChains.map((chain) => chain.sequence).join(""),
+          dotBracket: hybridizedChains.map((chain) => chain.dotBracket).join(""),
+          sourceChains: hybridizedChains,
+          sourceChainNames: hybridizedChains.map((chain) => chain.name),
+        };
       }
-    });
+
+      return null;
+    };
 
     try {
-      const uniqueStructures = new Set(
-        hybridized_chains.map((chain) => chain.dotBracket)
-      );
-      if (uniqueStructures.size !== hybridized_chains.length) {
-        throw new Error(
-          "Duplicate hybridized structures detected. All hybridized structures must be unique."
-        );
-      }
-
-      const hybridizedPairs: [Chain, Chain][] = [];
-      for (let i = 0; i < hybridized_chains.length; i++) {
-        for (let j = i + 1; j < hybridized_chains.length; j++) {
-          const chainA = hybridized_chains[i];
-          const chainB = hybridized_chains[j];
-
-          const combinedStructure = chainA.dotBracket + chainB.dotBracket;
-          const combinedOpeners = Array.from(combinedStructure).filter(
-            (x) => x === "(" || x === "["
-          ).length;
-          const combinedClosers = Array.from(combinedStructure).filter(
-            (x) => x === ")" || x === "]"
-          ).length;
-
-          if (combinedOpeners === combinedClosers) {
-            hybridizedPairs.push([chainA, chainB]);
-          }
-        }
-      }
+      const hybridizedChains = handleHybridChains(chains);
 
       chains.forEach((chain) => {
-        if (
-          !hybridizedPairs.some(
-            ([chainA, chainB]) => chain === chainA || chain === chainB
-          )
-        ) {
+        const isHybridSourceChain =
+          hybridizedChains?.sourceChainNames.includes(chain.name) ?? false;
+
+        if (!isHybridSourceChain) {
+          const normalizedStructure = normalizeDotBracket(chain.dotBracket);
+          if (normalizedStructure !== chain.dotBracket) {
+            console.warn(
+              `Chain ${chain.name} had invalid/unbalanced dot-bracket structure; sanitized before rendering`,
+              chain.dotBracket
+            );
+          }
+
           const options = {
-            structure: chain.dotBracket,
+            structure: normalizedStructure,
             sequence: chain.sequence,
             name: chain.name,
           };
           container.addRNA(options.structure, options);
         }
       });
-      hybridizedPairs.forEach(([chainA, chainB]) => {
-        const merged_sequence = chainA.sequence + chainB.sequence;
-        const merged_structure = chainA.dotBracket + chainB.dotBracket;
+
+      setHybridizedName([]);
+
+      if (hybridizedChains !== null) {
+        const merged_structure = normalizeDotBracket(hybridizedChains.dotBracket);
         const options = {
           structure: merged_structure,
-          sequence: merged_sequence,
-          name:
-            "hybrydized_" +
-            hybridized_chains[0].name +
-            "-" +
-            hybridized_chains[1].name,
+          sequence: hybridizedChains.sequence,
+          name: "hybrydized_" + hybridizedChains.sourceChainNames.join("-"),
         };
         container.addRNA(options.structure, options);
-        setHybridizedName([options.name]);
+        setHybridizedName((prev) => [...prev, options.name]);
 
-        [chainA, chainB].forEach((chain, index) => {
-          chain.nucleotides.forEach((nucleotide) => {
+        let chainOffset = 0;
+        hybridizedChains.sourceChains.forEach((chain) => {
+          chain.nucleotides.forEach((nucleotide, nucleotideIdx) => {
+            const localNodeNum = nucleotideIdx + 1;
+            const mergedNodeNum = chainOffset + localNodeNum;
+
             const gNode = document.querySelector(
-              `g.gnode[num="n${nucleotide.index}"][struct_name="${options.name}"]`
+              `g.gnode[num="n${mergedNodeNum}"][struct_name="${options.name}"]`
             );
 
             if (gNode) {
               const circle = gNode.querySelector(
-                `circle.fornac-node[node_num="${nucleotide.index}"]`
+                `circle.fornac-node[node_num="${mergedNodeNum}"]`
               );
 
               if (circle) {
@@ -150,20 +196,20 @@ const FornaComponent = ({
                 }
               }
               gNode.setAttribute("struct_name", `${chain.name}`);
-              if (chain === chainB && circle) {
-                gNode.setAttribute(
-                  "num",
-                  `n${nucleotide.index - chainA.sequence.length}`
-                );
+
+              gNode.setAttribute("num", `n${localNodeNum}`);
+              if (circle) {
                 circle.setAttribute(
                   "node_num",
-                  `${nucleotide.index - chainA.sequence.length}`
+                  `${localNodeNum}`
                 );
               }
             }
           });
+
+          chainOffset += chain.sequence.length;
         });
-      });
+      }
       // const rnaValues = Object.values(container.rnas)[0].nodes;
       // if (!rnaValues.length) {
       //   throw new Error("No valid RNA nodes found in container.");
