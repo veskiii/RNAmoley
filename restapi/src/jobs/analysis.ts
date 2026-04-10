@@ -170,7 +170,7 @@ export async function analyzeStructure(
       base: base,
       structure: secondaryStructure,
       chainID:  chainID,
-      original_chain_id: residueNumeration.original_chain_id,
+      original_chain_id: residueNumeration.auth_chain_id,
       selected: residues.some(
         (r) => r.chainID === chainID && r.residueID === original_index
       ),
