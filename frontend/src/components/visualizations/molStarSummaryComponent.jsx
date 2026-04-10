@@ -16,14 +16,20 @@ import {
   MolScriptBuilder as MS,
   MolScriptBuilder,
 } from "molstar/lib/mol-script/language/builder";
-import { Expression } from "molstar/lib/mol-script/language/expression";
-import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
 import {
   clearStructureOverpaint,
   setStructureOverpaint,
 } from "molstar/lib/mol-plugin-state/helpers/structure-overpaint";
 import { QualityScore } from "../utils/types";
 import { getColor } from "../utils/ColorUtils";
+
+const SUPPORTED_QUALITY_SCORES = new Set([
+  QualityScore.BAD_ANGLES,
+  QualityScore.BAD_BONDS,
+  QualityScore.CLASH_SCORE,
+  QualityScore.SUGAR_PUCKER_OUT,
+  QualityScore.SUITENESS,
+]);
 
 const Molstar = (props) => {
   const {
@@ -50,39 +56,30 @@ const Molstar = (props) => {
   const [canColor, setCanColor] = useState(false);
 
   const mapResiduesToColors = () => {
-    if (selectedQualityScore == QualityScore.BAD_ANGLES) {
-      return resultResidues.map((residue) => [
-        residue.residueMetrics.residue.trim().split(/\s+/)[0],
-        residue.residue_number,
-        getColor(residue, QualityScore.BAD_ANGLES),
-      ]);
-    } else if (selectedQualityScore == QualityScore.BAD_BONDS) {
-      return resultResidues.map((residue) => [
-        residue.residueMetrics.residue.trim().split(/\s+/)[0],
-        residue.residue_number,
-        getColor(residue, QualityScore.BAD_BONDS),
-      ]);
-    } else if (selectedQualityScore == QualityScore.CLASH_SCORE) {
-      return resultResidues.map((residue) => [
-        residue.residueMetrics.residue.trim().split(/\s+/)[0],
-        residue.residue_number,
-        getColor(residue, QualityScore.CLASH_SCORE),
-      ]);
-    } else if (selectedQualityScore == QualityScore.SUGAR_PUCKER_OUT) {
-      return resultResidues.map((residue) => [
-        residue.residueMetrics.residue.trim().split(/\s+/)[0],
-        residue.residue_number,
-        getColor(residue, QualityScore.SUGAR_PUCKER_OUT),
-      ]);
-    } else if (selectedQualityScore == QualityScore.SUITENESS) {
-      return resultResidues.map((residue) => [
-        residue.residueMetrics.residue.trim().split(/\s+/)[0],
-        residue.residue_number,
-        getColor(residue, QualityScore.SUITENESS),
-      ]);
-    } else {
+    if (!SUPPORTED_QUALITY_SCORES.has(selectedQualityScore)) {
       return [];
     }
+
+    return resultResidues
+      .map((residue) => {
+        const metricsResidue = residue?.residueMetrics?.residue;
+        const parsedChain = metricsResidue?.trim()?.split(/\s+/)?.[0];
+        const chainId = residue?.chainID || parsedChain;
+        const authResidueNumber = Number(residue?.original_index);
+        const labelResidueNumber = Number(residue?.residue_number);
+
+        if (!chainId || Number.isNaN(authResidueNumber)) {
+          return null;
+        }
+
+        return {
+          chainId,
+          authResidueNumber,
+          labelResidueNumber,
+          color: getColor(residue, selectedQualityScore),
+        };
+      })
+      .filter(Boolean);
   };
 
   const changeNucleotideColors = async () => {
@@ -91,7 +88,7 @@ const Molstar = (props) => {
       return;
     }
 
-    if (!resultResidues[0].residueMetrics) return;
+    if (!Array.isArray(resultResidues) || resultResidues.length === 0) return;
 
     const structure =
       plugin.current.managers.structure.hierarchy.current.structures[0];
@@ -105,34 +102,49 @@ const Molstar = (props) => {
 
     const groupedByColor = {};
 
-    residueColors.forEach(([chain, number, color]) => {
-      if (!groupedByColor[color]) {
-        groupedByColor[color] = [];
+    residueColors.forEach((entry) => {
+      if (!groupedByColor[entry.color]) {
+        groupedByColor[entry.color] = [];
       }
-      groupedByColor[color].push([chain, number, color]);
+      groupedByColor[entry.color].push(entry);
     });
+
     for (const color in groupedByColor) {
       const entries = groupedByColor[color];
 
-      const groups: Expression[] = [];
-      for (var chain of entries) {
+      const groups = [];
+      for (const entry of entries) {
+        const residueByAuth = MS.struct.generator.atomGroups({
+          "chain-test": MS.core.rel.eq([
+            MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+            entry.chainId,
+          ]),
+          "residue-test": MS.core.rel.eq([
+            MolScriptBuilder.struct.atomProperty.macromolecular.auth_seq_id(),
+            entry.authResidueNumber,
+          ]),
+        });
+
         groups.push(
-          MS.struct.generator.atomGroups({
-            "chain-test": MS.core.rel.eq([
-              MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
-              chain[0],
-            ]),
-            "residue-test": MS.core.rel.eq([
-              MolScriptBuilder.struct.atomProperty.macromolecular.label_seq_id(),
-              chain[1],
-            ]),
-          })
+          Number.isNaN(entry.labelResidueNumber)
+            ? residueByAuth
+            : MS.struct.combinator.merge([
+                residueByAuth,
+                MS.struct.generator.atomGroups({
+                  "chain-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+                    entry.chainId,
+                  ]),
+                  "residue-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.label_seq_id(),
+                    entry.labelResidueNumber,
+                  ]),
+                }),
+              ])
         );
       }
-      var sq = StructureSelectionQuery(
-        "selection_" + color,
-        MS.struct.combinator.merge(groups)
-      );
+
+      if (groups.length === 0) continue;
 
       const sel = Script.getStructureSelection(
         MS.struct.combinator.merge(groups),
@@ -140,7 +152,7 @@ const Molstar = (props) => {
       );
       const loci = StructureSelection.toLociWithSourceUnits(sel);
 
-      const getLoci = async (s: Structure) => loci;
+      const getLoci = async () => loci;
 
       await setStructureOverpaint(
         plugin.current,
