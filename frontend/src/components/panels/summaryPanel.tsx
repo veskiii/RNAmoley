@@ -460,6 +460,14 @@ const SummaryPanel: React.FC = () => {
           >
             {/* Scrollowalna zawartość sidebar'a */}
             <div className="rounded-scrollbar overflow-auto flex-1">
+              <div className="mb-4 rounded-lg bg-white p-3 shadow">
+                <div className="text-xs uppercase tracking-wide text-gray-500">
+                  Job name
+                </div>
+                <div className="truncate text-sm font-semibold text-gray-900" title={myData.name || "Unnamed job"}>
+                  {myData.name || "Unnamed job"}
+                </div>
+              </div>
               {/* Tabs */}
               <div className="flex mb-4">
                 <div
