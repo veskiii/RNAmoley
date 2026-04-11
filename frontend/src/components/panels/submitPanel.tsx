@@ -14,7 +14,6 @@ import { createJob, fetchJobCreation } from "../utils/api";
 import { isFileValid } from "../utils/fileValidation";
 
 const Dashboard: React.FC = () => {
-  const [jobName, setJobName] = useState<string>("");
   const [pdbCode, setPdbCode] = useState<string>("");
   const [rnaFile, setRnaFile] = useState<File | null>(null);
   const [radiobutton, setRadiobutton] = useState<string>("None");
@@ -29,11 +28,23 @@ const Dashboard: React.FC = () => {
     { id: "bad", value: "bad", label: "bad" },
   ];
 
+  const getSelectedJobName = () => {
+    if (rnaFile) {
+      return rnaFile.name;
+    }
+
+    if (radiobutton !== "None") {
+      return `Example (${radiobutton})`;
+    }
+
+    return pdbCode.trim();
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData();
-    formData.append("jobName", jobName || "");
+    formData.append("jobName", getSelectedJobName());
     formData.append("pdbCode", pdbCode || "");
     formData.append("rnaFile", rnaFile || "");
     formData.append("radioButton", radiobutton || "None");
