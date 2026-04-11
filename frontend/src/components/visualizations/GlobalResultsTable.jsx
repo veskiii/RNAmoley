@@ -1,38 +1,58 @@
 import React from "react";
 
-const fieldLabels = {
-    // pdbFileName: "PDB File Name",
-    // "x-H_type": "X-H Type",
-    // chains: "Chains",
-    residues: "Residues",
-    // nucacids: "Nucleic Acids",
-    // resolution: "Resolution",
-    // rvalue: "R Value",
-    // rfree: "R Free",
-    clashscore: "Clashscore",
-    // "clashscoreB<40": "Clashscore B<40",
-    // minresol: "Min Resolution",
-    // maxresol: "Max Resolution",
-    // n_samples: "Number of Samples",
-    // pct_rank: "Percentile Rank",
-    // pct_rank40: "Percentile Rank 40",
-    numbadbonds: "Number of Bad Bonds",
-    numbonds: "Number of Bonds",
-    pct_badbonds: "Percentage of Bad Bonds",
-    pct_resbadbonds: "Percentage of Residues with Bad Bonds",
-    numbadangles: "Number of Bad Angles",
-    numangles: "Number of Angles",
-    pct_badangles: "Percentage of Bad Angles",
-    pct_resbadangles: "Percentage of Residues with Bad Angles",
-    // chiralSwaps: "Chiral Swaps",
-    // tetraOutliers: "Tetrahedral Outliers",
-    // pseudochiralErrors: "Pseudochiral Errors",
-    // waterClashes: "Water Clashes",
-    // totalWaters: "Total Waters",
-    // numPperpOutliers: "Num Pperp Outliers",
-    // numPperp: "Num Pperp",
-    numSuiteOutliers: "Number of Suite Outliers",
-    numSuites: "Number of Suites",
+const fieldRows = [
+    {
+        label: "Residues",
+        key: "residues",
+    },
+    {
+        label: "Clashscore",
+        key: "clashscore",
+    },
+    {
+        label: "Bad Bond Lengths",
+        keys: ["numbadbonds", "numbonds", "pct_badbonds"],
+    },
+    {
+        label: "Percentage of Residues with Bad Bonds",
+        key: "pct_resbadbonds",
+    },
+    {
+        label: "Bad Bond Angles",
+        keys: ["numbadangles", "numangles", "pct_badangles"],
+    },
+    {
+        label: "Percentage of Residues with Bad Angles",
+        key: "pct_resbadangles",
+    },
+    {
+        label: "Suite Outliers",
+        keys: ["numSuiteOutliers", "numSuites"],
+    },
+];
+
+const renderMetricValue = (metrics, key) => {
+    if (!metrics || metrics[key] === undefined || metrics[key] === null || metrics[key] === "") {
+        return <span className="text-gray-400">—</span>;
+    }
+
+    return metrics[key];
+};
+
+const renderCombinedMetricValue = (metrics, keys) => {
+    const values = keys
+        .map((key) => metrics?.[key])
+        .filter((value) => value !== undefined && value !== null && value !== "");
+
+    if (values.length === 0) {
+        return <span className="text-gray-400">—</span>;
+    }
+
+    if (values.length === 3) {
+        return `${values[0]} / ${values[1]} (${values[2]}%)`;
+    }
+
+    return values.join(" / ");
 };
 
 const GlobalResultsTable = ({ modelMetrics, fragmentMetrics }) => (
@@ -45,18 +65,21 @@ const GlobalResultsTable = ({ modelMetrics, fragmentMetrics }) => (
             </tr>
         </thead>
         <tbody>
-            {Object.keys(fieldLabels)
-                .map((key) => (
-                    <tr key={key} className="even:bg-gray-50">
-                        <td className="px-4 py-2 border-b border-gray-200">{fieldLabels[key]}</td>
-                        <td className="px-4 py-2 border-b border-gray-200">
-                            {modelMetrics[key] === "" ? <span className="text-gray-400">—</span> : modelMetrics[key]}
-                        </td>
-                        <td className="px-4 py-2 border-b border-gray-200">
-                            {fragmentMetrics[key] === "" ? <span className="text-gray-400">—</span> : fragmentMetrics[key]}
-                        </td>
-                    </tr>
-                ))}
+            {fieldRows.map((row) => (
+                <tr key={row.label} className="even:bg-gray-50">
+                    <td className="px-4 py-2 border-b border-gray-200">{row.label}</td>
+                    <td className="px-4 py-2 border-b border-gray-200">
+                        {row.keys
+                            ? renderCombinedMetricValue(modelMetrics, row.keys)
+                            : renderMetricValue(modelMetrics, row.key)}
+                    </td>
+                    <td className="px-4 py-2 border-b border-gray-200">
+                        {row.keys
+                            ? renderCombinedMetricValue(fragmentMetrics, row.keys)
+                            : renderMetricValue(fragmentMetrics, row.key)}
+                    </td>
+                </tr>
+            ))}
         </tbody>
     </table>
 );
