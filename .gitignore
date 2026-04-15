@@ -15,3 +15,8 @@ tools/scripts/Correction/Corrected
 tools/scripts/Correction/To_correct
 tests/test.json
 docker-compose.yml.local
+sim/NAMD_3.0.2_Linux-x86_64-multicore.tar.gz
+sim/vmd-1.9.3.bin.LINUXAMD64.text.tar.gz
+sim/scripts/amber/*
+sim/scripts/ntc_templates/*
+sim/scripts/base_pair_templates/*

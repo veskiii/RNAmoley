@@ -80,6 +80,24 @@ services:
     depends_on:
       - restapi
 
+  sim:
+    image: sim
+    build:
+      context: ./sim
+    restart: always
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SIM_WORKER_CONCURRENCY: 1
+    ports:
+      - 3004:3001
+    volumes:
+      - user_data:/usr/src/app/public/jobs
+    depends_on:
+      - redis
+    scale: 1
+
 volumes:
   db_data:
     driver: local

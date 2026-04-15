@@ -1,0 +1,90 @@
+#############################################################
+## ADJUSTABLE PARAMETERS                                   ##
+#############################################################
+structure           output.psf
+coordinates         output.pdb
+
+set temperature     310
+set outputname      restrained_g25000_p25000_b25000
+firsttimestep       0
+binaryoutput        yes
+
+#############################################################
+## FIXED ATOMS                                             ##
+#############################################################
+
+#fixedAtoms          on
+
+#############################################################
+## SIMULATION PARAMETERS                                   ##
+#############################################################
+
+# Input - AMBER w NAMD nie używa paraTypeCharmm on
+set paramdir /webserver/scripts/amber
+source $paramdir/OL3/namdrc.OL3        
+# source $paramdir/solvents/namdrc.tip3p 
+
+temperature         $temperature
+
+readexclusions      yes
+
+# Force-Field Parameters 
+exclude             scaled1-4
+1-4scaling          0.83333333
+cutoff              12.0       
+switching           on        
+switchdist          10.0
+pairlistdist        14.0       
+zeromomentum        on
+
+
+# Integrator Parameters
+timestep            1.0        
+rigidBonds          none        
+rigidTolerance      1.0e-8
+useSettle           on         
+nonbondedFreq       1
+fullElectFrequency  2
+longSplitting       c2
+stepspercycle       20         
+
+# Constant Temperature Control (TERMOSTAT)
+langevin            off         
+langevinDamping     1.0        
+langevinTemp        $temperature
+langevinHydrogen    off        
+
+# Periodic Boundary Conditions
+# cellBasisVector1    50.0   0.    0.0
+# cellBasisVector2     0.0  50.0   0.0
+# cellBasisVector3     0.0   0.    50.0
+# cellOrigin           0.0   0.0   0.0
+
+wrapAll             on
+
+PME                 no
+PMEGridSpacing      1.0
+
+#############################################################
+## COLVARS (collective variables / RMSD restraints)        ##
+#############################################################
+
+colvars              on
+colvarsConfig        colvars_combined.conf
+
+#############################################################
+## Output                                                  ##
+#############################################################
+
+outputName          $outputname
+restartfreq         3000
+dcdfreq             20       
+xstFreq             1000
+outputEnergies      200
+outputPressure      3000
+
+#############################################################
+## EXECUTION SCRIPT                                        ##
+#############################################################
+
+minimize            500
