@@ -44,7 +44,11 @@ export async function fetchJobData(
   }
 }
 
-export async function fetchMyData(jobID: string | undefined, modelNumber: number) {
+export async function fetchMyData(
+  jobID: string | undefined,
+  modelNumber: number,
+  resultsSource: "original" | "simulation" = "original"
+) {
   console.log(`Sending request to /api/v1/jobs/${jobID}/${modelNumber}`);
 
   // TODO: czy tego potrzebuje? Wywalilo bez powodu
@@ -53,7 +57,7 @@ export async function fetchMyData(jobID: string | undefined, modelNumber: number
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(`${API_URL}/jobs/${jobID}/${modelNumber}`, {
+    const response = await fetch(`${API_URL}/jobs/${jobID}/${modelNumber}?resultsSource=${resultsSource}`, {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);

@@ -236,12 +236,13 @@ export async function fetchJSONFile(
 
 export async function fetchPdbFileAsJSON(
   jobID: UUID,
-  modelNumber?: string
+  modelNumber?: string,
+  modelsDir = "models"
 ): Promise<PDBFile | null> {
   try {
     const filename = modelNumber ? `${modelNumber}.pdb` : `${jobID}.pdb`;
     const filePath = modelNumber
-      ? `${JOBS_DIR}/${jobID}/models/${filename}`
+      ? `${JOBS_DIR}/${jobID}/${modelsDir}/${filename}`
       : `${JOBS_DIR}/${jobID}/${filename}`;
     const data = await fs.readFile(filePath, "utf-8");
     const parsed: PDBFile = parsePdb(data);
@@ -252,10 +253,10 @@ export async function fetchPdbFileAsJSON(
   }
 }
 
-export async function fetchModelFileAsString(jobID: UUID, modelNumber: string) {
+export async function fetchModelFileAsString(jobID: UUID, modelNumber: string, modelsDir = "models") {
   const filename = `${modelNumber}.pdb`;
   try {
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`);
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${modelsDir}/${filename}`);
     return data.toString();
   } catch (error: any) {
     if (error.code === "ENOENT") {

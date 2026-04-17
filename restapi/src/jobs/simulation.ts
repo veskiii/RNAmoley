@@ -282,7 +282,7 @@ async function analyzeSimulationResults(
       false
     );
 
-    updateModelMetadata(metadata, modelNumber, "completed");
+    updateModelMetadata(metadata, modelNumber, "sim_completed");
     metadata.status = "simulation_completed";
     await saveMetadata(jobID, metadata);
   } catch (error) {

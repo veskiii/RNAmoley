@@ -55,6 +55,7 @@ export async function getJobs(req: Request, res: Response) {
 export async function getJobById(req: Request, res: Response) {
   const id = req.params.id as UUID;
   const modelNumber = (req.params.modelNumber as string) || "1";
+  const resultsSource = ((req.query.resultsSource as string) || "original").toLowerCase();
 
   if (!id) {
     res.status(400).send({ error: "Job ID is required." });
@@ -70,6 +71,14 @@ export async function getJobById(req: Request, res: Response) {
     res.status(422).send({ error: "Invalid model number." });
     return;
   }
+
+  if (!["original", "simulation"].includes(resultsSource)) {
+    res.status(422).send({ error: "Invalid results source." });
+    return;
+  }
+
+  const modelsDir = resultsSource === "simulation" ? "sim" : "models";
+  const resultsSuffix = resultsSource === "simulation" ? "_sim_results" : "_results";
 
   let metadata: Metadata;
   try {
@@ -107,7 +116,8 @@ export async function getJobById(req: Request, res: Response) {
     const annotation = await fetchJSONFile(
       id,
       `${modelNumber}_annotation.json`,
-      modelNumber
+      modelNumber,
+      modelsDir
     );
     if (!annotation) {
       res.status(500).send({ error: "Annotation file not found." });
@@ -117,7 +127,8 @@ export async function getJobById(req: Request, res: Response) {
     const numeration = await fetchJSONFile(
       id,
       `${modelNumber}_numeration.json`,
-      modelNumber
+      modelNumber,
+      modelsDir
     );
     if (!numeration) {
       res.status(500).send({ error: "Numeration file not found." });
@@ -127,30 +138,31 @@ export async function getJobById(req: Request, res: Response) {
     const motifs = await fetchJSONFile(
       id,
       `${modelNumber}_motifs.json`,
-      modelNumber
+      modelNumber,
+      modelsDir
     );
     if (!motifs) {
       res.status(500).send({ error: "Motifs file not found." });
       return;
     }
 
-    const pdbFile = await fetchPdbFileAsJSON(id, modelNumber);
+    const pdbFile = await fetchPdbFileAsJSON(id, modelNumber, modelsDir);
     if (!pdbFile) {
       res.status(500).send({ error: "PDB file not found." });
       return;
     }
 
-    const file_string = await fetchModelFileAsString(id, modelNumber);
+    const file_string = await fetchModelFileAsString(id, modelNumber, modelsDir);
     if (!file_string) {
       res.status(500).send({ error: "Blob file not found." });
       return;
     }
 
     // check if results file exists
-    const resultsFilePath = join(JOBS_DIR, id, modelNumber + "_results.json");
+    const resultsFilePath = join(JOBS_DIR, id, modelNumber + `${resultsSuffix}.json`);
     let results: Analysis_results | null = null;
     if (existsSync(resultsFilePath)) {
-      results = await readResults(id, modelNumber);
+      results = await readResults(id, modelNumber, resultsSuffix);
     }
 
     const jobResponse: Job = {
@@ -466,6 +478,13 @@ export async function startSimulation(req: Request, res: Response) {
   const environmentPath = `${JOBS_DIR}/${id}`;
 
   metadata.status = "simulation_starting";
+  if (metadata.resultsStatus === undefined) {
+    metadata.resultsStatus = {};
+  }
+  metadata.resultsStatus[modelNumber] = {
+    modelNumber,
+    status: "sim_starting",
+  };
   if (metadata.simulations === undefined) {
     metadata.simulations = {};
   }

@@ -25,6 +25,8 @@ import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 
 const SummaryPanel: React.FC = () => {
+  type ResultsSource = "original" | "simulation";
+
   const { jobId, modelNumber } = useParams();
   const [selectedModel, setSelectedModel] = useState<number>(
     modelNumber ? parseInt(modelNumber) : 1
@@ -52,10 +54,15 @@ const SummaryPanel: React.FC = () => {
   const [isStartingSimulation, setIsStartingSimulation] = useState(false);
   const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
   const [simulationStartSuccess, setSimulationStartSuccess] = useState<string | null>(null);
+  const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
+  const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
   const canStartSimulation = myData?.metadata.status === "completed";
+  const selectedModelStatus = myData?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+  const simulationTabEnabled = selectedModelStatus === "sim_completed";
+  const isSimulationInProgress = ["sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(selectedModelStatus || "");
 
   const getModelStatusPresentation = (status?: string) => {
     if (!status) {
@@ -111,6 +118,8 @@ const SummaryPanel: React.FC = () => {
 
     return { label: status, className: "bg-gray-300 text-black" };
   };
+
+  const simulationStatusPresentation = getModelStatusPresentation(selectedModelStatus);
 
   const getClashesForForna = () => {
     if (showClashes && myData) {
@@ -220,7 +229,11 @@ const SummaryPanel: React.FC = () => {
     async function fetchData() {
       //console.log("Start to fetch data");
       try {
-        const response = await fetchMyData(jobId, selectedModel);
+        const effectiveResultsSource =
+          selectedResultsSource === "simulation" && simulationTabEnabled
+            ? "simulation"
+            : "original";
+        const response = await fetchMyData(jobId, selectedModel, effectiveResultsSource);
         const data = await response.json();
         if (!response.ok) {
           // console.log(
@@ -254,7 +267,8 @@ const SummaryPanel: React.FC = () => {
             return;
             }
             if (
-              (data.metadata.status === "running") &&
+              data.results &&
+              (data.metadata.status === "running" || data.metadata.status === "completed" || isSimulationStatus(data.metadata.status)) &&
               data.results &&
               isLoading &&
               !hasStoppedLoading.current
@@ -264,8 +278,14 @@ const SummaryPanel: React.FC = () => {
               setIsLoading(false);
               hasStoppedLoading.current = true;
             }
-            if (data.metadata.status === "completed" || isSimulationStatus(data.metadata.status)) {
-              if (isLoading) setInitialQualityScore(data);
+
+            const currentModelStatus = data.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+            const isBackgroundWorkActive =
+              ["creating", "starting", "running", "simulation_starting", "simulation_running"].includes(data.metadata.status) ||
+              ["starting", "running", "sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(currentModelStatus || "");
+
+            if (!isBackgroundWorkActive) {
+              if (isLoading && data.results) setInitialQualityScore(data);
               clearInterval(interval);
               setIsLoading(false);
             }
@@ -285,7 +305,7 @@ const SummaryPanel: React.FC = () => {
 
     // Cleanup interval when component unmounts or jobId changes
     return () => clearInterval(interval);
-  }, [jobId, selectedModel]);
+  }, [jobId, selectedModel, selectedResultsSource, refreshToken]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
@@ -317,6 +337,8 @@ const SummaryPanel: React.FC = () => {
 
       setSimulationStartSuccess("Simulation started.");
       setIsSimulationModalOpen(false);
+      setSelectedResultsSource("original");
+      setRefreshToken((prev) => prev + 1);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to start simulation.";
@@ -472,6 +494,12 @@ const SummaryPanel: React.FC = () => {
       ) {
         return;
       }
+
+      const targetModelStatus = myData?.metadata.resultsStatus?.[modelNum.toString()]?.status;
+      if (selectedResultsSource === "simulation" && targetModelStatus !== "sim_completed") {
+        setSelectedResultsSource("original");
+      }
+
       setInitialized(false);
       setSelectedModel(modelNum);
     }
@@ -717,6 +745,50 @@ const SummaryPanel: React.FC = () => {
               {simulationStartError && (
                 <p className="mt-2 text-sm text-red-700">{simulationStartError}</p>
               )}
+
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedResultsSource("original")}
+                    className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                      selectedResultsSource === "original"
+                        ? "bg-moley-darkGreen text-white"
+                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    }`}
+                  >
+                    Original results
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (simulationTabEnabled) {
+                        setSelectedResultsSource("simulation");
+                      }
+                    }}
+                    disabled={!simulationTabEnabled}
+                    className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                      selectedResultsSource === "simulation"
+                        ? "bg-moley-darkGreen text-white"
+                        : "bg-gray-100 text-gray-800"
+                    } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-200"}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>Simulation results</span>
+                      {isSimulationInProgress && (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                      )}
+                    </div>
+                    <div className="mt-1">
+                      <span className={`inline-block rounded-full px-2 py-1 text-xs ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                        {simulationStatusPresentation.label || "No simulation"}
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
             {/* Przyciski pobierania*/}
             <div className="mt-4 flex justify-center">
