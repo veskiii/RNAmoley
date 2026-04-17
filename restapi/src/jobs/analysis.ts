@@ -37,13 +37,14 @@ export function createAnalysisWorker() {
     interval: number;
     metadata: Metadata;
     analyzeSphereFilesEnabled: boolean;
+    modelsDir?: string;
   }>(
     "analysis",
     async (job) => {
-      const { jobID, models, radius, interval, metadata, analyzeSphereFilesEnabled } = job.data;
+      const { jobID, models, radius, interval, metadata, analyzeSphereFilesEnabled, modelsDir = "models" } = job.data;
 
       for (const [modelNumber, residues] of Object.entries(models)) {
-        await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled);
+        await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled, modelsDir);
       }
       const allFailed = Object.values(metadata.resultsStatus || {}).every(
         (status) => status.status === "failed"
@@ -73,7 +74,8 @@ export async function addAnalysisTask(
   radius: number,
   interval: number,
   metadata: Metadata,
-  analyzeSphereFilesEnabled: boolean
+  analyzeSphereFilesEnabled: boolean,
+  modelsDir = "models"
 ) {
   await analysisQueue.add("analyze-structure", {
     jobID,
@@ -82,6 +84,7 @@ export async function addAnalysisTask(
     interval,
     metadata,
     analyzeSphereFilesEnabled,
+    modelsDir,
   }, {jobId: jobID});
 }
   
@@ -93,7 +96,8 @@ async function performAnalysis(
   radius: number,
   interval: number,
   metadata: Metadata,
-  analyzeSphereFilesEnabled: boolean
+  analyzeSphereFilesEnabled: boolean,
+  modelsDir = "models"
 ) {
   try {
     const analysisOutput = await analyzeStructure(
@@ -103,7 +107,8 @@ async function performAnalysis(
       radius,
       interval,
       metadata,
-      analyzeSphereFilesEnabled
+      analyzeSphereFilesEnabled,
+      modelsDir
     );
 
     if (!analysisOutput) {
@@ -128,23 +133,30 @@ export async function analyzeStructure(
   radius: number,
   interval: number,
   metadata: Metadata,
-  analyzeSphereFilesEnabled: boolean
+  analyzeSphereFilesEnabled: boolean,
+  modelsDir = "models",
+  updateMetadataStatus = true
 ): Promise<Analysis_results> {
-  updateModelMetadata(metadata, modelNumber, "starting");
-  metadata.status = "starting";
-  await saveMetadata(jobID, metadata);
+  if (updateMetadataStatus) {
+    updateModelMetadata(metadata, modelNumber, "starting");
+    metadata.status = "starting";
+    await saveMetadata(jobID, metadata);
+  }
 
-  await writeSelectedResiduesToFile(jobID, modelNumber, residues);
-  await createFragmentPDB(jobID, modelNumber);
-  const fragmentMetrics = await fetchFragmentMetrics(jobID, modelNumber);
+  const resultsSuffix = modelsDir === "models" ? "_results" : "_sim_results";
 
-  const modelMetrics = await fetchModelMetrics(jobID, modelNumber);
-  const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber);
+  await writeSelectedResiduesToFile(jobID, modelNumber, residues, modelsDir);
+  await createFragmentPDB(jobID, modelNumber, modelsDir);
+  const fragmentMetrics = await fetchFragmentMetrics(jobID, modelNumber, modelsDir);
 
-  const numeration = await fetchNumeration(jobID, modelNumber);
-  const annotations = await fetchAnnotations(jobID, modelNumber);
-  const motifs = await fetchMotifs(jobID, modelNumber);
+  const modelMetrics = await fetchModelMetrics(jobID, modelNumber, modelsDir);
+  const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber, modelsDir);
 
+  const numeration = await fetchNumeration(jobID, modelNumber, modelsDir);
+  const annotations = await fetchAnnotations(jobID, modelNumber, modelsDir);
+  const motifs = await fetchMotifs(jobID, modelNumber, modelsDir);
+
+  // analysis of residues
   const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
     const original_index = extractResidueNumber(res.residue);
     const chainID = extractChainID(res.residue);
@@ -184,11 +196,13 @@ export async function analyzeStructure(
     data: initialData,
     modelMetrics: modelMetrics,
     fragmentMetrics: fragmentMetrics,
-  });
+  }, resultsSuffix);
 
-  updateModelMetadata(metadata, modelNumber, "running");
-  metadata.status = "running";
-  await saveMetadata(jobID, metadata);
+  if (updateMetadataStatus) {
+    updateModelMetadata(metadata, modelNumber, "running");
+    metadata.status = "running";
+    await saveMetadata(jobID, metadata);
+  }
 
   if (!analyzeSphereFilesEnabled) {
     return {
@@ -198,7 +212,7 @@ export async function analyzeStructure(
     };
   }
 
-  await createWalkingSphere(jobID, modelNumber, residues, radius, interval);
+  await createWalkingSphere(jobID, modelNumber, residues, radius, interval, modelsDir);
 
   const files = await fs.readdir(`${JOBS_DIR}/${jobID}/${modelNumber}_sphere`);
   const results = await analyzeSphereFilesIncremental(
@@ -207,7 +221,8 @@ export async function analyzeStructure(
     modelNumber,
     initialData,
     modelMetrics,
-    fragmentMetrics
+    fragmentMetrics,
+    resultsSuffix
   );
 
   return {
@@ -223,7 +238,8 @@ async function analyzeSphereFilesIncremental(
   modelNumber: string,
   initialData: nucleotideResult[],
   modelMetrics: metrics,
-  fragmentMetrics: metrics
+  fragmentMetrics: metrics,
+  resultsSuffix: string
 ): Promise<nucleotideResult[]> {
   const resultMap = new Map<number, nucleotideResult>();
   initialData.forEach((res) => resultMap.set(res.residue_number, { ...res }));
@@ -289,7 +305,7 @@ async function analyzeSphereFilesIncremental(
       data: sortedResults,
       modelMetrics,
       fragmentMetrics,
-    });
+    }, resultsSuffix);
   }
 
   return Array.from(resultMap.values()).sort(
@@ -310,14 +326,15 @@ async function createWalkingSphere(
   modelNumber: string,
   residues: ChainElement[],
   radius: number,
-  interval: number
+  interval: number,
+  modelsDir = "models"
 ) {
 
-  const residuesFilePath = `${JOBS_DIR}/${jobID}/models/${modelNumber}_residues.json`;
+  const residuesFilePath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_residues.json`;
   await fs.writeFile(residuesFilePath, JSON.stringify(residues, null, 2));
 
   const walkingSphere = await fetch(
-    `${TOOLS_URL}/sphere?id=${jobID}&modelNumber=${modelNumber}&radius=${radius}&interval=${interval}`,
+    `${TOOLS_URL}/sphere?id=${jobID}&modelNumber=${modelNumber}&radius=${radius}&interval=${interval}&modelsDir=${modelsDir}`,
     { method: "POST" }
   );
   if (!walkingSphere.ok) {
@@ -327,10 +344,11 @@ async function createWalkingSphere(
 
 async function fetchResidueAnalysis(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ): Promise<residueMetrics[]> {
   const residueAnalysis = await fetch(
-    `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/models/${modelNumber}.pdb`,
+    `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`,
     { keepalive: true }
   );
   if (!residueAnalysis.ok) {
@@ -341,10 +359,11 @@ async function fetchResidueAnalysis(
 
 async function fetchModelMetrics(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ): Promise<metrics> {
   const response = await fetch(
-    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/models/${modelNumber}.pdb`,
+    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`,
     { keepalive: true }
   );
   if (!response.ok) {
@@ -355,10 +374,11 @@ async function fetchModelMetrics(
 
 async function fetchFragmentMetrics(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ): Promise<metrics> {
   const response = await fetch(
-    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/models/${modelNumber}_fragment.pdb`,
+    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}_fragment.pdb`,
     { keepalive: true }
   );
   if (!response.ok) {
@@ -369,12 +389,14 @@ async function fetchFragmentMetrics(
 
 async function fetchNumeration(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ): Promise<Numeration> {
   const numeration = await fetchJSONFile(
     jobID,
     `${modelNumber}_numeration.json`,
-    modelNumber
+    modelNumber,
+    modelsDir
   );
   if (!numeration) {
     throw new Error(`Numeration file for model ${modelNumber} not found`);
@@ -384,12 +406,14 @@ async function fetchNumeration(
 
 async function fetchAnnotations(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ): Promise<Annotation[]> {
   const annotation = await fetchJSONFile(
     jobID,
     `${modelNumber}_annotation.json`,
-    modelNumber
+    modelNumber,
+    modelsDir
   );
   if (!annotation) {
     throw new Error(`Annotation file for model ${modelNumber} not found`);
@@ -399,12 +423,14 @@ async function fetchAnnotations(
 
 async function fetchMotifs(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ): Promise<StructuralElement[]> {
   const motifs = await fetchJSONFile(
     jobID,
     `${modelNumber}_motifs.json`,
-    modelNumber
+    modelNumber,
+    modelsDir
   );
   if (!motifs) {
     throw new Error(`Motifs file for model ${modelNumber} not found`);
@@ -433,18 +459,20 @@ async function fetchMotifs(
 async function writeSelectedResiduesToFile(
   jobID: UUID,
   modelNumber: string,
-  residues: ChainElement[]
+  residues: ChainElement[],
+  modelsDir = "models"
 ): Promise<void> {
-  const residuesFilePath = `${JOBS_DIR}/${jobID}/models/${modelNumber}_residues.json`;
+  const residuesFilePath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_residues.json`;
   await fs.writeFile(residuesFilePath, JSON.stringify(residues, null, 2));
 }
 
 async function createFragmentPDB(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ) {
   const fragment = await fetch(
-    `${TOOLS_URL}/fragment?id=${jobID}&modelNumber=${modelNumber}`,
+    `${TOOLS_URL}/fragment?id=${jobID}&modelNumber=${modelNumber}&modelsDir=${modelsDir}`,
     { method: "POST" }
   );
   if (!fragment.ok) {

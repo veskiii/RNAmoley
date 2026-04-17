@@ -1,12 +1,14 @@
+import fs from "fs/promises";
 import type { UUID } from "crypto";
-import type { Metadata } from "./types.js";
-import { SIM_URL } from "../server.js";
+import type { ChainElement, Metadata } from "./types.js";
+import { SIM_URL, TOOLS_URL } from "../server.js";
 import {
     JOBS_DIR,
     saveMetadata,
     updateModelMetadata,
 } from "./utils.js";
 import { Queue, Worker } from "bullmq";
+import { analyzeStructure } from "./analysis.js";
 
 export const simulationQueue = new Queue("simulation", {
   connection: {
@@ -26,6 +28,7 @@ export function createSimulationWorker() {
     async (job) => {
       const { jobID, modelNumber, environmentPath, metadata } = job.data;
       await performSimulation(jobID, modelNumber, environmentPath, metadata);
+      await analyzeSimulationResults(jobID, modelNumber, metadata);
     },
     {
       connection: {
@@ -139,7 +142,7 @@ async function performSimulation(
           metadata.simulations[modelNumber].status = "completed";
           metadata.simulations[modelNumber].completedAt = new Date().toISOString();
         }
-        updateModelMetadata(metadata, modelNumber, "sim_completed");
+        updateModelMetadata(metadata, modelNumber, "sim_finished");
         console.log(`Simulation ${simJobId} completed`);
       } else if (state === "failed") {
         throw new Error(
@@ -215,4 +218,83 @@ export async function fetchSimulationStatus(
   }
 
   return simulationStatuses;
+}
+
+async function analyzeSimulationResults(
+  jobID: UUID,
+  modelNumber: string,
+  metadata: Metadata
+) {
+  const modelsDir = "sim";
+  const sourceFormat = "pdb";
+  const radius = 5;
+  const interval = 1;
+  const analyzeSphereFilesEnabled = Boolean(metadata.analyzeNeighborhoods);
+
+  try {
+    updateModelMetadata(metadata, modelNumber, "sim_analyzing");
+    metadata.status = "simulation_running";
+    await saveMetadata(jobID, metadata);
+
+    const selectedResiduesPath = `${JOBS_DIR}/${jobID}/models/${modelNumber}_residues.json`;
+    const selectedResiduesRaw = await fs.readFile(selectedResiduesPath, "utf-8");
+    const selectedResidues = JSON.parse(selectedResiduesRaw) as ChainElement[];
+
+    if (!Array.isArray(selectedResidues) || selectedResidues.length === 0) {
+      throw new Error(`Selected residues are missing for model ${modelNumber}`);
+    }
+
+    const simulatedPdbPath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_sim.pdb`;
+    const analysisPdbPath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}.pdb`;
+    await fs.copyFile(simulatedPdbPath, analysisPdbPath);
+
+    const annotateResponse = await fetch(
+      `${TOOLS_URL}/annotate?id=${jobID}&numberOfModels=1&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
+      {
+        method: "POST",
+      }
+    );
+
+    if (!annotateResponse.ok) {
+      throw new Error(`Annotation failed: ${annotateResponse.statusText}`);
+    }
+
+    const motifsResponse = await fetch(
+      `${TOOLS_URL}/extractMotifs?id=${jobID}&numberOfModels=1&modelsDir=${modelsDir}`,
+      {
+        method: "POST",
+      }
+    );
+
+    if (!motifsResponse.ok) {
+      throw new Error(`Motif extraction failed: ${motifsResponse.statusText}`);
+    }
+
+    await analyzeStructure(
+      jobID,
+      modelNumber,
+      selectedResidues,
+      radius,
+      interval,
+      metadata,
+      analyzeSphereFilesEnabled,
+      modelsDir,
+      false
+    );
+
+    updateModelMetadata(metadata, modelNumber, "completed");
+    metadata.status = "simulation_completed";
+    await saveMetadata(jobID, metadata);
+  } catch (error) {
+    updateModelMetadata(
+      metadata,
+      modelNumber,
+      "sim_failed",
+      error instanceof Error ? error.message : String(error)
+    );
+    metadata.status = "simulation_failed";
+    metadata.error_message = error instanceof Error ? error.message : String(error);
+    await saveMetadata(jobID, metadata);
+    throw error;
+  }
 }

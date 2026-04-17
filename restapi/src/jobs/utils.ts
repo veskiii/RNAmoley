@@ -118,7 +118,7 @@ export async function saveMetadata(jobID: UUID, metadata: Metadata) {
 export function updateModelMetadata(
   metadata: Metadata, 
   modelNumber: string, 
-  status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_completed` | `sim_failed`,
+  status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_finished` | `sim_analyzing` | `sim_completed` | `sim_failed`,
   errorMessage?: string) {
   if (!metadata.resultsStatus) {
     metadata.resultsStatus = {};
@@ -132,19 +132,25 @@ export async function readMetadata(jobID: UUID): Promise<Metadata> {
   return JSON.parse(data.toString());
 }
 
-export async function saveResults(jobID: UUID, modelNumber: string, results: Analysis_results) {
+export async function saveResults(
+  jobID: UUID,
+  modelNumber: string,
+  results: Analysis_results,
+  resultsSuffix = "_results"
+) {
   await fs.writeFile(
-    `${JOBS_DIR}/${jobID}/${modelNumber}_results.json`,
+    `${JOBS_DIR}/${jobID}/${modelNumber}${resultsSuffix}.json`,
     JSON.stringify(results)
   );
 }
 
 export async function readResults(
   jobID: UUID,
-  modelNumber: string
+  modelNumber: string,
+  resultsSuffix = "_results"
 ): Promise<Analysis_results | null> {
   try {
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${modelNumber}_results.json`);
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${modelNumber}${resultsSuffix}.json`);
     return JSON.parse(data.toString());
   } catch (error: any) {
     if (error.code === "ENOENT") {
@@ -216,10 +222,11 @@ export async function fetchPdbFile(pdbCode: string) {
 export async function fetchJSONFile(
   jobID: UUID,
   filename: string,
-  modelNumber?: string
+  modelNumber?: string,
+  modelsDir = "models"
 ) {
   if (modelNumber) {
-    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/models/${filename}`);
+    const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${modelsDir}/${filename}`);
     return JSON.parse(data.toString());
   } else {
     const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`);

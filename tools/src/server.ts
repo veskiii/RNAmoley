@@ -20,6 +20,7 @@ app.post("/annotate", (req, res) => {
   const id = req.query.id as string;
   const numberOfModels = req.query.numberOfModels as string;
   const sourceFormat = req.query.sourceFormat as string;
+  const modelsDir = (req.query.modelsDir as string) || "models";
 
   if (!id) {
     res.status(400).send("Annotator error: id is required");
@@ -32,7 +33,7 @@ app.post("/annotate", (req, res) => {
   }
   console.log("Annotating", id, numberOfModels);
 
-  runAnnotator(id, parseInt(numberOfModels), sourceFormat)
+  runAnnotator(id, parseInt(numberOfModels), sourceFormat, modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -45,6 +46,7 @@ app.post("/annotate", (req, res) => {
 app.post("/extractMotifs", (req, res) => {
   const id = req.query.id as string;
   const numberOfModels = req.query.numberOfModels as string;
+  const modelsDir = (req.query.modelsDir as string) || "models";
 
   if (!id) {
     res.status(400).send("Motif-extractor error: id is required");
@@ -57,7 +59,7 @@ app.post("/extractMotifs", (req, res) => {
   }
   console.log("Extracting motifs ", id, numberOfModels);
 
-  runMotifExtractor(id, parseInt(numberOfModels))
+  runMotifExtractor(id, parseInt(numberOfModels), modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -90,6 +92,7 @@ app.post("/convert", (req, res) => {
 app.post("/split", (req, res) => {
   const id = req.query.id as string;
   const sourceFormat = req.query.sourceFormat as string;
+  const modelsDir = (req.query.modelsDir as string) || "models";
 
   if (!id) {
     res.status(400).send({ error: "Split error: id is required" });
@@ -102,7 +105,7 @@ app.post("/split", (req, res) => {
   }
   console.log("Splitting models for job", id, "with source format", sourceFormat);
 
-  splitModels(id, sourceFormat)
+  splitModels(id, sourceFormat, modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -115,6 +118,7 @@ app.post("/correct", (req, res) => {
   const id = req.query.id as string;
   const numberOfModels = req.query.numberOfModels as string;
   const sourceFormat = req.query.sourceFormat as string;
+  const modelsDir = (req.query.modelsDir as string) || "models";
 
   if (!id) {
     res.status(400).send({ error: "Correct error: id is required" });
@@ -128,7 +132,7 @@ app.post("/correct", (req, res) => {
     return;
   }
 
-  correctModels(id, parseInt(numberOfModels), sourceFormat)
+  correctModels(id, parseInt(numberOfModels), sourceFormat, modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -144,6 +148,7 @@ app.post("/sphere", (req, res) => {
   const modelNumber = req.query.modelNumber as string;
   const radius = req.query.radius as string;
   const interval = req.query.interval as string;
+  const modelsDir = (req.query.modelsDir as string) || "models";
 
   if (!id) {
     res.status(400).send({ error: "Sphere error: id is required" });
@@ -165,7 +170,7 @@ app.post("/sphere", (req, res) => {
     return;
   }
 
-  walkingSphere(id, parseInt(modelNumber), parseInt(radius), parseInt(interval))
+  walkingSphere(id, parseInt(modelNumber), parseInt(radius), parseInt(interval), modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -177,6 +182,7 @@ app.post("/sphere", (req, res) => {
 app.post("/fragment", (req, res) => {
   const id = req.query.id as string;
   const modelNumber = req.query.modelNumber as string;
+  const modelsDir = (req.query.modelsDir as string) || "models";
 
   if (!id) {
     res.status(400).send({ error: "Fragment extraction error: id is required" });
@@ -190,7 +196,7 @@ app.post("/fragment", (req, res) => {
     return;
   }
 
-  runFragmentExtraction(id, modelNumber)
+  runFragmentExtraction(id, modelNumber, modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })

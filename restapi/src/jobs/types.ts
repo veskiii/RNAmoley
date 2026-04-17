@@ -71,12 +71,12 @@ export interface StructuralElement {
 
 export interface ModelStatus {
   modelNumber: string;
-  status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_completed` | `sim_failed`;
+  status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_finished` | `sim_analyzing` | `sim_completed` | `sim_failed`;
   error_message?: string;
 }
 
 export interface Metadata {
-  status: `creating` | `created` | `starting` | `running` | `completed` | `failed` | `simulation_starting` | `simulation_running` | `simulation_completed`;
+  status: `creating` | `created` | `starting` | `running` | `completed` | `failed` | `simulation_starting` | `simulation_running` | `simulation_completed` | `simulation_failed`;
   resultsStatus?: Record<string, ModelStatus>;
   simulations?: Record<string, SimulationInfo>;
   model_count: number;

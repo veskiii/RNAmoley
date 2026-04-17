@@ -76,12 +76,16 @@ export async function runConverter(id: string, filename: string) {
   return result;
 }
 
-export async function splitModels(id: string, sourceFormat: string) {
-  console.log(`Splitting ${JOBS_DIR}/${id}/${id}.pdb into models...`);
+export async function splitModels(
+  id: string,
+  sourceFormat: string,
+  modelsDir = "models"
+) {
+  console.log(`Splitting ${JOBS_DIR}/${id}/${id}.pdb into ${modelsDir}...`);
 
   const split = spawnSync(`${SCRIPTS_DIR}/Separate.py`, [
     `${JOBS_DIR}/${id}/${id}.${sourceFormat}`,
-    `${JOBS_DIR}/${id}/models`,
+    `${JOBS_DIR}/${id}/${modelsDir}`,
   ]);
   if (split.error) {
     console.error("Error running split: ", split.error);
@@ -104,14 +108,19 @@ export async function splitModels(id: string, sourceFormat: string) {
   return response;
 }
 
-export async function correctModels(id: string, numberOfModels: number, sourceFormat: string) {
+export async function correctModels(
+  id: string,
+  numberOfModels: number,
+  sourceFormat: string,
+  modelsDir = "models"
+) {
   console.log(`Correcting ${id} models...`);
 
   for (let i = 1; i <= numberOfModels; i++) {
     console.log(`Correcting model ${i}...`);
     const correct = spawnSync(`${SCRIPTS_DIR}/Correction.py`, [
-      `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
-      `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
+      `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
+      `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
     ]);
     if (correct.error) {
       console.error("Error running correct: ", correct.error);
@@ -122,7 +131,12 @@ export async function correctModels(id: string, numberOfModels: number, sourceFo
   return { success: true };
 }
 
-export async function runAnnotator(id: string, numberOfModels: number, sourceFormat: string) {
+export async function runAnnotator(
+  id: string,
+  numberOfModels: number,
+  sourceFormat: string,
+  modelsDir = "models"
+) {
   console.log(`Running annotator on ${id}...`);
   const results = [];
 
@@ -131,8 +145,8 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
       "annotator",
       [
         "-j",
-        `${JOBS_DIR}/${id}/models/${i}.json`,
-        `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
+        `${JOBS_DIR}/${id}/${modelsDir}/${i}.json`,
+        `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
       ],
       { encoding: "utf-8" }
     );
@@ -145,7 +159,7 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
       
     const labelToAuthorMap: Record<string, string> = {};
     if (sourceFormat === "cif") {
-      const numerationFilePath = resolve(`${JOBS_DIR}/${id}/models/${i}_numeration.json`);
+      const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}_numeration.json`);
       let numerationData;
       try {
         const numerationRaw = await fs.readFile(numerationFilePath, "utf-8");
@@ -162,10 +176,10 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
       }
     }
 
-    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/models/${i}.json`));
+    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}.json`));
     const numerationFilename = `${i}_numeration.json`;
     const numerationString = JSON.stringify(numeration);
-    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/models`, numerationFilename);
+    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, numerationFilename);
     await fs.writeFile(numerationFilePath, numerationString);
 
     // parse output as list of annotations
@@ -200,14 +214,14 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
     };
     const mergedFilename = `${i}.dot`;
     const mergedString = `${merged.name}\n${merged.sequnece}\n${merged.dotbracket}`;
-    const mergedFilePath = resolve(`${JOBS_DIR}/${id}/models`, mergedFilename);
+    const mergedFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, mergedFilename);
     await fs.writeFile(mergedFilePath, mergedString);
 
     // save output as json file
     // const outputFilename = filename.split('.')[0] + '.json';
     const outputFilename = `${i}_annotation.json`;
     const outputString = JSON.stringify(output);
-    const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
+    const outputFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, outputFilename);
     await fs.writeFile(outputFilePath, outputString);
   }
 
@@ -334,20 +348,24 @@ const retrieveNumerationFromJson = async (
   return numerationMap;
 };
 
-export async function runMotifExtractor(id: string, numberOfModels: number) {
+export async function runMotifExtractor(
+  id: string,
+  numberOfModels: number,
+  modelsDir = "models"
+) {
   console.log(`Running motif extractor on ${id}...`);
   const results = [];
 
   for (let i = 1; i <= numberOfModels; i++) {
     const output = await retrieveMotifsFromJson(
-      `${JOBS_DIR}/${id}/models/${i}.json`
+      `${JOBS_DIR}/${id}/${modelsDir}/${i}.json`
     );
 
     results.push(output);
 
     const outputFilename = `${i}_motifs.json`;
     const outputString = JSON.stringify(output);
-    const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
+    const outputFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, outputFilename);
     await fs.writeFile(outputFilePath, outputString);
   }
 
@@ -360,7 +378,8 @@ export async function walkingSphere(
   id: string,
   modelNumber: number,
   radius: number,
-  interval: number
+  interval: number,
+  modelsDir = "models"
 ) {
   console.log(`Using walking sphere on model ${modelNumber} of ${id}...`);
 
@@ -377,8 +396,8 @@ export async function walkingSphere(
   }
 
   const sphere = spawnSync(`${SCRIPTS_DIR}/Walking_sphere.py`, [
-    `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
-    `${JOBS_DIR}/${id}/models/${modelNumber}_residues.json`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}.pdb`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_residues.json`,
     `${JOBS_DIR}/${id}/${modelNumber}_sphere`,
     radius.toString(),
     interval.toString(),
@@ -395,14 +414,15 @@ export async function walkingSphere(
 
 export async function runFragmentExtraction(
   id: string,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ) {
   console.log(`Running fragment extraction on model ${modelNumber} of ${id}...`);
 
   const fragment = spawnSync(`${SCRIPTS_DIR}/Extract_fragment.py`, [
-    `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
-    `${JOBS_DIR}/${id}/models/${modelNumber}_residues.json`,
-    `${JOBS_DIR}/${id}/models/${modelNumber}_fragment.pdb`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}.pdb`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_residues.json`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_fragment.pdb`,
   ], { encoding: "utf-8" });
 
   // console.log("stdout:", fragment.stdout);
@@ -413,7 +433,7 @@ export async function runFragmentExtraction(
   }
 
   try {
-    await fs.access(`${JOBS_DIR}/${id}/models/${modelNumber}_fragment.pdb`);
+    await fs.access(`${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_fragment.pdb`);
   } catch (e) {
     console.error("Fragment file was not created!");
     throw new Error("Fragment file was not created!");
