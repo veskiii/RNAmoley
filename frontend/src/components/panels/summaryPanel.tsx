@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "../common/loading";
-import "../../App.css";
 import Molstar from "../visualizations/molStarSummaryComponent";
 import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
 import {
@@ -18,11 +17,12 @@ import DownloadFile from "../common/downloadFile";
 import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
 import { colorMapByRange, getColor } from "../utils/ColorUtils";
 import { transformJobToChains } from "../utils/transformJobToChains";
-import { fetchMyData } from "../utils/api";
+import { fetchMyData, startSimulation } from "../utils/api";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
+import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 
 const SummaryPanel: React.FC = () => {
   const { jobId, modelNumber } = useParams();
@@ -48,6 +48,10 @@ const SummaryPanel: React.FC = () => {
   );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [sidebarTab, setSidebarTab] = useState(0);
+  const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
+  const [isStartingSimulation, setIsStartingSimulation] = useState(false);
+  const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
+  const [simulationStartSuccess, setSimulationStartSuccess] = useState<string | null>(null);
   const hasStoppedLoading = useRef(false);
 
   const getClashesForForna = () => {
@@ -230,6 +234,37 @@ const SummaryPanel: React.FC = () => {
       setQualityScore(QualityScore.CLASH_SCORE);
     } else {
       setQualityScore(QualityScore.SUITENESS);
+    }
+  };
+
+  const handleStartSimulation = async (values: SimulationFormValues) => {
+    if (!jobId) {
+      setSimulationStartError("Brak ID zadania.");
+      return;
+    }
+
+    setIsStartingSimulation(true);
+    setSimulationStartError(null);
+    setSimulationStartSuccess(null);
+
+    try {
+      await startSimulation({
+        id: jobId,
+        modelNumber: selectedModel,
+        restraintBackboneForce: values.restraintBackboneForce,
+        restraintGlobalForce: values.restraintGlobalForce,
+        restraintBasePairsForce: values.restraintBasePairsForce,
+        rmsdCutoff: values.rmsdCutoff,
+      });
+
+      setSimulationStartSuccess("Simulation started.");
+      setIsSimulationModalOpen(false);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to start simulation.";
+      setSimulationStartError(message);
+    } finally {
+      setIsStartingSimulation(false);
     }
   };
 
@@ -611,6 +646,25 @@ const SummaryPanel: React.FC = () => {
                 </div>
               </>)}
             </div>
+            <div className="mt-3 rounded-lg bg-white p-3 shadow">
+              <button
+                type="button"
+                onClick={() => {
+                  setSimulationStartError(null);
+                  setSimulationStartSuccess(null);
+                  setIsSimulationModalOpen(true);
+                }}
+                className="w-full rounded-lg bg-moley-darkGreen px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
+              >
+                Correct the structure
+              </button>
+              {simulationStartSuccess && (
+                <p className="mt-2 text-sm text-green-700">{simulationStartSuccess}</p>
+              )}
+              {simulationStartError && (
+                <p className="mt-2 text-sm text-red-700">{simulationStartError}</p>
+              )}
+            </div>
             {/* Przyciski pobierania*/}
             <div className="mt-4 flex justify-center">
             <DownloadLink />
@@ -679,6 +733,17 @@ const SummaryPanel: React.FC = () => {
         </div>
       </div>
       <SmallScreenPage />
+      <SimulationStartModal
+        isOpen={isSimulationModalOpen}
+        isSubmitting={isStartingSimulation}
+        errorMessage={simulationStartError || undefined}
+        onClose={() => {
+          if (!isStartingSimulation) {
+            setIsSimulationModalOpen(false);
+          }
+        }}
+        onSubmit={handleStartSimulation}
+      />
     </div>
   );
 };

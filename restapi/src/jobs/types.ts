@@ -71,16 +71,24 @@ export interface StructuralElement {
 
 export interface ModelStatus {
   modelNumber: string;
-  status: `created` | `starting` | `running` | `completed` | `failed`;
+  status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_completed` | `sim_failed`;
   error_message?: string;
 }
 
 export interface Metadata {
-  status: `creating` | `created` | `starting` | `running` | `completed` | `failed`;
+  status: `creating` | `created` | `starting` | `running` | `completed` | `failed` | `simulation_starting` | `simulation_running` | `simulation_completed`;
   resultsStatus?: Record<string, ModelStatus>;
+  simulations?: Record<string, SimulationInfo>;
   model_count: number;
   error_message?: string;
   analyzeNeighborhoods?: boolean;
+}
+
+export interface SimulationInfo {
+  simJobId: string;
+  status: string;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export interface metrics {

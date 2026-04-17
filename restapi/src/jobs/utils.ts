@@ -118,7 +118,7 @@ export async function saveMetadata(jobID: UUID, metadata: Metadata) {
 export function updateModelMetadata(
   metadata: Metadata, 
   modelNumber: string, 
-  status: `created` | `starting` | `running` | `completed` | `failed`,
+  status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_completed` | `sim_failed`,
   errorMessage?: string) {
   if (!metadata.resultsStatus) {
     metadata.resultsStatus = {};
@@ -163,14 +163,15 @@ export async function deleteFile(filename: string) {
 // Removes the job directory and all its contents, used when deleting a job or an error occurs
 export async function deleteJobDirectory(id: UUID) {
   // check if zip file exists and delete it
-  try {
-    await fs.unlink(`${JOBS_DIR}/${id}.zip`);
-  } catch (err: any) {
-    if (err.code !== "ENOENT") {
-      throw err;
-    }
-  }
-  await fs.rm(`${JOBS_DIR}/${id}`, { recursive: true });
+  console.log(`Deleting job directory ${JOBS_DIR}/${id}`);
+  // try {
+  //   await fs.unlink(`${JOBS_DIR}/${id}.zip`);
+  // } catch (err: any) {
+  //   if (err.code !== "ENOENT") {
+  //     throw err;
+  //   }
+  // }
+  // await fs.rm(`${JOBS_DIR}/${id}`, { recursive: true });
 }
 
 export const generateFilename = (id: UUID, file: File) => {

@@ -36,6 +36,7 @@ import type {
 } from "./types.js";
 import { TOOLS_URL } from "../server.js";
 import { addAnalysisTask } from "./analysis.js";
+import { addSimulationTask, fetchSimulationStatus } from "./simulation.js";
 import { existsSync } from "fs";
 import { join } from "path";
 import { addCreateJobTask } from "./jobCreation.js";
@@ -423,6 +424,114 @@ export async function downloadJobFiles(req: Request, res: Response) {
       console.error(err);
       res.status(500).send({ error: "Error downloading zip file." });
     }
+  });
+}
+
+export async function startSimulation(req: Request, res: Response) {
+  res.setMaxListeners(0);
+  res.setTimeout(0);
+
+  const id: UUID = req.body.id;
+  const modelNumber = (req.body.modelNumber as string) || "1";
+
+  console.log(
+    "Starting simulation. id: ",
+    id,
+    " modelNumber: ",
+    modelNumber
+  );
+
+  if (!id) {
+    res.status(400).send({ error: "ID is required." });
+    return;
+  }
+
+  if (id.length !== 36) {
+    res.status(422).send({ error: "Invalid job ID." });
+    return;
+  }
+
+  if (!Number.isInteger(parseInt(modelNumber))) {
+    res.status(422).send({ error: "Invalid model number." });
+    return;
+  }
+
+  const metadata = await readMetadata(id);
+  if (!metadata) {
+    res.status(500).send({ error: "Metadata file not found." });
+    return;
+  }
+
+  // Construct environment path from job directory
+  const environmentPath = `${JOBS_DIR}/${id}`;
+
+  metadata.status = "simulation_starting";
+  if (metadata.simulations === undefined) {
+    metadata.simulations = {};
+  }
+  metadata.simulations[modelNumber] = {
+    simJobId: "",
+    status: "starting",
+  };
+  await saveMetadata(id, metadata);
+
+  addSimulationTask(id, modelNumber, environmentPath, metadata);
+
+  db.query(getJobByIdQuery, [id], async (err, result) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send({ error: "Database error." });
+      return;
+    }
+    if (result.rows.length === 0) {
+      res.status(404).send({ error: "Job not found." });
+      return;
+    }
+
+    res.status(202).json({
+      id: result.rows[0].id,
+      original_filename: result.rows[0].original_filename,
+      name: result.rows[0].name,
+      metadata: metadata,
+      created_at: result.rows[0].created_at,
+      updated_at: result.rows[0].updated_at,
+      message: "Simulation is starting. Please check back later.",
+    });
+  });
+}
+
+export async function getSimulationStatus(req: Request, res: Response) {
+  const id = req.params.id as UUID;
+
+  if (!id) {
+    res.status(400).send({ error: "Job ID is required." });
+    return;
+  }
+
+  if (id.length !== 36) {
+    res.status(422).send({ error: "Invalid job ID." });
+    return;
+  }
+
+  let metadata: Metadata;
+  try {
+    metadata = await readMetadata(id);
+    if (!metadata) {
+      res.status(500).send({ error: "Metadata file not found." });
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(404).send({ error: "Job not found." });
+    return;
+  }
+
+  const simStatus = await fetchSimulationStatus(id, metadata);
+
+  res.status(200).json({
+    id: id,
+    metadata: metadata,
+    simulations: simStatus,
   });
 }
 

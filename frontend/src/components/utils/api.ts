@@ -114,3 +114,38 @@ export async function sendDataToAnalyze(
     console.error(error);
   }
 }
+
+export type StartSimulationPayload = {
+  id: string;
+  modelNumber: number;
+  restraintBackboneForce: number;
+  restraintGlobalForce: number;
+  restraintBasePairsForce: number;
+  rmsdCutoff: number;
+};
+
+export async function startSimulation(payload: StartSimulationPayload) {
+  const response = await fetch(`${API_URL}/jobs/simulation/start`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Content-Type": "application/json",
+    },
+  });
+
+  let responseBody: any = null;
+  try {
+    responseBody = await response.json();
+  } catch (_error) {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      responseBody?.error || responseBody?.message || "Failed to start simulation";
+    throw new Error(message);
+  }
+
+  return responseBody;
+}

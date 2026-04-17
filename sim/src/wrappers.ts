@@ -39,17 +39,34 @@ async function runCommand(
 	args: string[],
 	cwd: string,
 	label: string,
+	options?: {
+		logStdout?: boolean;
+		logStderr?: boolean;
+	},
 ) {
+	const logStdout = options?.logStdout ?? true;
+	const logStderr = options?.logStderr ?? true;
+
 	try {
 		const { stdout, stderr } = await execFileAsync(command, args, { cwd });
-		if (stdout?.trim()) {
+		if (logStdout && stdout?.trim()) {
 			console.log(`[${label}] stdout:\n${stdout}`);
 		}
-		if (stderr?.trim()) {
+		if (logStderr && stderr?.trim()) {
 			console.log(`[${label}] stderr:\n${stderr}`);
 		}
 	} catch (error) {
-		const details = error instanceof Error ? error.message : String(error);
+		let details = error instanceof Error ? error.message : String(error);
+		if (typeof error === "object" && error !== null) {
+			const stdout = "stdout" in error ? String(error.stdout ?? "") : "";
+			const stderr = "stderr" in error ? String(error.stderr ?? "") : "";
+			if (stdout.trim()) {
+				details += `\nstdout:\n${stdout}`;
+			}
+			if (stderr.trim()) {
+				details += `\nstderr:\n${stderr}`;
+			}
+		}
 		throw new Error(`[${label}] command failed: ${details}`);
 	}
 }
@@ -61,16 +78,19 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const scriptsPath = process.env.SIM_SCRIPTS_PATH ?? "/webserver/scripts";
 
 	const sourceModel = path.join(modelsPath, `${data.modelNumber}.pdb`);
-  const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
-  const sourceModelNtcs = path.join(modelsPath, `${data.modelNumber}_assigned_ntcs.csv`);
+  	const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
+  	const sourceModelNtcs = path.join(modelsPath, `${data.modelNumber}_assigned_ntcs.csv`);
 	const simModel = path.join(simPath, `${data.modelNumber}.pdb`);
 	const sourcePsfgen = path.join(scriptsPath, "psfgen.tcl");
 	const simPsfgen = path.join(simPath, "psfgen.tcl");
-  const sourceNamd = path.join(scriptsPath, "namd.script");
+  	const sourceNamd = path.join(scriptsPath, "namd.script");
 	const simNamd = path.join(simPath, "namd.script");
 	const outputPdb = path.join(simPath, "output.pdb");
+	const outputPsf = path.join(simPath, "output.psf");
 	const targetPdb = path.join(simPath, "target.pdb");
 	const restraintsScript = path.join(scriptsPath, "run_restraints_single.py");
+	const exportPDBScript = path.join(scriptsPath, "export_first_rmsd_threshold_single.py");
+	const resultPdb = path.join(simPath, `${data.modelNumber}_sim.pdb`);
 
 	await fs.mkdir(simPath, { recursive: true });
 	await fs.copyFile(sourceModel, simModel);
@@ -81,10 +101,15 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const psfgenPrepared = psfgenTemplate.replaceAll("<input>", path.basename(simModel));
 	await fs.writeFile(simPsfgen, psfgenPrepared, "utf8");
 
-	await runCommand("vmd", ["-dispdev", "text", "-e", "psfgen.tcl"], simPath, "vmd");
+	console.log("[sim] VMD: generowanie plikow output.pdb oraz output.psf z szablonu psfgen.tcl...");
+	await runCommand("vmd", ["-dispdev", "text", "-e", "psfgen.tcl"], simPath, "vmd", {
+		logStdout: false,
+		logStderr: true,
+	});
 
 	await fs.copyFile(outputPdb, targetPdb);
 
+	console.log("[sim] NAMD: uruchamianie restrykcji i symulacji przez run_restraints_single.py...");
 	await runCommand(
 		"python",
 		[restraintsScript, 
@@ -93,14 +118,31 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
       "--base-pair-templates-dir", "/webserver/scripts/base_pair_templates",
       "--generator-script", "/webserver/scripts/generate_colvars_combined.py",
       "--pairs", sourceModelPairs,
-      "--csv", sourceModelNtcs],
+      "--csv", sourceModelNtcs,
+	  "--outputname", "sim"],
 		simPath,
 		"run_restraints_single",
 	);
 
+	const dcdFilePath = path.join(simPath, "sim.dcd");
+
+	console.log("[sim] NAMD: eksport pierwszej klatki spelniajacej prog RMSD do pliku PDB...");
+	await runCommand(
+		"python",
+		[exportPDBScript,
+			"--dcd", dcdFilePath,
+			"--threshold", "0.4",
+			"--psf", outputPsf,
+			"--reference", outputPdb,
+			"--selection", "nucleic and noh",
+			"--out-pdb", resultPdb],
+		simPath,
+		"export_first_rmsd_threshold_single",
+	);
+
 	return {
 		simPath,
-		targetPdbPath: targetPdb,
+		targetPdbPath: resultPdb,
 	};
 }
 
