@@ -173,18 +173,145 @@ function toValidSegmentName(rawName: string | undefined) {
 	return normalized || "S";
 }
 
-async function getSegmentNameFromAnnotation(modelsPath: string, modelNumber: string) {
+function toPdbChainId(rawName: string) {
+	return rawName.trim().charAt(0);
+}
+
+function makeUniqueSegmentName(baseSegmentName: string, used: Set<string>) {
+	if (!used.has(baseSegmentName)) {
+		used.add(baseSegmentName);
+		return baseSegmentName;
+	}
+
+	for (let i = 1; i <= 9; i += 1) {
+		const candidate = `${baseSegmentName.slice(0, 3)}${i}`;
+		if (!used.has(candidate)) {
+			used.add(candidate);
+			return candidate;
+		}
+	}
+
+	let fallbackIndex = used.size + 1;
+	while (true) {
+		const candidate = `S${String(fallbackIndex).slice(-3)}`;
+		if (!used.has(candidate)) {
+			used.add(candidate);
+			return candidate;
+		}
+		fallbackIndex += 1;
+	}
+}
+
+async function getChainNamesFromAnnotation(modelsPath: string, modelNumber: string) {
 	const annotationPath = path.join(modelsPath, `${modelNumber}_annotation.json`);
 
 	try {
 		const raw = await fs.readFile(annotationPath, "utf8");
 		const parsed = JSON.parse(raw) as ModelAnnotationRecord[];
-		const chainName = Array.isArray(parsed) ? parsed[0]?.name : undefined;
-		return toValidSegmentName(chainName);
+		if (!Array.isArray(parsed)) {
+			return ["S"];
+		}
+
+		const names = parsed
+			.map((entry) => entry?.name?.trim() ?? "")
+			.filter((name) => name.length > 0);
+
+		if (names.length === 0) {
+			return ["S"];
+		}
+
+		const unique = new Set<string>();
+		for (const name of names) {
+			unique.add(name);
+		}
+
+		return [...unique];
 	} catch (error) {
-		console.warn(`[sim] Could not read chain name from ${annotationPath}. Falling back to segment S.`, error);
-		return "S";
+		console.warn(`[sim] Could not read chain names from ${annotationPath}. Falling back to segment S.`, error);
+		return ["S"];
 	}
+}
+
+type PreparedChain = {
+	segmentName: string;
+	pdbChainId: string;
+	pdbFileName: string;
+};
+
+function isPdbChainScopedRecord(line: string) {
+	return line.startsWith("ATOM  ")
+		|| line.startsWith("HETATM")
+		|| line.startsWith("ANISOU")
+		|| line.startsWith("TER   ");
+}
+
+function getPdbLineChainId(line: string) {
+	return (line[21] ?? "").trim();
+}
+
+async function preparePdbFilesForChains(
+	simPath: string,
+	simModelPath: string,
+	chainNames: string[],
+) {
+	const baseFileName = path.basename(simModelPath);
+	const baseName = path.basename(simModelPath, path.extname(simModelPath));
+	const extension = path.extname(simModelPath);
+	const usedSegments = new Set<string>();
+
+	const chains: PreparedChain[] = chainNames.map((chainName) => {
+		const segmentBase = toValidSegmentName(chainName);
+		const segmentName = makeUniqueSegmentName(segmentBase, usedSegments);
+		const pdbChainId = toPdbChainId(chainName);
+
+		return {
+			segmentName,
+			pdbChainId,
+			pdbFileName: baseFileName,
+		};
+	});
+
+	if (chains.length <= 1) {
+		return chains;
+	}
+
+	const pdbContent = await fs.readFile(simModelPath, "utf8");
+	const pdbLines = pdbContent.split(/\r?\n/);
+
+	for (const chain of chains) {
+		const splitFileName = `${baseName}_${chain.pdbChainId || "S"}${extension}`;
+		const splitPath = path.join(simPath, splitFileName);
+		const outputLines: string[] = [];
+		let matched = 0;
+
+		for (const line of pdbLines) {
+			if (isPdbChainScopedRecord(line)) {
+				if (getPdbLineChainId(line) === chain.pdbChainId) {
+					outputLines.push(line);
+					matched += 1;
+				}
+			} else {
+				outputLines.push(line);
+			}
+		}
+
+		if (matched === 0) {
+			throw new Error(`[sim] Chain ${chain.pdbChainId || "<empty>"} from annotation not found in ${baseFileName}`);
+		}
+
+		await fs.writeFile(splitPath, `${outputLines.join("\n")}\n`, "utf8");
+		chain.pdbFileName = splitFileName;
+	}
+
+	return chains;
+}
+
+function buildPsfgenSegmentBlocks(chains: PreparedChain[]) {
+	return chains
+		.map(
+			(chain) => `segment ${chain.segmentName} {\n    pdb ${chain.pdbFileName}\n}\n\ncoordpdb ${chain.pdbFileName} ${chain.segmentName}`,
+		)
+		.join("\n\n");
 }
 
 export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
@@ -205,7 +332,7 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const sourceModel = path.join(modelsPath, `${data.modelNumber}.pdb`);
 	const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
 	const sourceModelNtcs = await ensureDnatcoAnalysis(envPath, path.relative(envPath, sourceModel));
-	const segmentName = await getSegmentNameFromAnnotation(modelsPath, data.modelNumber);
+	const chainNames = await getChainNamesFromAnnotation(modelsPath, data.modelNumber);
 	const simModel = path.join(simPath, `${data.modelNumber}.pdb`);
 	const sourcePsfgen = path.join(scriptsPath, "psfgen.tcl");
 	const simPsfgen = path.join(simPath, "psfgen.tcl");
@@ -223,10 +350,11 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	await fs.copyFile(sourcePsfgen, simPsfgen);
 	await fs.copyFile(sourceNamd, simNamd);
 
+	const preparedChains = await preparePdbFilesForChains(simPath, simModel, chainNames);
+	const segmentBlocks = buildPsfgenSegmentBlocks(preparedChains);
+
 	const psfgenTemplate = await fs.readFile(simPsfgen, "utf8");
-	const psfgenPrepared = psfgenTemplate
-		.replaceAll("<input>", path.basename(simModel))
-		.replaceAll("<segment>", segmentName);
+	const psfgenPrepared = psfgenTemplate.replaceAll("<segment_blocks>", segmentBlocks);
 	await fs.writeFile(simPsfgen, psfgenPrepared, "utf8");
 
 	console.log("[sim] VMD: generowanie plikow output.pdb oraz output.psf z szablonu psfgen.tcl...");

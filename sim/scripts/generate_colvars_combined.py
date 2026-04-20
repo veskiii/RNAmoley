@@ -54,12 +54,16 @@ BACKBONE_ATOMS = {
 
 @dataclass
 class NtCRecord:
+    chain_id: str
     start_residue: int
     end_residue: int
     ntc_code: str
     template_file: Path
     col_value: float
     parity: str  # "odd" or "even"
+
+
+ResidueKey = Tuple[str, int]
 
 
 def parse_args() -> argparse.Namespace:
@@ -178,17 +182,53 @@ def parse_pdb_lines(path: Path) -> List[str]:
     return path.read_text().splitlines()
 
 
-def parse_pdb_residues(path: Path) -> Dict[int, str]:
-    residues: Dict[int, str] = {}
+def get_line_chain_id(line: str) -> str:
+    chain = (line[21] if len(line) > 21 else " ").strip()
+    return chain or "_"
+
+
+def get_line_residue_id(line: str) -> int:
+    return int(line[22:26])
+
+
+def parse_pdb_residues(path: Path) -> Tuple[Dict[ResidueKey, str], Dict[int, ResidueKey], Dict[int, List[ResidueKey]]]:
+    residues: Dict[ResidueKey, str] = {}
+    residue_order: List[ResidueKey] = []
+
     for line in path.read_text().splitlines():
         if not (line.startswith("ATOM") or line.startswith("HETATM")):
             continue
         if len(line) < 66:
             continue
+
         res_name = line[17:20].strip()
-        res_id = int(line[22:26])
-        residues.setdefault(res_id, res_name)
-    return residues
+        res_id = get_line_residue_id(line)
+        chain_id = get_line_chain_id(line)
+        key = (chain_id, res_id)
+
+        if key not in residues:
+            residues[key] = res_name
+            residue_order.append(key)
+
+    global_index_map: Dict[int, ResidueKey] = {
+        index + 1: key for index, key in enumerate(residue_order)
+    }
+
+    resid_to_keys: Dict[int, List[ResidueKey]] = {}
+    for key in residue_order:
+        resid_to_keys.setdefault(key[1], []).append(key)
+
+    return residues, global_index_map, resid_to_keys
+
+
+def build_first_residue_by_chain(residue_order: List[ResidueKey]) -> Dict[str, ResidueKey]:
+    first_residue_by_chain: Dict[str, ResidueKey] = {}
+
+    for key in residue_order:
+        if key[0] not in first_residue_by_chain:
+            first_residue_by_chain[key[0]] = key
+
+    return first_residue_by_chain
 
 
 def is_hydrogen(atom_name: str) -> bool:
@@ -199,18 +239,20 @@ def is_backbone_atom(atom_name: str) -> bool:
     return atom_name in BACKBONE_ATOMS
 
 
-def rewrite_pdb_b_factors(lines: List[str], value_by_residue: Dict[int, float]) -> List[str]:
+def rewrite_pdb_b_factors(lines: List[str], value_by_residue: Dict[ResidueKey, float]) -> List[str]:
     out_lines: List[str] = []
     for line in lines:
         if line.startswith("ATOM") or line.startswith("HETATM"):
             if len(line) < 66:
                 out_lines.append(line)
                 continue
-            res_id = int(line[22:26])
+            res_id = get_line_residue_id(line)
+            chain_id = get_line_chain_id(line)
+            residue_key = (chain_id, res_id)
             atom_name = line[12:16].strip()
             b_value = 0.0
-            if res_id in value_by_residue and not is_hydrogen(atom_name):
-                b_value = value_by_residue[res_id]
+            if residue_key in value_by_residue and not is_hydrogen(atom_name):
+                b_value = value_by_residue[residue_key]
             out_lines.append(f"{line[:60]}{b_value:6.2f}{line[66:]}")
         else:
             out_lines.append(line)
@@ -219,8 +261,8 @@ def rewrite_pdb_b_factors(lines: List[str], value_by_residue: Dict[int, float]) 
 
 def rewrite_pdb_b_factors_backbone(
     lines: List[str],
-    value_by_residue: Dict[int, float],
-    exclude_phosphate_for_first_residues: set[int],
+    value_by_residue: Dict[ResidueKey, float],
+    exclude_phosphate_for_first_residues: set[ResidueKey],
 ) -> List[str]:
     out_lines: List[str] = []
     for line in lines:
@@ -229,11 +271,13 @@ def rewrite_pdb_b_factors_backbone(
                 out_lines.append(line)
                 continue
 
-            res_id = int(line[22:26])
+            res_id = get_line_residue_id(line)
+            chain_id = get_line_chain_id(line)
+            residue_key = (chain_id, res_id)
             atom_name = line[12:16].strip()
             b_value = 0.0
 
-            if res_id in exclude_phosphate_for_first_residues and atom_name in {"P", "OP1", "OP2"}:
+            if residue_key in exclude_phosphate_for_first_residues and atom_name in {"P", "OP1", "OP2"}:
                 out_lines.append(f"{line[:60]}{b_value:6.2f}{line[66:]}")
                 continue
 
@@ -241,8 +285,8 @@ def rewrite_pdb_b_factors_backbone(
                 out_lines.append(f"{line[:60]}{b_value:6.2f}{line[66:]}")
                 continue
 
-            if res_id in value_by_residue and not is_hydrogen(atom_name):
-                b_value = value_by_residue[res_id]
+            if residue_key in value_by_residue and not is_hydrogen(atom_name):
+                b_value = value_by_residue[residue_key]
 
             out_lines.append(f"{line[:60]}{b_value:6.2f}{line[66:]}")
         else:
@@ -265,21 +309,60 @@ def read_pairs(path: Path) -> List[Tuple[int, int]]:
 
 def build_pairs_section(
     pairs_path: Path,
-    residues: Dict[int, str],
+    residues: Dict[ResidueKey, str],
+    global_index_map: Dict[int, ResidueKey],
+    resid_to_keys: Dict[int, List[ResidueKey]],
+    first_residue_by_chain: Dict[str, ResidueKey],
     start_value: float,
     force_constant: float,
     atoms_file_name: str,
     templates_dir: Path,
-) -> Tuple[str, Dict[int, float], int, List[str]]:
+) -> Tuple[str, Dict[ResidueKey, float], int, List[str]]:
     pairs = read_pairs(pairs_path)
-    value_by_residue: Dict[int, float] = {}
+    value_by_residue: Dict[ResidueKey, float] = {}
     skipped: List[str] = []
     blocks: List[str] = []
     next_value = start_value
 
+    def resolve_pair_index(index: int) -> Tuple[ResidueKey | None, str | None]:
+        if index in global_index_map:
+            return global_index_map[index], None
+
+        candidates = resid_to_keys.get(index, [])
+        if len(candidates) == 1:
+            return candidates[0], None
+        if len(candidates) == 0:
+            return None, f"index {index}: missing residue in PDB"
+        return None, f"index {index}: ambiguous residue number across chains"
+
+    def select_template_file(left_key: ResidueKey, right_key: ResidueKey, template_stem: str) -> Path:
+        left_is_first = first_residue_by_chain.get(left_key[0]) == left_key
+        right_is_first = first_residue_by_chain.get(right_key[0]) == right_key
+
+        suffix = ""
+        if left_is_first and right_is_first:
+            suffix = "_drop_r1_r2"
+        elif left_is_first:
+            suffix = "_drop_r1"
+        elif right_is_first:
+            suffix = "_drop_r2"
+
+        return templates_dir / f"{template_stem}{suffix}.pdb"
+
     for left, right in pairs:
-        left_base = residues.get(left)
-        right_base = residues.get(right)
+        left_key, left_error = resolve_pair_index(left)
+        right_key, right_error = resolve_pair_index(right)
+
+        if left_error or right_error:
+            reason = "; ".join([x for x in [left_error, right_error] if x])
+            skipped.append(f"{left}-{right}: {reason}")
+            continue
+
+        assert left_key is not None
+        assert right_key is not None
+
+        left_base = residues.get(left_key)
+        right_base = residues.get(right_key)
 
         if not left_base or not right_base:
             skipped.append(f"{left}-{right}: missing residue in PDB")
@@ -290,17 +373,17 @@ def build_pairs_section(
             skipped.append(f"{left}-{right}: skipped pair {left_base}-{right_base}")
             continue
 
-        ref_file = templates_dir / ref_file_name
+        ref_file = select_template_file(left_key, right_key, ref_file_name.removesuffix(".pdb"))
         if not ref_file.exists():
             skipped.append(f"{left}-{right}: missing template {ref_file.name}")
             continue
 
-        if left in value_by_residue or right in value_by_residue:
+        if left_key in value_by_residue or right_key in value_by_residue:
             skipped.append(f"{left}-{right}: skipped due to residue reuse")
             continue
 
-        value_by_residue[left] = next_value
-        value_by_residue[right] = next_value
+        value_by_residue[left_key] = next_value
+        value_by_residue[right_key] = next_value
 
         colvar_name = f"rmsd_pair_{left}_{right}"
         harmonic_name = f"harm_pair_{left}_{right}"
@@ -341,6 +424,25 @@ def parse_step_residues(step_value: str) -> Tuple[int, int]:
     return numbers[0], numbers[1]
 
 
+def parse_chain_id(chain_value: str, step_value: str) -> str:
+    chain = chain_value.strip()
+    if chain:
+        return chain[0]
+
+    step_match = re.search(r"custom_([^_]+)_", step_value)
+    if step_match:
+        parsed = step_match.group(1).strip()
+        if parsed:
+            return parsed[0]
+
+    return "_"
+
+
+def chain_token_for_name(chain_id: str) -> str:
+    token = re.sub(r"[^A-Za-z0-9]", "_", chain_id.strip())
+    return token or "X"
+
+
 def read_ntc_records(
     csv_path: Path,
     templates_dir: Path,
@@ -349,7 +451,7 @@ def read_ntc_records(
 ) -> Tuple[List[NtCRecord], List[str]]:
     kept: List[NtCRecord] = []
     skipped: List[str] = []
-    used_pairs: set[Tuple[int, int]] = set()
+    used_pairs: set[Tuple[str, int, int]] = set()
 
     next_value = start_value
 
@@ -362,6 +464,7 @@ def read_ntc_records(
 
         for i, row in enumerate(reader, start=2):
             step = (row.get("Step") or "").strip()
+            chain_id = parse_chain_id((row.get("Chain") or ""), step)
             template_code = (row.get(csv_column) or "").strip()
 
             if not step:
@@ -391,15 +494,16 @@ def read_ntc_records(
                 )
                 continue
 
-            pair_key = (start_res, end_res)
+            pair_key = (chain_id, start_res, end_res)
             if pair_key in used_pairs:
-                skipped.append(f"line {i}: duplicate pair {start_res}-{end_res}")
+                skipped.append(f"line {i}: duplicate pair {chain_id}:{start_res}-{end_res}")
                 continue
 
             used_pairs.add(pair_key)
             parity = "odd" if (start_res % 2 == 1) else "even"
             kept.append(
                 NtCRecord(
+                    chain_id=chain_id,
                     start_residue=start_res,
                     end_residue=end_res,
                     ntc_code=template_code,
@@ -421,8 +525,9 @@ def build_backbone_section(
 ) -> str:
     blocks: List[str] = []
     for rec in records:
-        colvar_name = f"rmsd_ntc_{rec.start_residue}_{rec.end_residue}_{rec.ntc_code}"
-        harmonic_name = f"harm_ntc_{rec.start_residue}_{rec.end_residue}_{rec.ntc_code}"
+        chain_token = chain_token_for_name(rec.chain_id)
+        colvar_name = f"rmsd_ntc_{chain_token}_{rec.start_residue}_{rec.end_residue}_{rec.ntc_code}"
+        harmonic_name = f"harm_ntc_{chain_token}_{rec.start_residue}_{rec.end_residue}_{rec.ntc_code}"
         atoms_file_name = odd_atoms_file_name if rec.parity == "odd" else even_atoms_file_name
 
         blocks.append(
@@ -491,7 +596,9 @@ def main() -> None:
     out_pdb_even_path = Path(args.out_pdb_even)
 
     pdb_lines = parse_pdb_lines(pdb_path)
-    residues = parse_pdb_residues(pdb_path)
+    residues, global_index_map, resid_to_keys = parse_pdb_residues(pdb_path)
+    residue_order = list(global_index_map.values())
+    first_residue_by_chain = build_first_residue_by_chain(residue_order)
 
     sections: List[str] = ["# Auto-generated by generate_colvars_combined.py"]
     skipped_pairs: List[str] = []
@@ -514,6 +621,9 @@ def main() -> None:
         pairs_section, value_by_residue_pairs, total_pairs, skipped_pairs = build_pairs_section(
             pairs_path=Path(args.pairs),
             residues=residues,
+            global_index_map=global_index_map,
+            resid_to_keys=resid_to_keys,
+            first_residue_by_chain=first_residue_by_chain,
             start_value=args.pairs_start_value,
             force_constant=args.pairs_force_constant,
             atoms_file_name=out_pdb_pairs_path.name,
@@ -541,19 +651,21 @@ def main() -> None:
             csv_column=args.csv_column,
         )
 
-        value_by_residue_odd: Dict[int, float] = {}
-        value_by_residue_even: Dict[int, float] = {}
-        first_residues_odd: set[int] = set()
-        first_residues_even: set[int] = set()
+        value_by_residue_odd: Dict[ResidueKey, float] = {}
+        value_by_residue_even: Dict[ResidueKey, float] = {}
+        first_residues_odd: set[ResidueKey] = set()
+        first_residues_even: set[ResidueKey] = set()
 
         for rec in records:
+            start_key = (rec.chain_id, rec.start_residue)
+            end_key = (rec.chain_id, rec.end_residue)
             target = value_by_residue_odd if rec.parity == "odd" else value_by_residue_even
-            target[rec.start_residue] = rec.col_value
-            target[rec.end_residue] = rec.col_value
+            target[start_key] = rec.col_value
+            target[end_key] = rec.col_value
             if rec.parity == "odd":
-                first_residues_odd.add(rec.start_residue)
+                first_residues_odd.add(start_key)
             else:
-                first_residues_even.add(rec.start_residue)
+                first_residues_even.add(start_key)
 
         odd_lines = rewrite_pdb_b_factors_backbone(
             pdb_lines,

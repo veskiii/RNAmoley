@@ -10,11 +10,7 @@ pdbalias atom C O2P OP2
 pdbalias atom U O1P OP1
 pdbalias atom U O2P OP2
 
-segment <segment> {
-    pdb <input>
-}
-
-coordpdb <input> <segment>
+<segment_blocks>
 
 regenerate angles dihedrals  
 
