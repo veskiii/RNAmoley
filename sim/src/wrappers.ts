@@ -165,6 +165,15 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const modelsPath = path.join(envPath, "models");
 	const scriptsPath = process.env.SIM_SCRIPTS_PATH ?? "/webserver/scripts";
 
+	console.log("[sim-worker] Running simulation with parameters:", {
+		environmentPath: data.environmentPath,
+		modelNumber: data.modelNumber,
+		restraintBackboneForce: data.restraintBackboneForce,
+		restraintGlobalForce: data.restraintGlobalForce,
+		restraintBasePairsForce: data.restraintBasePairsForce,
+		rmsdCutoff: data.rmsdCutoff,
+	});
+
 	const sourceModel = path.join(modelsPath, `${data.modelNumber}.pdb`);
   	const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
 	const sourceModelNtcs = await ensureDnatcoAnalysis(envPath, path.relative(envPath, sourceModel));

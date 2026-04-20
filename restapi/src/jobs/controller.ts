@@ -511,6 +511,12 @@ export async function startSimulation(req: Request, res: Response) {
     rmsdCutoff,
   };
 
+  console.log("Starting simulation with parameters:", {
+    id,
+    modelNumber,
+    ...simulationParams,
+  });
+
   metadata.status = "simulation_starting";
   if (metadata.resultsStatus === undefined) {
     metadata.resultsStatus = {};

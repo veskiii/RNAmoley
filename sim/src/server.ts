@@ -54,6 +54,15 @@ app.post("/sim-jobs", async (req, res) => {
     }
   }
 
+  console.log("[sim-api] Accepted simulation start request:", {
+    environmentPath: String(environmentPath),
+    modelNumber: String(modelNumber),
+    restraintBackboneForce: parsedRestraintBackboneForce,
+    restraintGlobalForce: parsedRestraintGlobalForce,
+    restraintBasePairsForce: parsedRestraintBasePairsForce,
+    rmsdCutoff: parsedRmsdCutoff,
+  });
+
   try {
     const job = await enqueueSimJob({
       environmentPath: String(environmentPath),
