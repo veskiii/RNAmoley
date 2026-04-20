@@ -182,6 +182,14 @@ export async function runAnnotator(
     const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, numerationFilename);
     await fs.writeFile(numerationFilePath, numerationString);
 
+    const basePairs = await retrieveBasePairsFromJson(
+      resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}.json`)
+    );
+    const basePairsFilename = `${i}_pairs.resid`;
+    const basePairsString = basePairs.map(([left, right]) => `${left} ${right}`).join("\n");
+    const basePairsFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, basePairsFilename);
+    await fs.writeFile(basePairsFilePath, basePairsString);
+
     // parse output as list of annotations
     // every 3 lines is a new annotation
     const output: Annotation[] = [];
@@ -346,6 +354,46 @@ const retrieveNumerationFromJson = async (
   }
 
   return numerationMap;
+};
+
+const retrieveBasePairsFromJson = async (
+  filePath: string
+): Promise<Array<[number, number]>> => {
+  const rawData = await fs.readFile(filePath, "utf-8");
+  const jsonData = JSON.parse(rawData);
+
+  const pairs = jsonData.bpseq?.pairs;
+  if (!pairs || typeof pairs !== "object") {
+    return [];
+  }
+
+  const uniquePairs = new Set<string>();
+  for (const [leftRaw, rightRaw] of Object.entries(pairs)) {
+    const left = Number(leftRaw);
+    const right = Number(rightRaw);
+
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+      continue;
+    }
+
+    if (left < 1 || right < 1 || left === right) {
+      continue;
+    }
+
+    const first = Math.min(left, right);
+    const second = Math.max(left, right);
+    uniquePairs.add(`${first} ${second}`);
+  }
+
+  return Array.from(uniquePairs)
+    .map((pair) => pair.split(" ").map(Number) as [number, number])
+    .sort((a, b) => {
+      if (a[0] !== b[0]) {
+        return a[0] - b[0];
+      }
+
+      return a[1] - b[1];
+    });
 };
 
 export async function runMotifExtractor(
