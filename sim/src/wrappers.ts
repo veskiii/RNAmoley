@@ -159,6 +159,34 @@ async function runCommand(
 	}
 }
 
+type ModelAnnotationRecord = {
+	name?: string;
+};
+
+function toValidSegmentName(rawName: string | undefined) {
+	const normalized = (rawName ?? "")
+		.trim()
+		.toUpperCase()
+		.replaceAll(/[^A-Z0-9]/g, "")
+		.slice(0, 4);
+
+	return normalized || "S";
+}
+
+async function getSegmentNameFromAnnotation(modelsPath: string, modelNumber: string) {
+	const annotationPath = path.join(modelsPath, `${modelNumber}_annotation.json`);
+
+	try {
+		const raw = await fs.readFile(annotationPath, "utf8");
+		const parsed = JSON.parse(raw) as ModelAnnotationRecord[];
+		const chainName = Array.isArray(parsed) ? parsed[0]?.name : undefined;
+		return toValidSegmentName(chainName);
+	} catch (error) {
+		console.warn(`[sim] Could not read chain name from ${annotationPath}. Falling back to segment S.`, error);
+		return "S";
+	}
+}
+
 export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const envPath = path.resolve(data.environmentPath);
 	const simPath = path.join(envPath, "sim");
@@ -175,12 +203,13 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	});
 
 	const sourceModel = path.join(modelsPath, `${data.modelNumber}.pdb`);
-  	const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
+	const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
 	const sourceModelNtcs = await ensureDnatcoAnalysis(envPath, path.relative(envPath, sourceModel));
+	const segmentName = await getSegmentNameFromAnnotation(modelsPath, data.modelNumber);
 	const simModel = path.join(simPath, `${data.modelNumber}.pdb`);
 	const sourcePsfgen = path.join(scriptsPath, "psfgen.tcl");
 	const simPsfgen = path.join(simPath, "psfgen.tcl");
-  	const sourceNamd = path.join(scriptsPath, "namd.script");
+	const sourceNamd = path.join(scriptsPath, "namd.script");
 	const simNamd = path.join(simPath, "namd.script");
 	const outputPdb = path.join(simPath, "output.pdb");
 	const outputPsf = path.join(simPath, "output.psf");
@@ -195,7 +224,9 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	await fs.copyFile(sourceNamd, simNamd);
 
 	const psfgenTemplate = await fs.readFile(simPsfgen, "utf8");
-	const psfgenPrepared = psfgenTemplate.replaceAll("<input>", path.basename(simModel));
+	const psfgenPrepared = psfgenTemplate
+		.replaceAll("<input>", path.basename(simModel))
+		.replaceAll("<segment>", segmentName);
 	await fs.writeFile(simPsfgen, psfgenPrepared, "utf8");
 
 	console.log("[sim] VMD: generowanie plikow output.pdb oraz output.psf z szablonu psfgen.tcl...");

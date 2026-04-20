@@ -22,8 +22,8 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [restraintBackboneForce, setRestraintBackboneForce] = useState("100000");
-  const [restraintGlobalForce, setRestraintGlobalForce] = useState("500");
+  const [restraintBackboneForce, setRestraintBackboneForce] = useState("500");
+  const [restraintGlobalForce, setRestraintGlobalForce] = useState("100000");
   const [restraintBasePairsForce, setRestraintBasePairsForce] = useState("500");
   const [rmsdCutoff, setRmsdCutoff] = useState("0.4");
   const [validationError, setValidationError] = useState<string | null>(null);
