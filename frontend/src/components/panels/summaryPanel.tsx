@@ -63,6 +63,7 @@ const SummaryPanel: React.FC = () => {
   const selectedModelStatus = myData?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
   const simulationTabEnabled = selectedModelStatus === "sim_completed";
   const isSimulationInProgress = ["sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(selectedModelStatus || "");
+  const hasSimulationStarted = (selectedModelStatus || "").startsWith("sim_");
 
   const getModelStatusPresentation = (status?: string) => {
     if (!status) {
@@ -117,6 +118,12 @@ const SummaryPanel: React.FC = () => {
     }
 
     return { label: status, className: "bg-gray-300 text-black" };
+  };
+
+  const getModelListStatus = (status?: string) => {
+    if (!status) return status;
+    if (status.startsWith("sim_")) return "completed";
+    return status;
   };
 
   const simulationStatusPresentation = getModelStatusPresentation(selectedModelStatus);
@@ -611,7 +618,8 @@ const SummaryPanel: React.FC = () => {
                   {Array.from({ length: myData.metadata.model_count }, (_, i) => {
                     const modelNum = i + 1;
                     const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
-                    const modelStatusPresentation = getModelStatusPresentation(modelStatus);
+                    const modelListStatus = getModelListStatus(modelStatus);
+                    const modelStatusPresentation = getModelStatusPresentation(modelListStatus);
                     return (
                       <div
                         key={"model" + modelNum}
@@ -627,10 +635,10 @@ const SummaryPanel: React.FC = () => {
                           <div className="flex flex-col items-end">
                             <span
                               className={`ml-2 p-2 rounded-full inline-block ${modelStatusPresentation.className}`}
-                              title={modelStatus || ""}
+                              title={modelListStatus || ""}
                             >{modelStatusPresentation.label}
                             </span>
-                            {["failed", "sim_failed"].includes(modelStatus || "") && (
+                            {["failed"].includes(modelStatus || "") && (
                               <div className="text-red-500 text-sm mt-1">${myData.metadata.resultsStatus[modelNum].error_message}</div>
                             )}
                           </div>
@@ -746,49 +754,51 @@ const SummaryPanel: React.FC = () => {
                 <p className="mt-2 text-sm text-red-700">{simulationStartError}</p>
               )}
 
-              <div className="mt-3 border-t border-gray-200 pt-3">
-                <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedResultsSource("original")}
-                    className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
-                      selectedResultsSource === "original"
-                        ? "bg-moley-darkGreen text-white"
-                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                    }`}
-                  >
-                    Original results
-                  </button>
+              {hasSimulationStarted && (
+                <div className="mt-3 border-t border-gray-200 pt-3">
+                  <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedResultsSource("original")}
+                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                        selectedResultsSource === "original"
+                          ? "bg-moley-darkGreen text-white"
+                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                      }`}
+                    >
+                      Original results
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (simulationTabEnabled) {
-                        setSelectedResultsSource("simulation");
-                      }
-                    }}
-                    disabled={!simulationTabEnabled}
-                    className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
-                      selectedResultsSource === "simulation"
-                        ? "bg-moley-darkGreen text-white"
-                        : "bg-gray-100 text-gray-800"
-                    } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-200"}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Simulation results</span>
-                      {isSimulationInProgress && (
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                      )}
-                    </div>
-                    <div className="mt-1">
-                      <span className={`inline-block rounded-full px-2 py-1 text-xs ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
-                        {simulationStatusPresentation.label || "No simulation"}
-                      </span>
-                    </div>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (simulationTabEnabled) {
+                          setSelectedResultsSource("simulation");
+                        }
+                      }}
+                      disabled={!simulationTabEnabled}
+                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                        selectedResultsSource === "simulation"
+                          ? "bg-moley-darkGreen text-white"
+                          : "bg-gray-100 text-gray-800"
+                      } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-200"}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Simulation results</span>
+                        {isSimulationInProgress && (
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                        )}
+                      </div>
+                      <div className="mt-1">
+                        <span className={`inline-block rounded-full px-2 py-1 text-xs ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                          {simulationStatusPresentation.label || "No simulation"}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             {/* Przyciski pobierania*/}
             <div className="mt-4 flex justify-center">
