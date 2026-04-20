@@ -812,6 +812,7 @@ const SummaryPanel: React.FC = () => {
               <div className="overflow-x-auto">
                 {/* residue table */}
                 <ResultsResidueTable
+                key={`residue-table-${selectedModel}-${selectedResultsSource}`}
                 data={myData.results.data}
                 analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
                 selectedScore={selectedQualityScore}

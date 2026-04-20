@@ -5,6 +5,11 @@ import { Colors } from "../common/colors";
 
 const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore }) => {
   const selectedBorderColor = Colors.salmon;
+  const neighborhoodScores = [
+    QualityScore.CLASH_SCORE,
+    QualityScore.BAD_ANGLES,
+    QualityScore.BAD_BONDS,
+  ];
 
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -70,6 +75,13 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     setSelectedScore(clickedScore);
   };
 
+  const getEffectiveSelectedScore = () => {
+    if (!analyzeNeighborhood && neighborhoodScores.includes(selectedScore)) {
+      return QualityScore.SUITENESS;
+    }
+    return selectedScore;
+  };
+
   useEffect(() => {
     if (
       chainOptions.length > 0 &&
@@ -77,21 +89,21 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     ) {
       setSelectedChain(chainOptions[0].chainID);
     }
-  }, [chainOptions]);
+  }, [chainOptions, selectedChain]);
 
   useEffect(() => {
     // console.log("ResidueTable rerendered");
   }, [selectedChain]);
 
   useEffect(() => {
-    colorColumn(selectedScore);
-    // if (analyzeNeighborhood)
-    //   colorColumn(QualityScore.CLASH_SCORE);
-    // else 
-    //   colorColumn(QualityScore.SUITENESS);
-  }, [data]);
+    if (!analyzeNeighborhood && neighborhoodScores.includes(selectedScore)) {
+      setSelectedScore(QualityScore.SUITENESS);
+    }
+  }, [analyzeNeighborhood, selectedScore, setSelectedScore]);
 
   useEffect(() => {
+    const effectiveSelectedScore = getEffectiveSelectedScore();
+
     resetColumns();
 
     const ids = [
@@ -118,14 +130,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
       [QualityScore.SUGAR_PUCKER_OUT]: "tableSugarPuckerOut",
     };
 
-    const selectedId = scoreToId[selectedScore];
+    const selectedId = scoreToId[effectiveSelectedScore];
     const selectedEl = document.getElementById(selectedId);
     if (selectedEl) {
       selectedEl.style.borderColor = selectedBorderColor;
       selectedEl.style.borderWidth = "3px";
     }
-    colorColumn(selectedScore);
-  }, [selectedScore]);
+    colorColumn(effectiveSelectedScore);
+  }, [data, selectedScore, selectedChain, analyzeNeighborhood]);
 
   if (!data || data.length === 0) {
     return <p>No data available</p>;
