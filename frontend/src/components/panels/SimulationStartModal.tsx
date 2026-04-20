@@ -22,10 +22,10 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [restraintBackboneForce, setRestraintBackboneForce] = useState("1.0");
-  const [restraintGlobalForce, setRestraintGlobalForce] = useState("0.5");
-  const [restraintBasePairsForce, setRestraintBasePairsForce] = useState("1.0");
-  const [rmsdCutoff, setRmsdCutoff] = useState("3.0");
+  const [restraintBackboneForce, setRestraintBackboneForce] = useState("100000");
+  const [restraintGlobalForce, setRestraintGlobalForce] = useState("500");
+  const [restraintBasePairsForce, setRestraintBasePairsForce] = useState("500");
+  const [rmsdCutoff, setRmsdCutoff] = useState("0.4");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   if (!isOpen) {
@@ -47,7 +47,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
     );
 
     if (hasInvalidValue) {
-      setValidationError("Wszystkie parametry muszą być liczbami >= 0.");
+      setValidationError("All parameters must be numbers >= 0.");
       return;
     }
 
@@ -59,26 +59,18 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Start symulacji</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="rounded-md px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            Zamknij
-          </button>
+          <h2 className="text-xl font-bold text-gray-900">Start simulation</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700">
-              Siła restraint backbone
+              Backbone restraint force
             </span>
             <input
               type="number"
               min="0"
-              step="0.1"
+              step="100"
               value={restraintBackboneForce}
               onChange={(e) => setRestraintBackboneForce(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
@@ -88,12 +80,12 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700">
-              Siła restraint global
+              Global restraint force
             </span>
             <input
               type="number"
               min="0"
-              step="0.1"
+              step="100"
               value={restraintGlobalForce}
               onChange={(e) => setRestraintGlobalForce(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
@@ -103,12 +95,12 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700">
-              Siła restraint base pairs
+              Base pairs restraint force
             </span>
             <input
               type="number"
               min="0"
-              step="0.1"
+              step="100"
               value={restraintBasePairsForce}
               onChange={(e) => setRestraintBasePairsForce(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
@@ -118,7 +110,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700">
-              Cutoff RMSD
+              RMSD cutoff
             </span>
             <input
               type="number"
@@ -144,14 +136,14 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               disabled={isSubmitting}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
             >
-              Anuluj
+              Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="rounded-lg bg-moley-darkGreen px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSubmitting ? "Uruchamianie..." : "Start symulacji"}
+              {isSubmitting ? "Starting..." : "Start simulation"}
             </button>
           </div>
         </form>
