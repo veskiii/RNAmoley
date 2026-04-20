@@ -17,17 +17,25 @@ export const simulationQueue = new Queue("simulation", {
   },
 });
 
+export type SimulationParameters = {
+  restraintBackboneForce: number;
+  restraintGlobalForce: number;
+  restraintBasePairsForce: number;
+  rmsdCutoff: number;
+};
+
 export function createSimulationWorker() {
   const worker = new Worker<{
     jobID: UUID;
     modelNumber: string;
     environmentPath: string;
     metadata: Metadata;
+    simulationParams: SimulationParameters;
   }>(
     "simulation",
     async (job) => {
-      const { jobID, modelNumber, environmentPath, metadata } = job.data;
-      await performSimulation(jobID, modelNumber, environmentPath, metadata);
+      const { jobID, modelNumber, environmentPath, metadata, simulationParams } = job.data;
+      await performSimulation(jobID, modelNumber, environmentPath, metadata, simulationParams);
       await analyzeSimulationResults(jobID, modelNumber, metadata);
     },
     {
@@ -54,13 +62,15 @@ export async function addSimulationTask(
   jobID: UUID,
   modelNumber: string,
   environmentPath: string,
-  metadata: Metadata
+  metadata: Metadata,
+  simulationParams: SimulationParameters
 ) {
   await simulationQueue.add("run-simulation", {
     jobID,
     modelNumber,
     environmentPath,
     metadata,
+    simulationParams,
   }, { jobId: `${jobID}_sim_${modelNumber}` });
 }
 
@@ -68,7 +78,8 @@ async function performSimulation(
   jobID: UUID,
   modelNumber: string,
   environmentPath: string,
-  metadata: Metadata
+  metadata: Metadata,
+  simulationParams: SimulationParameters
 ) {
   try {
     updateModelMetadata(metadata, modelNumber, "sim_starting");
@@ -83,6 +94,10 @@ async function performSimulation(
       body: JSON.stringify({
         environmentPath: environmentPath,
         modelNumber: modelNumber,
+        restraintBackboneForce: simulationParams.restraintBackboneForce,
+        restraintGlobalForce: simulationParams.restraintGlobalForce,
+        restraintBasePairsForce: simulationParams.restraintBasePairsForce,
+        rmsdCutoff: simulationParams.rmsdCutoff,
       }),
     });
 

@@ -734,19 +734,32 @@ const SummaryPanel: React.FC = () => {
               </>)}
             </div>
             <div className="mt-3 rounded-lg bg-white p-3 shadow">
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={canStartSimulation ? 0 : -1}
+                aria-disabled={!canStartSimulation}
                 onClick={() => {
+                  if (!canStartSimulation) return;
                   setSimulationStartError(null);
                   setSimulationStartSuccess(null);
                   setIsSimulationModalOpen(true);
                 }}
-                disabled={!canStartSimulation}
-                className="w-full rounded-lg bg-moley-darkGreen px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                onKeyDown={(e) => {
+                  if (!canStartSimulation) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSimulationStartError(null);
+                    setSimulationStartSuccess(null);
+                    setIsSimulationModalOpen(true);
+                  }
+                }}
+                className={`w-full rounded-lg bg-moley-darkGreen px-4 py-2 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                  canStartSimulation ? "hover:opacity-95 cursor-pointer" : "cursor-not-allowed opacity-50"
+                }`}
                 title={canStartSimulation ? "" : "Structure correction is available after the analysis is completed."}
               >
                 {canStartSimulation ? "Correct the structure" : "Correct the structure (available after completed)"}
-              </button>
+              </div>
               {simulationStartSuccess && (
                 <p className="mt-2 text-sm text-green-700">{simulationStartSuccess}</p>
               )}
@@ -758,27 +771,42 @@ const SummaryPanel: React.FC = () => {
                 <div className="mt-3 border-t border-gray-200 pt-3">
                   <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
                   <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelectedResultsSource("original")}
-                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedResultsSource("original");
+                        }
+                      }}
+                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
                         selectedResultsSource === "original"
                           ? "bg-moley-darkGreen text-white"
                           : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                       }`}
                     >
                       Original results
-                    </button>
+                    </div>
 
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={simulationTabEnabled ? 0 : -1}
+                      aria-disabled={!simulationTabEnabled}
                       onClick={() => {
                         if (simulationTabEnabled) {
                           setSelectedResultsSource("simulation");
                         }
                       }}
-                      disabled={!simulationTabEnabled}
-                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                      onKeyDown={(e) => {
+                        if (!simulationTabEnabled) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedResultsSource("simulation");
+                        }
+                      }}
+                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
                         selectedResultsSource === "simulation"
                           ? "bg-moley-darkGreen text-white"
                           : "bg-gray-100 text-gray-800"
@@ -795,7 +823,7 @@ const SummaryPanel: React.FC = () => {
                           {simulationStatusPresentation.label || "No simulation"}
                         </span>
                       </div>
-                    </button>
+                    </div>
                   </div>
                 </div>
               )}

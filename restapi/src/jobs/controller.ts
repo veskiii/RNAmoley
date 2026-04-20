@@ -36,7 +36,7 @@ import type {
 } from "./types.js";
 import { TOOLS_URL } from "../server.js";
 import { addAnalysisTask } from "./analysis.js";
-import { addSimulationTask, fetchSimulationStatus } from "./simulation.js";
+import { addSimulationTask, fetchSimulationStatus, type SimulationParameters } from "./simulation.js";
 import { existsSync } from "fs";
 import { join } from "path";
 import { addCreateJobTask } from "./jobCreation.js";
@@ -445,6 +445,10 @@ export async function startSimulation(req: Request, res: Response) {
 
   const id: UUID = req.body.id;
   const modelNumber = (req.body.modelNumber as string) || "1";
+  const restraintBackboneForce = Number(req.body.restraintBackboneForce);
+  const restraintGlobalForce = Number(req.body.restraintGlobalForce);
+  const restraintBasePairsForce = Number(req.body.restraintBasePairsForce);
+  const rmsdCutoff = Number(req.body.rmsdCutoff);
 
   console.log(
     "Starting simulation. id: ",
@@ -468,6 +472,30 @@ export async function startSimulation(req: Request, res: Response) {
     return;
   }
 
+  const numericParams: Array<[string, number]> = [
+    ["restraintBackboneForce", restraintBackboneForce],
+    ["restraintGlobalForce", restraintGlobalForce],
+    ["restraintBasePairsForce", restraintBasePairsForce],
+    ["rmsdCutoff", rmsdCutoff],
+  ];
+
+  for (const [name, value] of numericParams) {
+    if (!Number.isFinite(value)) {
+      res.status(422).send({ error: `Invalid ${name}.` });
+      return;
+    }
+  }
+
+  if (restraintBackboneForce < 0 || restraintGlobalForce < 0 || restraintBasePairsForce < 0) {
+    res.status(422).send({ error: "Restraint forces must be non-negative." });
+    return;
+  }
+
+  if (rmsdCutoff <= 0) {
+    res.status(422).send({ error: "rmsdCutoff must be greater than 0." });
+    return;
+  }
+
   const metadata = await readMetadata(id);
   if (!metadata) {
     res.status(500).send({ error: "Metadata file not found." });
@@ -476,6 +504,12 @@ export async function startSimulation(req: Request, res: Response) {
 
   // Construct environment path from job directory
   const environmentPath = `${JOBS_DIR}/${id}`;
+  const simulationParams: SimulationParameters = {
+    restraintBackboneForce,
+    restraintGlobalForce,
+    restraintBasePairsForce,
+    rmsdCutoff,
+  };
 
   metadata.status = "simulation_starting";
   if (metadata.resultsStatus === undefined) {
@@ -494,7 +528,7 @@ export async function startSimulation(req: Request, res: Response) {
   };
   await saveMetadata(id, metadata);
 
-  addSimulationTask(id, modelNumber, environmentPath, metadata);
+  addSimulationTask(id, modelNumber, environmentPath, metadata, simulationParams);
 
   db.query(getJobByIdQuery, [id], async (err, result) => {
     if (err) {

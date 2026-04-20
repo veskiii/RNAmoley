@@ -96,7 +96,26 @@ services:
     ports:
       - 3004:3001
     volumes:
-      - user_data:/usr/src/app/public/jobs
+      - user_data:/webserver/public/jobs
+    depends_on:
+      - redis
+    scale: 1
+
+  dnatco:
+    image: dnatco
+    build:
+      context: ./dnatco
+    restart: always
+    user: "0:0"
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DNATCO_WORKER_CONCURRENCY: 1
+    ports:
+      - 3005:3001
+    volumes:
+      - user_data:/webserver/public/jobs
     depends_on:
       - redis
     scale: 1

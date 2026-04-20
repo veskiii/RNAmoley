@@ -12,19 +12,56 @@ app.get("/", (req, res) => {
 });
 
 app.post("/sim-jobs", async (req, res) => {
-  const { environmentPath, modelNumber } = req.body ?? {};
+  const {
+    environmentPath,
+    modelNumber,
+    restraintBackboneForce,
+    restraintGlobalForce,
+    restraintBasePairsForce,
+    rmsdCutoff,
+  } = req.body ?? {};
 
-  if (!environmentPath || !modelNumber) {
+  if (
+    !environmentPath
+    || !modelNumber
+    || restraintBackboneForce === undefined
+    || restraintGlobalForce === undefined
+    || restraintBasePairsForce === undefined
+    || rmsdCutoff === undefined
+  ) {
     res.status(400).json({
-      error: "Missing required fields: environmentPath, modelNumber",
+      error: "Missing required fields: environmentPath, modelNumber, restraintBackboneForce, restraintGlobalForce, restraintBasePairsForce, rmsdCutoff",
     });
     return;
+  }
+
+  const parsedRestraintBackboneForce = Number(restraintBackboneForce);
+  const parsedRestraintGlobalForce = Number(restraintGlobalForce);
+  const parsedRestraintBasePairsForce = Number(restraintBasePairsForce);
+  const parsedRmsdCutoff = Number(rmsdCutoff);
+
+  const numericParams: Array<[string, number]> = [
+    ["restraintBackboneForce", parsedRestraintBackboneForce],
+    ["restraintGlobalForce", parsedRestraintGlobalForce],
+    ["restraintBasePairsForce", parsedRestraintBasePairsForce],
+    ["rmsdCutoff", parsedRmsdCutoff],
+  ];
+
+  for (const [name, value] of numericParams) {
+    if (!Number.isFinite(value)) {
+      res.status(422).json({ error: `Invalid ${name}` });
+      return;
+    }
   }
 
   try {
     const job = await enqueueSimJob({
       environmentPath: String(environmentPath),
       modelNumber: String(modelNumber),
+      restraintBackboneForce: parsedRestraintBackboneForce,
+      restraintGlobalForce: parsedRestraintGlobalForce,
+      restraintBasePairsForce: parsedRestraintBasePairsForce,
+      rmsdCutoff: parsedRmsdCutoff,
     });
 
     res.status(202).json({

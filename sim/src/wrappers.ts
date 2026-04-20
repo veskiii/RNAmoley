@@ -11,11 +11,24 @@ export const simQueueName = "sim-jobs";
 export type SimJobData = {
 	environmentPath: string;
 	modelNumber: string;
+	restraintBackboneForce: number;
+	restraintGlobalForce: number;
+	restraintBasePairsForce: number;
+	rmsdCutoff: number;
 };
 
 export type SimJobResult = {
 	simPath: string;
 	targetPdbPath: string;
+};
+
+type DnatcoJobState = {
+	state?: string;
+	failedReason?: string | null;
+	returnvalue?: {
+		outputDir?: string;
+		producedFiles?: string[];
+	} | null;
 };
 
 export const redisConnection: ConnectionOptions = {
@@ -32,6 +45,81 @@ export async function enqueueSimJob(
 	options?: JobsOptions,
 ) {
 	return simQueue.add("prepare-and-run", data, options);
+}
+
+async function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getDnatcoBaseUrl() {
+	return process.env.DNATCO_BASE_URL ?? "http://dnatco:3001";
+}
+
+async function requestDnatcoAnalysis(environmentPath: string, coordsPath: string) {
+	const response = await fetch(`${getDnatcoBaseUrl()}/dnatco-jobs`, {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			environmentPath,
+			coordsPath,
+			outputDirName: "dnatco",
+			report: false,
+			reportText: false,
+			ntcCsv: true,
+			ntcJson: false,
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`DNATCO request failed with HTTP ${response.status}`);
+	}
+
+	const payload = await response.json() as { jobId?: string };
+	if (!payload.jobId) {
+		throw new Error("DNATCO response did not include jobId");
+	}
+
+	return String(payload.jobId);
+}
+
+async function waitForDnatcoJob(jobId: string) {
+	const timeoutMs = Number(process.env.DNATCO_JOB_TIMEOUT_MS ?? 30 * 60 * 1000);
+	const deadline = Date.now() + timeoutMs;
+
+	while (Date.now() < deadline) {
+		const response = await fetch(`${getDnatcoBaseUrl()}/dnatco-jobs/${encodeURIComponent(jobId)}`);
+		if (!response.ok) {
+			throw new Error(`DNATCO status request failed with HTTP ${response.status}`);
+		}
+
+		const payload = await response.json() as DnatcoJobState;
+		if (payload.state === "completed") {
+			return payload.returnvalue?.outputDir ?? null;
+		}
+
+		if (payload.state === "failed") {
+			throw new Error(payload.failedReason ?? `DNATCO job ${jobId} failed`);
+		}
+
+		await sleep(2000);
+	}
+
+	throw new Error(`Timed out waiting for DNATCO job ${jobId}`);
+}
+
+async function ensureDnatcoAnalysis(environmentPath: string, coordsPath: string) {
+	const outputDir = path.join(environmentPath, "dnatco");
+	const assignedNtcs = path.join(outputDir, "custom_assigned_ntcs.csv");
+
+	console.log("[sim] DNATCO: submitting analysis job...");
+	const jobId = await requestDnatcoAnalysis(environmentPath, coordsPath);
+	console.log(`[sim] DNATCO: waiting for job ${jobId} to finish...`);
+	await waitForDnatcoJob(jobId);
+
+	await fs.access(assignedNtcs);
+	return assignedNtcs;
 }
 
 async function runCommand(
@@ -79,7 +167,7 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 
 	const sourceModel = path.join(modelsPath, `${data.modelNumber}.pdb`);
   	const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
-  	const sourceModelNtcs = path.join(modelsPath, `${data.modelNumber}_assigned_ntcs.csv`);
+	const sourceModelNtcs = await ensureDnatcoAnalysis(envPath, path.relative(envPath, sourceModel));
 	const simModel = path.join(simPath, `${data.modelNumber}.pdb`);
 	const sourcePsfgen = path.join(scriptsPath, "psfgen.tcl");
 	const simPsfgen = path.join(simPath, "psfgen.tcl");
@@ -119,6 +207,9 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
       "--generator-script", "/webserver/scripts/generate_colvars_combined.py",
       "--pairs", sourceModelPairs,
       "--csv", sourceModelNtcs,
+	  "--global-force-constant", String(data.restraintGlobalForce),
+	  "--pairs-force-constant", String(data.restraintBasePairsForce),
+	  "--backbone-force-constant", String(data.restraintBackboneForce),
 	  "--outputname", "sim"],
 		simPath,
 		"run_restraints_single",
@@ -131,7 +222,7 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 		"python",
 		[exportPDBScript,
 			"--dcd", dcdFilePath,
-			"--threshold", "0.4",
+			"--threshold", String(data.rmsdCutoff),
 			"--psf", outputPsf,
 			"--reference", outputPdb,
 			"--selection", "nucleic and noh",
