@@ -166,10 +166,12 @@ const Molstar = (props) => {
   };
 
   useEffect(() => {
-    if (initialized) {
-      changeNucleotideColors();
+    if (!initialized) {
+      return;
     }
-  }, [initialized, resultResidues, selectedQualityScore]);
+
+    changeNucleotideColors();
+  }, [resultResidues, selectedQualityScore]);
 
   useEffect(() => {
     const element = parentRef.current;
@@ -213,8 +215,6 @@ const Molstar = (props) => {
     }
 
     let cancelled = false;
-    let timerId;
-
     (async () => {
       if (useInterface) {
         const spec = DefaultPluginUISpec();
@@ -266,19 +266,19 @@ const Molstar = (props) => {
 
       await loadStructure(pdbId, url, file, plugin.current);
 
-      timerId = window.setTimeout(() => {
-        if (!cancelled) {
-          setInitialized(true);
-        }
-      }, 2000);
+      if (cancelled) {
+        return;
+      }
+
+      await changeNucleotideColors();
+
+      if (!cancelled) {
+        setInitialized(true);
+      }
     })();
 
     return () => {
       cancelled = true;
-
-      if (timerId) {
-        window.clearTimeout(timerId);
-      }
 
       plugin.current?.dispose();
       plugin.current = null;
@@ -290,6 +290,7 @@ const Molstar = (props) => {
     if (!initialized) return;
     (async () => {
       await loadStructure(pdbId, url, file, plugin.current);
+      await changeNucleotideColors();
     })();
   }, [pdbId, url, file]);
 
