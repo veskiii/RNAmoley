@@ -59,11 +59,19 @@ const SummaryPanel: React.FC = () => {
   const hasStoppedLoading = useRef(false);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
-  const canStartSimulation = myData?.metadata.status === "completed";
   const selectedModelStatus = myData?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+  const canStartSimulation =
+    ["completed", "sim_completed", "sim_failed"].includes(selectedModelStatus || "") ||
+    (!selectedModelStatus && myData?.metadata.status === "completed");
   const simulationTabEnabled = selectedModelStatus === "sim_completed";
   const isSimulationInProgress = ["sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(selectedModelStatus || "");
   const hasSimulationStarted = (selectedModelStatus || "").startsWith("sim_");
+
+  useEffect(() => {
+    if (selectedResultsSource === "simulation" && !simulationTabEnabled) {
+      setSelectedResultsSource("original");
+    }
+  }, [selectedResultsSource, simulationTabEnabled]);
 
   const getModelStatusPresentation = (status?: string) => {
     if (!status) {

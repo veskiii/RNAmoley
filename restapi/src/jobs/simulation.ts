@@ -65,13 +65,19 @@ export async function addSimulationTask(
   metadata: Metadata,
   simulationParams: SimulationParameters
 ) {
+  const queueJobId = `${jobID}_sim_${modelNumber}`;
+  const existingJob = await simulationQueue.getJob(queueJobId);
+  if (existingJob) {
+    await existingJob.remove();
+  }
+
   await simulationQueue.add("run-simulation", {
     jobID,
     modelNumber,
     environmentPath,
     metadata,
     simulationParams,
-  }, { jobId: `${jobID}_sim_${modelNumber}` });
+  }, { jobId: queueJobId });
 }
 
 async function performSimulation(

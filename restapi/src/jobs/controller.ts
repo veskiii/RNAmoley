@@ -39,7 +39,33 @@ import { addAnalysisTask } from "./analysis.js";
 import { addSimulationTask, fetchSimulationStatus, type SimulationParameters } from "./simulation.js";
 import { existsSync } from "fs";
 import { join } from "path";
+import fs from "fs/promises";
 import { addCreateJobTask } from "./jobCreation.js";
+
+const MODEL_SIMULATION_IN_PROGRESS_STATUSES = new Set([
+  "sim_starting",
+  "sim_running",
+  "sim_finished",
+  "sim_analyzing",
+]);
+
+async function clearPreviousSimulationArtifacts(id: UUID) {
+  const jobDir = join(JOBS_DIR, id);
+  const simDir = join(jobDir, "sim");
+
+  // Ensure stale simulated structures and annotations cannot leak into a new run.
+  await fs.rm(simDir, { recursive: true, force: true });
+  await fs.mkdir(simDir, { recursive: true });
+
+  const jobFiles = await fs.readdir(jobDir);
+  const simResultsFiles = jobFiles.filter((filename) =>
+    filename.endsWith("_sim_results.json")
+  );
+
+  await Promise.all(
+    simResultsFiles.map((filename) => fs.rm(join(jobDir, filename), { force: true }))
+  );
+}
 
 export async function getJobs(req: Request, res: Response) {
   db.query(getJobsQuery, (err, result) => {
@@ -502,6 +528,20 @@ export async function startSimulation(req: Request, res: Response) {
     return;
   }
 
+  const currentModelStatus = metadata.resultsStatus?.[modelNumber]?.status;
+  if (currentModelStatus && MODEL_SIMULATION_IN_PROGRESS_STATUSES.has(currentModelStatus)) {
+    res.status(409).send({ error: "Simulation is already in progress for this model." });
+    return;
+  }
+
+  try {
+    await clearPreviousSimulationArtifacts(id);
+  } catch (error) {
+    console.error("Failed to clear previous simulation artifacts:", error);
+    res.status(500).send({ error: "Failed to clean previous simulation artifacts." });
+    return;
+  }
+
   // Construct environment path from job directory
   const environmentPath = `${JOBS_DIR}/${id}`;
   const simulationParams: SimulationParameters = {
@@ -524,6 +564,7 @@ export async function startSimulation(req: Request, res: Response) {
   metadata.resultsStatus[modelNumber] = {
     modelNumber,
     status: "sim_starting",
+    error_message: undefined,
   };
   if (metadata.simulations === undefined) {
     metadata.simulations = {};
