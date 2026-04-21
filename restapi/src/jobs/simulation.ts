@@ -246,7 +246,7 @@ async function analyzeSimulationResults(
   modelNumber: string,
   metadata: Metadata
 ) {
-  const modelsDir = "sim";
+  const modelsDir = `${modelNumber}_sim`;
   const sourceFormat = "pdb";
   const radius = 5;
   const interval = 1;

@@ -43,10 +43,20 @@ def render_tcl_template(template_path, substitutions):
     return text
 
 
-def run_vmd(tcl_script):
+def run_vmd(tcl_script, log_path=None):
     cmd = ["vmd", "-dispdev", "text", "-e", tcl_script]
     print("Uruchamiam:", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True)
+    combined_output = (result.stdout or "") + (result.stderr or "")
+
+    if log_path:
+        with open(log_path, "w", encoding="utf-8") as log_file:
+            log_file.write("CMD: " + " ".join(cmd) + "\n\n")
+            log_file.write("=== STDOUT ===\n")
+            log_file.write(result.stdout or "")
+            log_file.write("\n\n=== STDERR ===\n")
+            log_file.write(result.stderr or "")
+        print(f"Log VMD zapisany do: {log_path}")
 
     # Ograniczamy spam z VMD: normalnie nic nie wypisujemy z outputu,
     # ale przy bledzie pokazujemy diagnostyke.
@@ -56,7 +66,7 @@ def run_vmd(tcl_script):
         if result.stderr:
             print(result.stderr, end="", file=sys.stderr)
 
-    return result.returncode, result.stdout + result.stderr
+    return result.returncode, combined_output
 
 
 def run_remove_hydrogen(remove_h_script, pdb_path):
@@ -189,6 +199,11 @@ def main():
         help="Nazwa pliku CSV z podsumowaniem (domyslnie: <dcd_name>_rmsd_threshold_summary.csv)"
     )
     parser.add_argument(
+        "--vmd-log",
+        default=None,
+        help="Sciezka do pliku logu VMD (domyslnie: <dcd_name>_vmd.log w --out-dir)"
+    )
+    parser.add_argument(
         "--no-align",
         action="store_true",
         help="Wylacz dopasowanie przed obliczeniem RMSD"
@@ -256,6 +271,10 @@ def main():
     summary_rows = []
     default_csv_name = f"{dcd_base}_rmsd_threshold_summary.csv"
     csv_path = args.summary if args.summary else os.path.join(output_dir, default_csv_name)
+    vmd_log_path = args.vmd_log if args.vmd_log else os.path.join(output_dir, f"{dcd_base}_vmd.log")
+    if not os.path.isabs(vmd_log_path):
+        vmd_log_path = os.path.join(output_dir, vmd_log_path)
+    vmd_log_path = os.path.abspath(vmd_log_path)
 
     existing_pdb = None
     if forced_out_pdb:
@@ -299,7 +318,7 @@ def main():
         print("=" * 70)
 
         try:
-            return_code, output_text = run_vmd(temp_tcl)
+            return_code, output_text = run_vmd(temp_tcl, vmd_log_path)
         finally:
             if os.path.exists(temp_tcl):
                 os.remove(temp_tcl)

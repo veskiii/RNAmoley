@@ -14,18 +14,25 @@ mol addfile $dcd_file type dcd waitfor all
 set traj_mol [molinfo top]
 
 # --- REFERENCJA ---
+set reference_coords_file ""
+set temporary_reference 0
+
 if {[string length $reference_file] > 0} {
-    mol new $reference_file waitfor all
-    set ref_mol [molinfo top]
+    set reference_coords_file $reference_file
 } else {
     set temp_reference "__temp_reference_from_frame0.pdb"
     set ref_export_sel [atomselect $traj_mol $rmsd_selection frame 0]
     $ref_export_sel writepdb $temp_reference
     $ref_export_sel delete
-
-    mol new $temp_reference waitfor all
-    set ref_mol [molinfo top]
+    set reference_coords_file $temp_reference
+    set temporary_reference 1
 }
+
+# Zaladuj referencje na tej samej topologii PSF co trajektoria,
+# zeby selekcje typu "nucleic and noh" mialy identyczny zestaw atomow.
+mol new $psf_file type psf waitfor all
+mol addfile $reference_coords_file type pdb waitfor all
+set ref_mol [molinfo top]
 
 set ref_sel [atomselect $ref_mol $rmsd_selection]
 set num_ref [$ref_sel num]
@@ -44,8 +51,8 @@ for {set frame 0} {$frame < $num_frames} {incr frame} {
         puts "ERROR selection size mismatch at frame $frame: [$fit_sel num] vs $num_ref"
         $fit_sel delete
         $ref_sel delete
-        if {[file exists "__temp_reference_from_frame0.pdb"]} {
-            file delete -force "__temp_reference_from_frame0.pdb"
+        if {$temporary_reference && [file exists $reference_coords_file]} {
+            file delete -force $reference_coords_file
         }
         exit 1
     }
@@ -85,8 +92,8 @@ if {$found_frame < 0} {
     puts "FOUND frame=$found_frame rmsd=[format %.4f $current_rmsd] output=$out_pdb"
 }
 
-if {[file exists "__temp_reference_from_frame0.pdb"]} {
-    file delete -force "__temp_reference_from_frame0.pdb"
+if {$temporary_reference && [file exists $reference_coords_file]} {
+    file delete -force $reference_coords_file
 }
 
 exit

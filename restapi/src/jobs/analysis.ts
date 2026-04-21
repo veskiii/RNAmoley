@@ -151,6 +151,7 @@ export async function analyzeStructure(
 
   const modelMetrics = await fetchModelMetrics(jobID, modelNumber, modelsDir);
   const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber, modelsDir);
+  console.log(`[Job ${jobID}, Model ${modelNumber}] residueAnalysisArray length: ${residueAnalysisArray?.length || 0}. First few items:`, residueAnalysisArray?.slice(0, 3));
 
   const numeration = await fetchNumeration(jobID, modelNumber, modelsDir);
   const annotations = await fetchAnnotations(jobID, modelNumber, modelsDir);
@@ -160,6 +161,7 @@ export async function analyzeStructure(
   const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
     const original_index = extractResidueNumber(res.residue);
     const chainID = extractChainID(res.residue);
+    console.log(`[Job ${jobID}, Model ${modelNumber}] Processing residue: "${res.residue}" -> chainID='${chainID}', original_index=${original_index}`);
     
     // Try to find in numeration with fallbacks: auth first, then label
     let residueNumeration = Object.values(numeration).find(
@@ -371,7 +373,10 @@ async function fetchResidueAnalysis(
   if (!residueAnalysis.ok) {
     throw new Error("Residue analysis error: " + residueAnalysis.statusText);
   }
-  return (await residueAnalysis.json()) as residueMetrics[];
+  const metrics = (await residueAnalysis.json()) as residueMetrics[];
+  const filePath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_ResidueMetrics.json`;
+  await fs.writeFile(filePath, JSON.stringify(metrics, null, 2));
+  return metrics;
 }
 
 async function fetchModelMetrics(
@@ -386,7 +391,10 @@ async function fetchModelMetrics(
   if (!response.ok) {
     throw new Error("One-line analysis error: " + response.statusText);
   }
-  return (await response.json()) as metrics;
+  const metrics = (await response.json()) as metrics;
+  const filePath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_ModelMetrics.json`;
+  await fs.writeFile(filePath, JSON.stringify(metrics, null, 2));
+  return metrics;
 }
 
 async function fetchFragmentMetrics(
@@ -401,7 +409,10 @@ async function fetchFragmentMetrics(
   if (!response.ok) {
     throw new Error("One-line analysis error: " + response.statusText);
   }
-  return (await response.json()) as metrics;
+  const metrics = (await response.json()) as metrics;
+  const filePath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_FragmentMetrics.json`;
+  await fs.writeFile(filePath, JSON.stringify(metrics, null, 2));
+  return metrics;
 }
 
 async function fetchNumeration(

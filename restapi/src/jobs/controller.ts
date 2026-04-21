@@ -49,22 +49,17 @@ const MODEL_SIMULATION_IN_PROGRESS_STATUSES = new Set([
   "sim_analyzing",
 ]);
 
-async function clearPreviousSimulationArtifacts(id: UUID) {
+async function clearPreviousSimulationArtifacts(id: UUID, modelNumber: string) {
   const jobDir = join(JOBS_DIR, id);
-  const simDir = join(jobDir, "sim");
+  const simDir = join(jobDir, `${modelNumber}_sim`);
 
   // Ensure stale simulated structures and annotations cannot leak into a new run.
   await fs.rm(simDir, { recursive: true, force: true });
   await fs.mkdir(simDir, { recursive: true });
 
-  const jobFiles = await fs.readdir(jobDir);
-  const simResultsFiles = jobFiles.filter((filename) =>
-    filename.endsWith("_sim_results.json")
-  );
-
-  await Promise.all(
-    simResultsFiles.map((filename) => fs.rm(join(jobDir, filename), { force: true }))
-  );
+  await fs.rm(join(jobDir, `${modelNumber}_sim_results.json`), {
+    force: true,
+  });
 }
 
 export async function getJobs(req: Request, res: Response) {
@@ -103,7 +98,7 @@ export async function getJobById(req: Request, res: Response) {
     return;
   }
 
-  const modelsDir = resultsSource === "simulation" ? "sim" : "models";
+  const modelsDir = resultsSource === "simulation" ? `${modelNumber}_sim` : "models";
   const resultsSuffix = resultsSource === "simulation" ? "_sim_results" : "_results";
 
   let metadata: Metadata;
@@ -535,7 +530,7 @@ export async function startSimulation(req: Request, res: Response) {
   }
 
   try {
-    await clearPreviousSimulationArtifacts(id);
+    await clearPreviousSimulationArtifacts(id, modelNumber);
   } catch (error) {
     console.error("Failed to clear previous simulation artifacts:", error);
     res.status(500).send({ error: "Failed to clean previous simulation artifacts." });

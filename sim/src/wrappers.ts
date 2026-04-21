@@ -346,7 +346,7 @@ function buildPsfgenSegmentBlocks(chains: PreparedChain[]) {
 
 export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const envPath = path.resolve(data.environmentPath);
-	const simPath = path.join(envPath, "sim");
+	const simPath = path.join(envPath, `${data.modelNumber}_sim`);
 	const modelsPath = path.join(envPath, "models");
 	const scriptsPath = process.env.SIM_SCRIPTS_PATH ?? "/webserver/scripts";
 
@@ -374,8 +374,10 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const targetPdb = path.join(simPath, "target.pdb");
 	const restraintsScript = path.join(scriptsPath, "run_restraints_single.py");
 	const exportPDBScript = path.join(scriptsPath, "export_first_rmsd_threshold_single.py");
+	const exportLogPath = path.join(simPath, "export_first_rmsd_threshold_single.log");
 	const resultPdb = path.join(simPath, `${data.modelNumber}_sim.pdb`);
 
+	await fs.rm(simPath, { recursive: true, force: true });
 	await fs.mkdir(simPath, { recursive: true });
 	await fs.copyFile(sourceModel, simModel);
 	await fs.copyFile(sourcePsfgen, simPsfgen);
@@ -400,17 +402,29 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	console.log("[sim] NAMD: uruchamianie restrykcji i symulacji przez run_restraints_single.py...");
 	await runCommand(
 		"python",
-		[restraintsScript, 
-      "--namd-bin", "namd3",
-      "--templates-dir", "/webserver/scripts/ntc_templates",
-      "--base-pair-templates-dir", "/webserver/scripts/base_pair_templates",
-      "--generator-script", "/webserver/scripts/generate_colvars_combined.py",
-      "--pairs", sourceModelPairs,
-      "--csv", sourceModelNtcs,
-	  "--global-force-constant", String(data.restraintGlobalForce),
-	  "--pairs-force-constant", String(data.restraintBasePairsForce),
-	  "--backbone-force-constant", String(data.restraintBackboneForce),
-	  "--outputname", "sim"],
+		[
+			restraintsScript,
+			"--namd-bin",
+			"namd3",
+			"--templates-dir",
+			"/webserver/scripts/ntc_templates",
+			"--base-pair-templates-dir",
+			"/webserver/scripts/base_pair_templates",
+			"--generator-script",
+			"/webserver/scripts/generate_colvars_combined.py",
+			"--pairs",
+			sourceModelPairs,
+			"--csv",
+			sourceModelNtcs,
+			"--global-force-constant",
+			String(data.restraintGlobalForce),
+			"--pairs-force-constant",
+			String(data.restraintBasePairsForce),
+			"--backbone-force-constant",
+			String(data.restraintBackboneForce),
+			"--outputname",
+			"sim",
+		],
 		simPath,
 		"run_restraints_single",
 	);
@@ -420,15 +434,26 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	console.log("[sim] NAMD: eksport pierwszej klatki spelniajacej prog RMSD do pliku PDB...");
 	await runCommand(
 		"python",
-		[exportPDBScript,
-			"--dcd", dcdFilePath,
-			"--threshold", String(data.rmsdCutoff),
-			"--psf", outputPsf,
-			"--reference", outputPdb,
-			"--selection", "nucleic and noh",
-			"--out-pdb", resultPdb],
+		[
+			exportPDBScript,
+			"--dcd",
+			dcdFilePath,
+			"--threshold",
+			String(data.rmsdCutoff),
+			"--psf",
+			outputPsf,
+			"--reference",
+			outputPdb,
+			"--selection",
+			"nucleic and noh",
+			"--out-pdb",
+			resultPdb,
+		],
 		simPath,
 		"export_first_rmsd_threshold_single",
+		{
+			logFilePath: exportLogPath,
+		},
 	);
 
 	return {
