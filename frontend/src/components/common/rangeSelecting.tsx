@@ -39,11 +39,19 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
     handleInputChangeEnd,
     selectFragment,
 }) => {
+    const hasChains = chains.length > 0;
+    const effectiveSelectedChain = selectedChain || chains[0]?.name || "";
+
     const handleSubmit = () => {
+        if (!hasChains || !effectiveSelectedChain) {
+            alert("No chains available for range selection");
+            return;
+        }
+
         const start = parseInt(inputValueStart, 10);
         const end = parseInt(inputValueEnd, 10);
         
-            console.log(`Selected range: ${start} to ${end} on chain ${selectedChain}`);
+            console.log(`Selected range: ${start} to ${end} on chain ${effectiveSelectedChain}`);
 
         if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
             alert(`Invalid range: ${start} to ${end}`);
@@ -52,12 +60,12 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
         if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
 
             const selectedNucleotides = chains
-                .find(chain => chain.name === selectedChain)
+                .find(chain => chain.name === effectiveSelectedChain)
                 ?.nucleotides
                 .filter(nucleotide => nucleotide.index >= start && nucleotide.index <= end)
                 .map(nucleotide => nucleotide.index) || [];
             
-            selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
+            selectFragment(`Range ${start}-${end}`, effectiveSelectedChain, selectedNucleotides);
         } else {
             alert("Type valid range on selected chain");
         }
@@ -65,8 +73,16 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
     };
 
     useEffect(() => {
+        if (!hasChains || !effectiveSelectedChain) {
+            setMinId("");
+            setMaxId("");
+            setInputValueStart("");
+            setInputValueEnd("");
+            return;
+        }
+
         chains.forEach((chain) => {
-            if (chain.name === selectedChain) {
+            if (chain.name === effectiveSelectedChain) {
                 const indices = chain.nucleotides.map(nucleotide => nucleotide.index);
                 const min = Math.min(...indices);
                 const max = Math.max(...indices);
@@ -78,7 +94,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
             }
 
         })
-    }, [selectedChain])
+    }, [selectedChain, chains])
     return (
         <div className="flex items-center pl-6 h-[auto] z-0 text-xl font-semibold "> {/* justify-end */}
             <Box sx={{ width: "80px", maxWidth: 120 }}>
@@ -87,9 +103,10 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                     <Select
                         labelId="demo-simple-select-label"
                         id="demo-simple-select"
-                        value={selectedChain || chains[0].name}
+                        value={effectiveSelectedChain}
                         label="Chain"
                         onChange={handleChange}
+                        disabled={!hasChains}
                         className="p-0"
                         sx={{ height: "40px", maxWidth: 120 }}
                     >
@@ -127,6 +144,7 @@ const RangeSelecting: React.FC<RangeSelectingProps> = ({
                 <button
                     id="select_button"
                     onClick={handleSubmit}
+                    disabled={!hasChains}
                     className="p-0 m-0 bg-moley-backgroundGreen hover:bg-moley-green"
                 >
                     Select

@@ -50,6 +50,30 @@ function ensureWithinEnvironment(environmentPath, targetPath, label) {
   }
 }
 
+async function cleanPdbElementSymbols(pdbPath, outputPath) {
+  const content = await fs.readFile(pdbPath, "utf-8");
+  const lines = content.split("\n");
+
+  const cleanedLines = lines.map((line) => {
+    if ((line.startsWith("ATOM") || line.startsWith("HETATM")) && line.length >= 76) {
+      // Kolumny PDB: element 77-78, charge 79-80. Czyścimy do neutralnego symbolu (np. O1+ -> O)
+      const beforeElement = line.substring(0, 76);
+      const tail = line.substring(76);
+      const match = tail.match(/\s*([A-Za-z]{1,2})\s*\d*[+-]?/);
+      const cleanElement = (match?.[1] ?? "").slice(0, 2).toUpperCase();
+      const formattedElement = cleanElement.padStart(2, " ");
+
+      // Zachowaj długość i wyzeruj pole charge.
+      const afterCharge = line.length > 80 ? line.substring(80) : "";
+      return `${beforeElement}${formattedElement}  ${afterCharge}`;
+    }
+    return line;
+  });
+
+  const cleanedContent = cleanedLines.join("\n");
+  await fs.writeFile(outputPath, cleanedContent);
+}
+
 export async function processDnatcoJob(data) {
   const environmentPath = path.resolve(String(data.environmentPath ?? "").trim());
   if (!environmentPath) {
@@ -66,9 +90,15 @@ export async function processDnatcoJob(data) {
   await fs.access(coordsPath);
   await fs.mkdir(outputDir, { recursive: true });
 
+  // Użyj stabilnej nazwy wejściowej, żeby DNATCO nie wyprowadzał prefiksu z oryginalnej nazwy pliku.
+  const cleanedCoordsPath = path.join(outputDir, "custom.pdb");
+  await cleanPdbElementSymbols(coordsPath, cleanedCoordsPath);
+
+  const outputPrefix = String(data.prefix ?? "custom").trim() || "custom";
+
   const args = [
     "/opt/dnatco/dnatco/bin/dnatco.js",
-    "--coords", coordsPath,
+    "--coords", cleanedCoordsPath,
     "--outputDir", outputDir,
   ];
 
@@ -90,9 +120,7 @@ export async function processDnatcoJob(data) {
     }
   }
 
-  if (data.prefix) {
-    args.push("--prefix", String(data.prefix));
-  }
+  args.push("--prefix", outputPrefix);
 
   console.log("[dnatco] Running:", "node", args.join(" "));
 
@@ -108,7 +136,26 @@ export async function processDnatcoJob(data) {
     console.log(`[dnatco] stderr:\n${stderr}`);
   }
 
-  const producedFiles = await fs.readdir(outputDir);
+  let producedFiles = await fs.readdir(outputDir);
+
+  // Fallback: jeśli DNATCO mimo --prefix użyje innego prefiksu, przepnij wyniki na oczekiwany.
+  const maybePrimaryCsv = producedFiles.find((name) => name.endsWith("_assigned_ntcs.csv"));
+  if (maybePrimaryCsv && !maybePrimaryCsv.startsWith(`${outputPrefix}_`)) {
+    const fromPrefix = maybePrimaryCsv.replace(/_assigned_ntcs\.csv$/, "");
+    const renamedFiles = [];
+
+    for (const fileName of producedFiles) {
+      if (fileName.startsWith(`${fromPrefix}_`)) {
+        const targetName = `${outputPrefix}_${fileName.slice(fromPrefix.length + 1)}`;
+        await fs.rename(path.join(outputDir, fileName), path.join(outputDir, targetName));
+        renamedFiles.push(targetName);
+      } else {
+        renamedFiles.push(fileName);
+      }
+    }
+
+    producedFiles = renamedFiles;
+  }
 
   return {
     environmentPath,

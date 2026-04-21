@@ -30,12 +30,16 @@ export function transformJobToChains(job: Job): Chain[] {
   }
 
 
+  const resolveChainId = (item: any): string | undefined =>
+    item.auth_chain_id ?? item.label_chain_id ?? item.moley_chain_id;
+
   // create chain
-  // get all chain ids from numeration
+  // get all chain ids from numeration (with fallbacks for mmCIF-only payloads)
   const chainIds = new Set<string>();
   Object.values(job.numeration).forEach((item) => {
-    if (item.auth_chain_id) {
-      chainIds.add(item.auth_chain_id);
+    const resolvedChainId = resolveChainId(item);
+    if (resolvedChainId) {
+      chainIds.add(resolvedChainId);
     }
   });
 
@@ -55,11 +59,14 @@ export function transformJobToChains(job: Job): Chain[] {
     // get all nucleotides from numeration with this chain id
     Object.keys(job.numeration).forEach((key) => {
       const item = job.numeration[Number(key)];
-      if (item.auth_chain_id === chainId) {
+      if (resolveChainId(item) === chainId) {
         // for each nucleotide create nucleotide
         const nucleotide: Nucleotide = {
           index: item.annotator_residue_number,
-          original_index: item.auth_residue_number,
+          original_index:
+            item.auth_residue_number ??
+            item.label_residue_number ??
+            item.annotator_residue_number,
           base: item.annotator_nucleotide_name,
           structure: item.annotator_dotbracket,
           selected: false,

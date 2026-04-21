@@ -27,9 +27,9 @@ interface NumerationItem {
   annotator_dotbracket: string;
   label_chain_id: string | undefined;
   label_residue_number: number | undefined;
-  auth_chain_id: string;
-  auth_residue_number: number;
-  auth_nucleotide_name: string;
+  auth_chain_id: string | undefined;
+  auth_residue_number: number | undefined;
+  auth_nucleotide_name: string | undefined;
   moley_residue_number?: number;
   moley_chain_id?: string;
 }

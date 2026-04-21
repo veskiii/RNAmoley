@@ -61,7 +61,7 @@ const Panel: React.FC = () => {
 
   useEffect(() => {
     setSelectedChain(chainsState[0]?.name || "");
-  }, [myData]);
+  }, [chainsState]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);

@@ -130,13 +130,29 @@ async function runCommand(
 	options?: {
 		logStdout?: boolean;
 		logStderr?: boolean;
+		logFilePath?: string;
+		maxBuffer?: number;
 	},
 ) {
 	const logStdout = options?.logStdout ?? true;
 	const logStderr = options?.logStderr ?? true;
+	const logFilePath = options?.logFilePath;
+	const maxBuffer = options?.maxBuffer ?? 50 * 1024 * 1024;
 
 	try {
-		const { stdout, stderr } = await execFileAsync(command, args, { cwd });
+		const { stdout, stderr } = await execFileAsync(command, args, { cwd, maxBuffer });
+		if (logFilePath) {
+			const rendered = [
+				`[${label}] command: ${command} ${args.join(" ")}`,
+				"",
+				"=== STDOUT ===",
+				stdout ?? "",
+				"",
+				"=== STDERR ===",
+				stderr ?? "",
+			].join("\n");
+			await fs.writeFile(logFilePath, rendered, "utf8");
+		}
 		if (logStdout && stdout?.trim()) {
 			console.log(`[${label}] stdout:\n${stdout}`);
 		}
@@ -145,15 +161,29 @@ async function runCommand(
 		}
 	} catch (error) {
 		let details = error instanceof Error ? error.message : String(error);
+		let stdout = "";
+		let stderr = "";
 		if (typeof error === "object" && error !== null) {
-			const stdout = "stdout" in error ? String(error.stdout ?? "") : "";
-			const stderr = "stderr" in error ? String(error.stderr ?? "") : "";
+			stdout = "stdout" in error ? String(error.stdout ?? "") : "";
+			stderr = "stderr" in error ? String(error.stderr ?? "") : "";
 			if (stdout.trim()) {
 				details += `\nstdout:\n${stdout}`;
 			}
 			if (stderr.trim()) {
 				details += `\nstderr:\n${stderr}`;
 			}
+		}
+		if (logFilePath) {
+			const rendered = [
+				`[${label}] command: ${command} ${args.join(" ")}`,
+				"",
+				"=== STDOUT ===",
+				stdout,
+				"",
+				"=== STDERR ===",
+				stderr,
+			].join("\n");
+			await fs.writeFile(logFilePath, rendered, "utf8");
 		}
 		throw new Error(`[${label}] command failed: ${details}`);
 	}
@@ -338,6 +368,7 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const simPsfgen = path.join(simPath, "psfgen.tcl");
 	const sourceNamd = path.join(scriptsPath, "namd.script");
 	const simNamd = path.join(simPath, "namd.script");
+	const vmdLogPath = path.join(simPath, "vmd.log");
 	const outputPdb = path.join(simPath, "output.pdb");
 	const outputPsf = path.join(simPath, "output.psf");
 	const targetPdb = path.join(simPath, "target.pdb");
@@ -361,6 +392,7 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	await runCommand("vmd", ["-dispdev", "text", "-e", "psfgen.tcl"], simPath, "vmd", {
 		logStdout: false,
 		logStderr: true,
+		logFilePath: vmdLogPath,
 	});
 
 	await fs.copyFile(outputPdb, targetPdb);

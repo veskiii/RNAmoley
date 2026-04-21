@@ -136,7 +136,7 @@ async function performSimulation(
     let simCompleted = false;
     let pollCount = 0;
     const maxPolls = 1440; // 24 hours with 60-second intervals
-    const pollInterval = 60000; // 60 seconds
+    const pollInterval = 30000; // 30 seconds
 
     while (!simCompleted && pollCount < maxPolls) {
       await new Promise((resolve) => setTimeout(resolve, pollInterval));

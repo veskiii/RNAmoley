@@ -160,11 +160,28 @@ export async function analyzeStructure(
   const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
     const original_index = extractResidueNumber(res.residue);
     const chainID = extractChainID(res.residue);
-    const residueNumeration = Object.values(numeration).find(
+    
+    // Try to find in numeration with fallbacks: auth first, then label
+    let residueNumeration = Object.values(numeration).find(
       (n: NumerationItem) => n.auth_residue_number === original_index && n.auth_chain_id === chainID);
+    
+    // Fallback: try label fields if auth didn't match
+    if (!residueNumeration) {
+      residueNumeration = Object.values(numeration).find(
+        (n: NumerationItem) => n.label_residue_number === original_index && n.label_chain_id === chainID);
+    }
+    
+    // Fallback: try by label_chain_id matching chainID (if label_residue_number is missing)
+    if (!residueNumeration) {
+      residueNumeration = Object.values(numeration).find(
+        (n: NumerationItem) => n.label_chain_id === chainID && n.label_residue_number === original_index);
+    }
 
     if (!residueNumeration) {
-      console.error(`Numeration not found for residue  ${res.residue}, skipping this residue`);
+      const sampleEntries = Object.entries(numeration).slice(0, 3).map(([idx, item]) => 
+        `idx=${idx} auth=(chain=${item.auth_chain_id} res=${item.auth_residue_number}) label=(chain=${item.label_chain_id} res=${item.label_residue_number})`
+      ).join(' | ');
+      console.error(`Numeration not found for residue ${res.residue}. Looking for chainID='${chainID}' residueNum=${original_index}. Sample: ${sampleEntries}`);
       return null;
     }
     const residueNumber = residueNumeration.annotator_residue_number;

@@ -32,11 +32,13 @@ interface NumerationItem {
   annotator_dotbracket: string;
   label_chain_id: string | undefined;
   label_residue_number: number | undefined;
-  auth_chain_id: string;
-  auth_residue_number: number;
-  auth_nucleotide_name: string;
+  auth_chain_id: string | undefined;
+  auth_residue_number: number | undefined;
+  auth_nucleotide_name: string | undefined;
   moley_residue_number?: number;
   moley_chain_id?: string;
+  original_label_asym_id?: string;
+  new_chain_id?: string;
 }
 
 interface NumerationMap {
@@ -157,13 +159,21 @@ export async function runAnnotator(
       .split("\\n");
 
       
+
+    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}.json`));
+    const numerationFilename = `${i}_numeration.json`;
+    const numerationString = JSON.stringify(numeration);
+    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, numerationFilename);
+    await fs.writeFile(numerationFilePath, numerationString);
+
+      
     const labelToAuthorMap: Record<string, string> = {};
     if (sourceFormat === "cif") {
       const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}_numeration.json`);
-      let numerationData;
+      let numerationData: Record<string, any> = {};
       try {
         const numerationRaw = await fs.readFile(numerationFilePath, "utf-8");
-        numerationData = JSON.parse(numerationRaw);
+        numerationData = JSON.parse(numerationRaw) ?? {};
       }
       catch (error) {
         console.error(`Error reading numeration file ${numerationFilePath}:`, error);
@@ -175,12 +185,6 @@ export async function runAnnotator(
         }
       }
     }
-
-    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}.json`));
-    const numerationFilename = `${i}_numeration.json`;
-    const numerationString = JSON.stringify(numeration);
-    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, numerationFilename);
-    await fs.writeFile(numerationFilePath, numerationString);
 
     const basePairs = await retrieveBasePairsFromJson(
       resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}.json`)
@@ -337,6 +341,19 @@ const retrieveNumerationFromJson = async (
 
   if (jsonData.bpseq_index) {
     Object.entries(jsonData.bpseq_index).forEach(([annotator_residue_number, value]: [string, any]) => {
+      // Skip only if value is completely missing or not object-like
+      if (value === null || value === undefined) {
+        return;
+      }
+
+      const label = value.label && typeof value.label === "object" ? value.label : undefined;
+      const auth = value.auth && typeof value.auth === "object" ? value.auth : undefined;
+
+      // Fallback: use label fields if auth fields are missing
+      const chainId = auth?.chain ?? label?.chain ?? undefined;
+      const residueNumber = auth?.number ?? label?.number ?? undefined;
+      const nucleotideName = auth?.name ?? undefined;
+
       // get nucleotide name from jsonData.bpseq.sequence
       const annotator_nucleotide_name = jsonData.bpseq?.sequence?.[Number(annotator_residue_number) - 1] ?? "N";
       const annotator_dotbracket = jsonData.bpseq?.dot_bracket?.structure?.[Number(annotator_residue_number) - 1] ?? ".";
@@ -344,11 +361,11 @@ const retrieveNumerationFromJson = async (
         annotator_residue_number: Number(annotator_residue_number),
         annotator_nucleotide_name: annotator_nucleotide_name,
         annotator_dotbracket: annotator_dotbracket,
-        label_chain_id: value.label?.chain ?? undefined,
-        label_residue_number: value.label?.number ?? undefined,
-        auth_chain_id: value.auth.chain,
-        auth_residue_number: value.auth.number,
-        auth_nucleotide_name: value.auth.name,
+        label_chain_id: label?.chain ?? undefined,
+        label_residue_number: label?.number ?? undefined,
+        auth_chain_id: chainId,
+        auth_residue_number: residueNumber,
+        auth_nucleotide_name: nucleotideName,
       };
     });
   }
