@@ -171,25 +171,27 @@ const SummaryPanel: React.FC = () => {
       console.warn("No data in myData.results.data");
       return;
     }
-    // if (myData.results.mode === "fragment" || myData.results.mode === "full") {
+    //@ts-ignore
+    const nodes = d3.selectAll("circle.fornac-node");
+    nodes.style("fill", "white");
+
+    const nodeByNumber = new Map<number, any>();
+    nodes.each(function () {
       //@ts-ignore
-      const nodes = d3.selectAll("circle.fornac-node");
-      nodes.style("fill", "white");
-    // }
+      const node = d3.select(this);
+      const nodeNum = parseInt(node.attr("node_num"), 10);
+      if (!Number.isNaN(nodeNum)) {
+        nodeByNumber.set(nodeNum, node);
+      }
+    });
+
     myData.results.data.forEach((residue) => {
       try {
-        //@ts-ignore
-        const node = d3.select(
-          `circle.fornac-node[node_num="${residue.residue_number}"]`
-        );
-        if (!node.empty()) {
+        const node = nodeByNumber.get(residue.residue_number);
+        if (node) {
           node
             .classed("fornac-selectedNode", true)
             .style("fill", getColor(residue, selectedQualityScore));
-        // } else if (!node.empty() && myData.results.mode === "fragment") {
-        //   //@ts-ignore
-
-        //   node.classed("fornac-selectedNode", true).style("fill", "#6fc2d3");
         } else {
           // console.warn(`Node with index ${residue.residue_number} not found`);
         }
@@ -214,10 +216,10 @@ const SummaryPanel: React.FC = () => {
     myData,
   ]);
 
-  const getColorMap = () => {
+  const updateColorMaps = () => {
     if (!myData || !myData.results || !myData.results.data) {
       console.error("No data in myData.results.data");
-      return <ErrorPage />;
+      return;
     }
 
     myData.results.data.forEach((residue) => {
@@ -229,6 +231,10 @@ const SummaryPanel: React.FC = () => {
       badBondsColorMap.set(residue.residue_number, color);
     });
   };
+
+  useEffect(() => {
+    updateColorMaps();
+  }, [myData]);
 
 
   const toggleRangeMenuVisibility = () => {
@@ -515,7 +521,6 @@ const SummaryPanel: React.FC = () => {
         setSelectedResultsSource("original");
       }
 
-      setInitialized(false);
       setSelectedModel(modelNum);
     }
 
@@ -887,9 +892,7 @@ const SummaryPanel: React.FC = () => {
                 />
               </div>
               <div className="w-1/2 h-full p-5">
-                {getColorMap()}
                 <Molstar
-                  key={JSON.stringify(myData.results.data)}
                   useInterface={true}
                   file={myData.pdb_file_string}
                   chains={chainsState}

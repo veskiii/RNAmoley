@@ -53,6 +53,8 @@ const Molstar = (props) => {
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
+  const coloringRunId = useRef(0);
+  const isStructureLoading = useRef(false);
   const [canColor, setCanColor] = useState(false);
   const [isContainerReady, setIsContainerReady] = useState(false);
 
@@ -89,15 +91,32 @@ const Molstar = (props) => {
       return;
     }
 
+    if (isStructureLoading.current) {
+      return;
+    }
+
     if (!Array.isArray(resultResidues) || resultResidues.length === 0) return;
 
-    const structure =
-      plugin.current.managers.structure.hierarchy.current.structures[0];
-    const data =
-      plugin.current.managers.structure.hierarchy.current.structures[0]?.cell
-        .obj?.data;
+    const runId = ++coloringRunId.current;
+    const hierarchy = plugin.current.managers?.structure?.hierarchy?.current;
+    const structure = hierarchy?.structures?.[0];
+    const data = structure?.cell?.obj?.data;
+    const components = structure?.components;
 
-    await clearStructureOverpaint(plugin.current, structure.components);
+    if (!structure || !data || !components || components.length === 0) {
+      return;
+    }
+
+    try {
+      await clearStructureOverpaint(plugin.current, components);
+    } catch (error) {
+      console.warn("Failed to clear overpaint", error);
+      return;
+    }
+
+    if (runId !== coloringRunId.current || !plugin.current) {
+      return;
+    }
 
     const residueColors = mapResiduesToColors();
 
@@ -111,6 +130,10 @@ const Molstar = (props) => {
     });
 
     for (const color in groupedByColor) {
+      if (runId !== coloringRunId.current || !plugin.current) {
+        return;
+      }
+
       const entries = groupedByColor[color];
 
       const groups = [];
@@ -151,16 +174,27 @@ const Molstar = (props) => {
         MS.struct.combinator.merge(groups),
         data
       );
+
+      if (!sel) continue;
+
       const loci = StructureSelection.toLociWithSourceUnits(sel);
+
+      if (!loci || !Array.isArray(loci.elements) || loci.elements.length === 0) {
+        continue;
+      }
 
       const getLoci = async () => loci;
 
-      await setStructureOverpaint(
-        plugin.current,
-        structure.components,
-        Color(parseInt(color.replace("#", ""), 16)),
-        getLoci
-      );
+      try {
+        await setStructureOverpaint(
+          plugin.current,
+          components,
+          Color(parseInt(color.replace("#", ""), 16)),
+          getLoci
+        );
+      } catch (error) {
+        console.warn("Failed to apply overpaint for color", color, error);
+      }
       //   return;
     }
   };
@@ -170,7 +204,7 @@ const Molstar = (props) => {
       return;
     }
 
-    changeNucleotideColors();
+    void changeNucleotideColors();
   }, [resultResidues, selectedQualityScore]);
 
   useEffect(() => {
@@ -288,10 +322,24 @@ const Molstar = (props) => {
 
   useEffect(() => {
     if (!initialized) return;
+    let cancelled = false;
+
     (async () => {
-      await loadStructure(pdbId, url, file, plugin.current);
+      try {
+        isStructureLoading.current = true;
+        await loadStructure(pdbId, url, file, plugin.current);
+      } finally {
+        isStructureLoading.current = false;
+      }
+
+      if (cancelled) return;
       await changeNucleotideColors();
     })();
+
+    return () => {
+      cancelled = true;
+      coloringRunId.current += 1;
+    };
   }, [pdbId, url, file]);
 
   useEffect(() => {

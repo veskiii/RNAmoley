@@ -1,14 +1,15 @@
-import React, { useEffect } from "react";
+import React, { useMemo } from "react";
 
 const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment, deselectFragment, selectResidue, deselectResidue, }) => {
-  useEffect(() => {
-    console.log("ResidueTable rerendered");
-    console.log("selectedResidueIds:", selectedResidueIds);
-  }, [selectedResidueIds, selectedChain, data]);
+  const selectedResidueIdSet = useMemo(
+    () => new Set(selectedResidueIds || []),
+    [selectedResidueIds]
+  );
 
   if (!data || data.length === 0) {
     return <p>No data available</p>;
   }
+
   const selectedChainData = data.find(
     (chain) => chain.name === selectedChain
   );
@@ -17,83 +18,43 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
   }
 
   const handleResidueClick = (index) => {
-    console.log(`Residue ${index} clicked`);
-    console.log(data);
-    // setData(prevChains =>
-      data.map(chain => {
-        if (chain.name === selectedChain) {
-          return {
-            ...chain,
-            nucleotides: chain.nucleotides.map(nucleotide => {
-              if (nucleotide.index === index) {
-                if (nucleotide.selected) {
-                  deselectResidue(selectedChain, nucleotide.index);
-                }
-                else {
-                  selectResidue(selectedChain, nucleotide.index);
-                }
-                return {
-                  ...nucleotide,
-                  selected: !nucleotide.selected,
-                }
-              }
-              else return nucleotide;
-            }),
-          };
-        }
-        return chain;
-    })//);
+    const nucleotide = selectedChainData.nucleotides.find((n) => n.index === index);
+    if (!nucleotide) return;
+
+    if (nucleotide.selected) {
+      deselectResidue(selectedChain, nucleotide.index);
+    } else {
+      selectResidue(selectedChain, nucleotide.index);
+    }
   }
 
   const handleStructuralElementClick = (index) => {
-    console.log(`Structural element of residue ${index} clicked`);
-    console.log(data);
-    // setData(prevChains =>
-      data.map(chain => {
-        if (chain.name === selectedChain) {
-          const clickedNucleotide = chain.nucleotides.find( nucleotide => nucleotide.index === index);
-          const clickedStructuralNames = clickedNucleotide.structuralElements.map(el => el.name);
-          const SEResidues = chain.nucleotides.filter(nucleotide =>
-            nucleotide.structuralElements.some(el => clickedStructuralNames.includes(el.name)));
-          const allResiduesSelected = !SEResidues.some( nucleotide => nucleotide.selected === false);
+    const clickedNucleotide = selectedChainData.nucleotides.find(
+      (nucleotide) => nucleotide.index === index
+    );
+    if (!clickedNucleotide) return;
 
-          const updatedNucleotides = chain.nucleotides.map(nucleotide => {
-              const hasCommonStructuralElement = nucleotide.structuralElements.some(structuralElement =>
-                clickedStructuralNames.includes(structuralElement.name)
-              );
-              if (hasCommonStructuralElement && !allResiduesSelected) {
-                return {
-                  ...nucleotide,
-                  selected: allResiduesSelected ? false : true,
-                }
-              }
-              else return nucleotide;
-          })
-          
-          if (allResiduesSelected) {
-            // Dla każdego elementu strukturalnego klikniętego nukleotydu wywołaj deselectFragment
-            clickedStructuralNames.forEach(name => {
-              deselectFragment(name, clickedStructuralNames);
-            });
-          } else {
-            // Dla każdego elementu strukturalnego klikniętego nukleotydu wywołaj selectFragment
-            clickedStructuralNames.forEach(name => {
-              selectFragment(name, selectedChain, SEResidues
-                .filter(nuc =>
-                  nuc.structuralElements.some(el => el.name === name)
-                )
-                .map(nuc => nuc.index)
-              );
-            });
-          }
+    const clickedStructuralNames = clickedNucleotide.structuralElements.map((el) => el.name);
+    const SEResidues = selectedChainData.nucleotides.filter((nucleotide) =>
+      nucleotide.structuralElements.some((el) => clickedStructuralNames.includes(el.name))
+    );
+    const allResiduesSelected = !SEResidues.some((nucleotide) => nucleotide.selected === false);
 
-          return {
-            ...chain,
-            nucleotides: updatedNucleotides,
-          };
-        }
-        return chain;
-    })//);
+    if (allResiduesSelected) {
+      clickedStructuralNames.forEach((name) => {
+        deselectFragment(name, clickedStructuralNames);
+      });
+    } else {
+      clickedStructuralNames.forEach((name) => {
+        selectFragment(
+          name,
+          selectedChain,
+          SEResidues
+            .filter((nuc) => nuc.structuralElements.some((el) => el.name === name))
+            .map((nuc) => nuc.index)
+        );
+      });
+    }
   }
 
   return (
@@ -106,7 +67,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
               key={`${selectedChain}-id-${index}`}
               className={[
                 "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
-                selectedResidueIds.includes(nucleotide.index)
+                selectedResidueIdSet.has(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-moley-backgroundLightGreen"
               ].join(" ")}
@@ -123,7 +84,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
               key={`${selectedChain}-name-${index}`}
               className={[
                 "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
-                selectedResidueIds.includes(nucleotide.index)
+                selectedResidueIdSet.has(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-gray-300"
               ].join(" ")}
@@ -142,7 +103,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
               key={`${selectedChain}-index-${index}`}
               className={[
                 "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2",
-                selectedResidueIds.includes(nucleotide.index)
+                selectedResidueIdSet.has(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-moley-backgroundLightGreen"
               ].join(" ")}
