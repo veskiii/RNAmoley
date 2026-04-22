@@ -4,12 +4,14 @@
 The workflow matches the grid-search helper, but executes only one combination:
 1. Generate `colvars_combined.conf` and helper PDB files.
 2. Create a run-specific copy of `namd.script` with the desired `outputname`.
-3. Start NAMD and write its log to a single file.
+3. Optionally zero the charge column in the PSF `!NATOM` section.
+4. Start NAMD and write its log to a single file.
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import shlex
 import shutil
 import subprocess
@@ -47,6 +49,45 @@ def replace_outputname(text: str, new_outputname: str) -> str:
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
+def zero_psf_natom_charges(psf_path: Path) -> None:
+    text = psf_path.read_text()
+    lines = text.splitlines()
+
+    natom_section_index = None
+    natom_count = None
+
+    for index, line in enumerate(lines):
+        if "!NATOM" in line:
+            natom_section_index = index
+            natom_count = int(line.split()[0])
+            break
+
+    if natom_section_index is None or natom_count is None:
+        raise ValueError(f"Could not find !NATOM section in {psf_path}")
+
+    # PSF readers expect the NATOM records to keep their fixed-width layout.
+    # Rebuilding the line with split/join collapses spacing and breaks VMD.
+    for offset in range(1, natom_count + 1):
+        line_index = natom_section_index + offset
+        if line_index >= len(lines):
+            raise ValueError(f"Unexpected end of file while reading !NATOM section in {psf_path}")
+
+        line = lines[line_index]
+        tokens = list(re.finditer(r"\S+", line))
+        if len(tokens) < 9:
+            raise ValueError(f"Malformed !NATOM line in {psf_path}: {line!r}")
+
+        charge_token = tokens[6]
+        charge_width = charge_token.end() - charge_token.start()
+        if charge_width < len("0.000000"):
+            raise ValueError(f"Charge field too narrow in {psf_path}: {line!r}")
+
+        charge_value = f"{0.0:>{charge_width}.6f}"
+        lines[line_index] = f"{line[:charge_token.start()]}{charge_value}{line[charge_token.end():]}"
+
+    psf_path.write_text("\n".join(lines) + ("\n" if text.endswith("\n") else ""), encoding="utf8")
+
+
 def run_command(cmd: list[str], cwd: Path, log_path: Path | None = None) -> None:
     if log_path is None:
         subprocess.run(cmd, cwd=cwd, check=True)
@@ -73,6 +114,7 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("--pdb", default="output.pdb", help="Input PDB for colvars generator")
+    parser.add_argument("--psf", default="output.psf", help="PSF file to normalize before NAMD")
     parser.add_argument("--pairs", default="R1260TS267_4_pairs.resid", help="Pairs file")
     parser.add_argument("--csv", default="R1260TS267_4.pdb_assigned_ntcs.csv", help="NtC CSV file")
     parser.add_argument(
@@ -160,6 +202,11 @@ def parse_args() -> argparse.Namespace:
         "--dry-run",
         action="store_true",
         help="Print planned commands without running them",
+    )
+    parser.add_argument(
+        "--zero-psf-charges",
+        action="store_true",
+        help="Zero the charge column in the PSF !NATOM section before NAMD",
     )
     parser.add_argument(
         "--namd-processes",
@@ -269,12 +316,23 @@ def main() -> None:
     if args.dry_run:
         print("DRY-RUN generate: " + " ".join(shlex.quote(x) for x in generator_cmd))
         print("DRY-RUN write: " + shlex.quote(str(run_namd_script)))
+        if args.zero_psf_charges:
+            print("DRY-RUN normalize PSF: " + shlex.quote(str((workdir / args.psf).resolve())))
         print("DRY-RUN run: " + " ".join(shlex.quote(x) for x in namd_cmd))
         print("DRY-RUN log: " + shlex.quote(str(log_path)))
         return
 
     run_namd_script.write_text(replace_outputname(namd_script.read_text(), outputname))
     run_command(generator_cmd, cwd=workdir)
+
+    psf_path = (workdir / args.psf).resolve()
+    if not psf_path.exists():
+        raise FileNotFoundError(f"Missing PSF file: {psf_path}")
+
+    if args.zero_psf_charges:
+        print(f"Zeroing charges in PSF !NATOM section: {psf_path.name}")
+        zero_psf_natom_charges(psf_path)
+
     run_command(namd_cmd, cwd=workdir, log_path=log_path)
 
     print("Finished single NAMD run")

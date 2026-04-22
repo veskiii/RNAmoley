@@ -416,6 +416,7 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 			sourceModelPairs,
 			"--csv",
 			sourceModelNtcs,
+			"--zero-psf-charges",
 			"--global-force-constant",
 			String(data.restraintGlobalForce),
 			"--pairs-force-constant",
