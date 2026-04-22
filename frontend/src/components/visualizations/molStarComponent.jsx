@@ -37,64 +37,122 @@ const Molstar = (props) => {
   const plugin = useRef(null);
   const [selected, setSelected] = useState([]);
   const [enableSelection, setEnableSelection] = useState(false);
+  const [isContainerReady, setIsContainerReady] = useState(false);
 
   useEffect(() => {
+    const element = parentRef.current;
+    if (!element) return;
+
+    const updateContainerReady = () => {
+      const { width, height } = element.getBoundingClientRect();
+      setIsContainerReady(width > 0 && height > 0);
+    };
+
+    updateContainerReady();
+
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        setIsContainerReady(false);
+      };
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateContainerReady();
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      setIsContainerReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isContainerReady) {
+      return;
+    }
+
     if (plugin.current) {
       console.log("Plugin already initialized");
       return;
-    } else {
-      (async () => {
-        if (useInterface) {
-          const spec = DefaultPluginUISpec();
-          spec.layout = {
-            initial: {
-              isExpanded: false,
-              controlsDisplay: "reactive",
-              showControls,
-              regionState: {
-                right: "hidden",
-                bottom: "hidden",
-                left: "collapsed",
-              },
-            },
-          };
+    }
 
-          spec.config = [
-            [PluginConfig.VolumeStreaming.Enabled, true],
-            [PluginConfig.Viewport.ShowSelectionMode, true],
-            [PluginConfig.Viewport.ShowSettings, true],
-            [PluginConfig.Viewport.ShowAnimation, true],
-            [PluginConfig.Viewport.ShowTrajectoryControls, true],
-            [PluginConfig.Viewport.ShowControls, true],
-          ];
+    let cancelled = false;
 
-          plugin.current = await createPluginUI({
-            target: parentRef.current,
-            spec: spec,
-            render: renderReact18,
-          });
-        } else {
-          plugin.current = new PluginContext(DefaultPluginSpec());
-          plugin.current.initViewer(canvasRef.current, parentRef.current);
-        }
-        if (!showAxes) {
-          plugin.current.canvas3d?.setProps({
-            camera: {
-              show: true,
+    (async () => {
+      if (useInterface) {
+        const spec = DefaultPluginUISpec();
+        spec.layout = {
+          initial: {
+            isExpanded: false,
+            controlsDisplay: "reactive",
+            showControls,
+            regionState: {
+              right: "hidden",
+              bottom: "hidden",
+              left: "collapsed",
             },
-          });
+          },
+        };
+
+        spec.config = [
+          [PluginConfig.VolumeStreaming.Enabled, true],
+          [PluginConfig.Viewport.ShowSelectionMode, true],
+          [PluginConfig.Viewport.ShowSettings, true],
+          [PluginConfig.Viewport.ShowAnimation, true],
+          [PluginConfig.Viewport.ShowTrajectoryControls, true],
+          [PluginConfig.Viewport.ShowControls, true],
+        ];
+
+        const createdPlugin = await createPluginUI({
+          target: parentRef.current,
+          spec: spec,
+          render: renderReact18,
+        });
+
+        if (cancelled) {
+          createdPlugin.dispose();
+          return;
         }
-        await loadStructure(plugin.current, file);
+
+        plugin.current = createdPlugin;
+      } else {
+        const createdPlugin = new PluginContext(DefaultPluginSpec());
+        createdPlugin.initViewer(canvasRef.current, parentRef.current);
+        await createdPlugin.init();
+
+        if (cancelled) {
+          createdPlugin.dispose();
+          return;
+        }
+
+        plugin.current = createdPlugin;
+      }
+
+      if (!showAxes) {
+        plugin.current.canvas3d?.setProps({
+          camera: {
+            show: true,
+          },
+        });
+      }
+
+      await loadStructure(plugin.current, file);
+
+      if (!cancelled) {
         setInitialized(true);
         setIsViewInitialized(true);
-      })();
-    }
+      }
+    })();
+
     return () => {
+      cancelled = true;
       plugin.current?.dispose();
       plugin.current = null;
       setInitialized(false);
     };
-  }, []);
+  }, [isContainerReady]);
 
   useEffect(() => {
     if (!initialized) return;

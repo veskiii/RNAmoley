@@ -38,6 +38,16 @@ const FornacWrapper = ({
   const error = null;
   const [hoveredIndex, setHoveredIndex] = useState<number>();
   const [hybridizedName, setHybridizedName] = useState<string[]>([]);
+  const chainsRef = useRef(chains);
+  const hybridizedNameRef = useRef(hybridizedName);
+
+  useEffect(() => {
+    chainsRef.current = chains;
+  }, [chains]);
+
+  useEffect(() => {
+    hybridizedNameRef.current = hybridizedName;
+  }, [hybridizedName]);
 
   useEffect(() => {
     setIsViewInitialized(true);
@@ -64,17 +74,19 @@ const FornacWrapper = ({
       selectedNodes.forEach((node) => {
         const nodeNumAttr = node.getAttribute("num");
         const nodeNameAttr = node.getAttribute("struct_name");
+        const activeChains = chainsRef.current;
+        const activeHybridizedNames = hybridizedNameRef.current;
         if (nodeNumAttr) {
           const numIndex = parseInt(nodeNumAttr.slice(1), 10);
-          let found_chain = chains.find((chain) => chain.name === nodeNameAttr);
+          let found_chain = activeChains.find((chain) => chain.name === nodeNameAttr);
           if (found_chain) {
             const found_nucleotide = found_chain.nucleotides[numIndex - 1];
 
             if (found_nucleotide) {
               selectedIndices.add(found_nucleotide.index);
             }
-          } else if (nodeNameAttr && hybridizedName.includes(nodeNameAttr)) {
-            found_chain = chains.find(
+          } else if (nodeNameAttr && activeHybridizedNames.includes(nodeNameAttr)) {
+            found_chain = activeChains.find(
               (chain) => chain.name === nodeNameAttr.slice(-3, -2)
             );
             if (found_chain) {
@@ -83,10 +95,10 @@ const FornacWrapper = ({
               if (found_nucleotide) {
                 selectedIndices.add(found_nucleotide.index);
               } else {
-                found_chain = chains.find(
+                found_chain = activeChains.find(
                   (chain) => chain.name === nodeNameAttr.slice(-1)
                 );
-                let prevChain = chains.find(
+                let prevChain = activeChains.find(
                   (chain) => chain.name === nodeNameAttr.slice(-3, -2)
                 );
                 if (found_chain && prevChain)
@@ -108,18 +120,31 @@ const FornacWrapper = ({
       //@ts-ignore
       debounceTimeout.current = setTimeout(() => {
         setChains((prevChains) => {
-          const newChains = prevChains.map((chain) => ({
-            ...chain,
-            nucleotides: chain.nucleotides.map((nucleotide) => ({
-              ...nucleotide,
-              selected: selectedIndices.has(nucleotide.index),
-            })),
-          }));
+          let hasChanged = false;
 
-          // Porównaj stare i nowe chains, aby uniknąć zbędnych renderów
-          const hasChanged =
-            JSON.stringify(prevChains) !== JSON.stringify(newChains);
-          return hasChanged ? newChains : prevChains;
+          const nextChains = prevChains.map((chain) => {
+            let chainChanged = false;
+            const nextNucleotides = chain.nucleotides.map((nucleotide) => {
+              const shouldBeSelected = selectedIndices.has(nucleotide.index);
+              if (nucleotide.selected !== shouldBeSelected) {
+                chainChanged = true;
+                hasChanged = true;
+                return { ...nucleotide, selected: shouldBeSelected };
+              }
+              return nucleotide;
+            });
+
+            if (!chainChanged) {
+              return chain;
+            }
+
+            return {
+              ...chain,
+              nucleotides: nextNucleotides,
+            };
+          });
+
+          return hasChanged ? nextChains : prevChains;
         });
       }, 50);
     };
@@ -258,7 +283,6 @@ const FornacWrapper = ({
           ))}
       </div> */}
       <Fornac
-        key={JSON.stringify(chains)}
         chains={chains}
         setChains={setChains}
         labelInterval={labelInterval}

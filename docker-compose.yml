@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres
+    image: postgres:17
     restart: always
     # set shared memory limit when using docker-compose
     shm_size: 128mb
@@ -42,6 +42,7 @@ services:
     image: tools
     build:
       context: ./tools
+    user: "0:0"
     environment:
       NODE_ENV: production
     # ports:
@@ -55,6 +56,7 @@ services:
     build:
       context: ./restapi
     restart: always
+    user: "0:0"
     environment:
       NODE_ENV: production
     env_file:
@@ -79,6 +81,44 @@ services:
       - 3000:3000
     depends_on:
       - restapi
+
+  sim:
+    image: sim
+    build:
+      context: ./sim
+    restart: always
+    user: "0:0"
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SIM_WORKER_CONCURRENCY: 1
+    ports:
+      - 3004:3001
+    volumes:
+      - user_data:/webserver/public/jobs
+    depends_on:
+      - redis
+    scale: 1
+
+  dnatco:
+    image: dnatco
+    build:
+      context: ./dnatco
+    restart: always
+    user: "0:0"
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DNATCO_WORKER_CONCURRENCY: 1
+    ports:
+      - 3005:3001
+    volumes:
+      - user_data:/webserver/public/jobs
+    depends_on:
+      - redis
+    scale: 1
 
 volumes:
   db_data:

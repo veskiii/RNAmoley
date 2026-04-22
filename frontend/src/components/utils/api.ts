@@ -44,7 +44,11 @@ export async function fetchJobData(
   }
 }
 
-export async function fetchMyData(jobID: string | undefined, modelNumber: number) {
+export async function fetchMyData(
+  jobID: string | undefined,
+  modelNumber: number,
+  resultsSource: "original" | "simulation" = "original"
+) {
   console.log(`Sending request to /api/v1/jobs/${jobID}/${modelNumber}`);
 
   // TODO: czy tego potrzebuje? Wywalilo bez powodu
@@ -53,7 +57,7 @@ export async function fetchMyData(jobID: string | undefined, modelNumber: number
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(`${API_URL}/jobs/${jobID}/${modelNumber}`, {
+    const response = await fetch(`${API_URL}/jobs/${jobID}/${modelNumber}?resultsSource=${resultsSource}`, {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -113,4 +117,39 @@ export async function sendDataToAnalyze(
   } catch (error) {
     console.error(error);
   }
+}
+
+export type StartSimulationPayload = {
+  id: string;
+  modelNumber: number;
+  restraintBackboneForce: number;
+  restraintGlobalForce: number;
+  restraintBasePairsForce: number;
+  rmsdCutoff: number;
+};
+
+export async function startSimulation(payload: StartSimulationPayload) {
+  const response = await fetch(`${API_URL}/jobs/simulation/start`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Content-Type": "application/json",
+    },
+  });
+
+  let responseBody: any = null;
+  try {
+    responseBody = await response.json();
+  } catch (_error) {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      responseBody?.error || responseBody?.message || "Failed to start simulation";
+    throw new Error(message);
+  }
+
+  return responseBody;
 }
