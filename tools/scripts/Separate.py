@@ -108,6 +108,10 @@ def separate_pdb_models(file_handle, output_folder, model_count):
         output_path = os.path.join(output_folder, "1.pdb")
         with open(output_path, "w") as f:
             for line in lines:
+                if line.startswith('MODEL'):
+                    continue
+                if line.startswith('ENDMDL'):
+                    continue
                 f.write(line)
             f.write("END\n")
     else:
@@ -117,6 +121,8 @@ def separate_pdb_models(file_handle, output_folder, model_count):
         f = open(output_path, "w")
         
         for line in lines:
+            if line.startswith('MODEL'):
+                continue
             if line.startswith('ENDMDL'):
                 f.write("END\n")
                 f.close()

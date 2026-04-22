@@ -53,7 +53,10 @@ const Molstar = (props) => {
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
+  const coloringRunId = useRef(0);
+  const isStructureLoading = useRef(false);
   const [canColor, setCanColor] = useState(false);
+  const [isContainerReady, setIsContainerReady] = useState(false);
 
   const mapResiduesToColors = () => {
     if (!SUPPORTED_QUALITY_SCORES.has(selectedQualityScore)) {
@@ -88,15 +91,32 @@ const Molstar = (props) => {
       return;
     }
 
+    if (isStructureLoading.current) {
+      return;
+    }
+
     if (!Array.isArray(resultResidues) || resultResidues.length === 0) return;
 
-    const structure =
-      plugin.current.managers.structure.hierarchy.current.structures[0];
-    const data =
-      plugin.current.managers.structure.hierarchy.current.structures[0]?.cell
-        .obj?.data;
+    const runId = ++coloringRunId.current;
+    const hierarchy = plugin.current.managers?.structure?.hierarchy?.current;
+    const structure = hierarchy?.structures?.[0];
+    const data = structure?.cell?.obj?.data;
+    const components = structure?.components;
 
-    await clearStructureOverpaint(plugin.current, structure.components);
+    if (!structure || !data || !components || components.length === 0) {
+      return;
+    }
+
+    try {
+      await clearStructureOverpaint(plugin.current, components);
+    } catch (error) {
+      console.warn("Failed to clear overpaint", error);
+      return;
+    }
+
+    if (runId !== coloringRunId.current || !plugin.current) {
+      return;
+    }
 
     const residueColors = mapResiduesToColors();
 
@@ -110,6 +130,10 @@ const Molstar = (props) => {
     });
 
     for (const color in groupedByColor) {
+      if (runId !== coloringRunId.current || !plugin.current) {
+        return;
+      }
+
       const entries = groupedByColor[color];
 
       const groups = [];
@@ -150,85 +174,172 @@ const Molstar = (props) => {
         MS.struct.combinator.merge(groups),
         data
       );
+
+      if (!sel) continue;
+
       const loci = StructureSelection.toLociWithSourceUnits(sel);
+
+      if (!loci || !Array.isArray(loci.elements) || loci.elements.length === 0) {
+        continue;
+      }
 
       const getLoci = async () => loci;
 
-      await setStructureOverpaint(
-        plugin.current,
-        structure.components,
-        Color(parseInt(color.replace("#", ""), 16)),
-        getLoci
-      );
+      try {
+        await setStructureOverpaint(
+          plugin.current,
+          components,
+          Color(parseInt(color.replace("#", ""), 16)),
+          getLoci
+        );
+      } catch (error) {
+        console.warn("Failed to apply overpaint for color", color, error);
+      }
       //   return;
     }
   };
 
   useEffect(() => {
-    if (initialized) {
-      changeNucleotideColors();
+    if (!initialized) {
+      return;
     }
-  }, [initialized, resultResidues, selectedQualityScore]);
+
+    void changeNucleotideColors();
+  }, [resultResidues, selectedQualityScore]);
 
   useEffect(() => {
-    console.log("Initializing Molstar plugin...");
-    if (plugin.current) {
-      console.log("Plugin already initialized");
-      return;
-    } else {
-      (async () => {
-        if (useInterface) {
-          const spec = DefaultPluginUISpec();
-          spec.layout = {
-            initial: {
-              isExpanded: false,
-              controlsDisplay: "reactive",
-              showControls,
-            },
-          };
+    const element = parentRef.current;
+    if (!element) return;
 
-          plugin.current = await createPluginUI({
-            target: parentRef.current,
-            spec: spec,
-            render: renderReact18,
-          });
-        } else {
-          plugin.current = new PluginContext(DefaultPluginSpec());
-          plugin.current.initViewer(canvasRef.current, parentRef.current);
-          await plugin.current.init();
-        }
-        if (!showAxes) {
-          plugin.current.canvas3d?.setProps({
-            camera: {
-              helper: {
-                axes: {
-                  name: "off",
-                  params: {},
-                },
-              },
-            },
-          });
-        }
-        await loadStructure(pdbId, url, file, plugin.current);
-        const timer = setTimeout(() => {
-          setInitialized(true);
-        }, 2000);
-        return () => clearTimeout(timer);
-      })();
+    const updateContainerReady = () => {
+      const { width, height } = element.getBoundingClientRect();
+      setIsContainerReady(width > 0 && height > 0);
+    };
+
+    updateContainerReady();
+
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        setIsContainerReady(false);
+      };
     }
 
+    const observer = new ResizeObserver(() => {
+      updateContainerReady();
+    });
+
+    observer.observe(element);
+
     return () => {
-      plugin.current?.dispose();
-      plugin.current = null;
-      setInitialized(false);
+      observer.disconnect();
+      setIsContainerReady(false);
     };
   }, []);
 
   useEffect(() => {
-    if (!initialized) return;
+    if (!isContainerReady) {
+      return;
+    }
+
+    console.log("Initializing Molstar plugin...");
+
+    if (plugin.current) {
+      console.log("Plugin already initialized");
+      return;
+    }
+
+    let cancelled = false;
     (async () => {
+      if (useInterface) {
+        const spec = DefaultPluginUISpec();
+        spec.layout = {
+          initial: {
+            isExpanded: false,
+            controlsDisplay: "reactive",
+            showControls,
+          },
+        };
+
+        const createdPlugin = await createPluginUI({
+          target: parentRef.current,
+          spec: spec,
+          render: renderReact18,
+        });
+
+        if (cancelled) {
+          createdPlugin.dispose();
+          return;
+        }
+
+        plugin.current = createdPlugin;
+      } else {
+        const createdPlugin = new PluginContext(DefaultPluginSpec());
+        createdPlugin.initViewer(canvasRef.current, parentRef.current);
+        await createdPlugin.init();
+
+        if (cancelled) {
+          createdPlugin.dispose();
+          return;
+        }
+
+        plugin.current = createdPlugin;
+      }
+
+      if (!showAxes) {
+        plugin.current.canvas3d?.setProps({
+          camera: {
+            helper: {
+              axes: {
+                name: "off",
+                params: {},
+              },
+            },
+          },
+        });
+      }
+
       await loadStructure(pdbId, url, file, plugin.current);
+
+      if (cancelled) {
+        return;
+      }
+
+      await changeNucleotideColors();
+
+      if (!cancelled) {
+        setInitialized(true);
+      }
     })();
+
+    return () => {
+      cancelled = true;
+
+      plugin.current?.dispose();
+      plugin.current = null;
+      setInitialized(false);
+    };
+  }, [isContainerReady]);
+
+  useEffect(() => {
+    if (!initialized) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        isStructureLoading.current = true;
+        await loadStructure(pdbId, url, file, plugin.current);
+      } finally {
+        isStructureLoading.current = false;
+      }
+
+      if (cancelled) return;
+      await changeNucleotideColors();
+    })();
+
+    return () => {
+      cancelled = true;
+      coloringRunId.current += 1;
+    };
   }, [pdbId, url, file]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Loading from "../common/loading";
 import "../../App.css";
 import Molstar from "../visualizations/molStarComponent";
@@ -48,20 +48,39 @@ const Panel: React.FC = () => {
   const [inputValueEnd, setInputValueEnd] = useState<string>("");
   const [minId, setMinId] = useState<string>("");
   const [maxId, setMaxId] = useState<string>("");
-  const [selectedList, setSelectedList] = useState<ChainElement[]>([]);
   const [selectedFragments, setSelectedFragments] = useState<SelectedFragment[]>([]);
   const [isViewInitialized, setIsViewInitialized] = useState<boolean>(true);
   const { jobId } = useParams();
   const jobID = jobId;
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const isDisabled = !(selectedList.length > 0);
   const [sidebarTab, setSidebarTab] = useState(0);
   const [modelSelections, setModelSelections] = useState<Record<number, {chainsState: Chain[], selectedFragments: SelectedFragment[]}>>({});
 
+  const selectedList = useMemo<ChainElement[]>(() => {
+    return chainsState.flatMap((chain) =>
+      chain.nucleotides
+        .filter((nucleotide) => nucleotide.selected)
+        .map((nucleotide) => ({
+          chainID: chain.name,
+          residueID: nucleotide.index,
+        }))
+    );
+  }, [chainsState]);
+
+  const selectedResidueIdsForChain = useMemo(() => {
+    const selectedChainData = chainsState.find((chain) => chain.name === selectedChain);
+    if (!selectedChainData) return [];
+    return selectedChainData.nucleotides
+      .filter((nucleotide) => nucleotide.selected)
+      .map((nucleotide) => nucleotide.index);
+  }, [chainsState, selectedChain]);
+
+  const isDisabled = selectedList.length === 0;
+
   useEffect(() => {
     setSelectedChain(chainsState[0]?.name || "");
-  }, [myData]);
+  }, [chainsState]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -451,19 +470,6 @@ const Panel: React.FC = () => {
     loadData(jobID, 1);
   }, [jobID]);
 
-  useEffect(() => {
-    const selectedChainElements: ChainElement[] = chainsState.flatMap((chain) =>
-      chain.nucleotides
-        .filter((nucleotide) => nucleotide.selected)
-        .map((nucleotide) => ({
-          chainID: chain.name,
-          residueID: nucleotide.index,
-        }))
-    );
-    console.log("Selected IDs:", selectedChainElements);
-    setSelectedList(selectedChainElements);
-  }, [chainsState]);
-
   if (error) return <ErrorPage errorMessage={error} />;
   if (!myData) {
     return <Loading page="Analysis panel" />;
@@ -675,7 +681,7 @@ const Panel: React.FC = () => {
                   <ResidueTable
                     data={chainsState}
                     selectedChain={selectedChain}
-                    selectedResidueIds={selectedList.filter(ce => ce.chainID === selectedChain).map(ce => ce.residueID)}
+                    selectedResidueIds={selectedResidueIdsForChain}
                     selectResidue={selectResidue}
                     selectFragment={selectFragment}
                     deselectResidue={deselectResidue}

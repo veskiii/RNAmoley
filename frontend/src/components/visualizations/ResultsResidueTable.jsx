@@ -5,6 +5,11 @@ import { Colors } from "../common/colors";
 
 const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore }) => {
   const selectedBorderColor = Colors.salmon;
+  const neighborhoodScores = [
+    QualityScore.CLASH_SCORE,
+    QualityScore.BAD_ANGLES,
+    QualityScore.BAD_BONDS,
+  ];
 
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -24,50 +29,29 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     chainOptions.length > 0 ? chainOptions[0].chainID : ""
   );
 
-  function colorColumn(selectedScore = QualityScore.CLASH_SCORE) {
-    const getEnumKeyByValue = (value) => {
-      return Object.keys(QualityScore).find(
-        (key) => QualityScore[key] === value
-      );
-    };
-
-    const score = getEnumKeyByValue(selectedScore);
-
-    if (data) {
-      document
-        .querySelectorAll(`td[class*="column-${score}"]`)
-        .forEach((cell) => {
-          const keyAttr = cell.getAttribute("data-residue-number");
-          if (keyAttr) {
-            const residue = data.find(nuc => String(nuc.residue_number) === keyAttr);
-            if (residue) {
-              cell.style.backgroundColor = getColor(
-                residue,
-                selectedScore
-              );
-            }
-          }
-        });
-    }
-    return <div></div>;
-  }
-
-  const resetColumns = () => {
-    [
-      "CLASH_SCORE",
-      "BAD_ANGLES",
-      "BAD_BONDS",
-      "SUGAR_PUCKER_OUT",
-      "SUITENESS",
-    ].forEach((column) => {
-      document.querySelectorAll(`.column-${column}`).forEach((cell, index) => {
-        cell.style.backgroundColor = "#c4cbc4";
-      });
-    });
-  };
-
   const handleClick = (clickedScore) => {
     setSelectedScore(clickedScore);
+  };
+
+  const getEffectiveSelectedScore = () => {
+    if (!analyzeNeighborhood && neighborhoodScores.includes(selectedScore)) {
+      return QualityScore.SUITENESS;
+    }
+    return selectedScore;
+  };
+
+  const effectiveSelectedScore = getEffectiveSelectedScore();
+
+  const chainData = useMemo(() => {
+    if (!data) return [];
+    return data.filter((nucleotide) => nucleotide.chainID === selectedChain);
+  }, [data, selectedChain]);
+
+  const activeCellStyle = (residue, score) => {
+    if (effectiveSelectedScore !== score) {
+      return undefined;
+    }
+    return { backgroundColor: getColor(residue, score) };
   };
 
   useEffect(() => {
@@ -77,55 +61,17 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     ) {
       setSelectedChain(chainOptions[0].chainID);
     }
-  }, [chainOptions]);
+  }, [chainOptions, selectedChain]);
 
   useEffect(() => {
     // console.log("ResidueTable rerendered");
   }, [selectedChain]);
 
   useEffect(() => {
-    colorColumn(selectedScore);
-    // if (analyzeNeighborhood)
-    //   colorColumn(QualityScore.CLASH_SCORE);
-    // else 
-    //   colorColumn(QualityScore.SUITENESS);
-  }, [data]);
-
-  useEffect(() => {
-    resetColumns();
-
-    const ids = [
-      "tableClashscore",
-      "tableBadAngles",
-      "tableBadBonds",
-      "tableSuiteness",
-      "tableSugarPuckerOut",
-    ];
-
-    ids.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.style.backgroundColor = "#a0b2a5";
-        el.style.borderColor = "#a0b2a5";
-      }
-    });
-
-    const scoreToId = {
-      [QualityScore.CLASH_SCORE]: "tableClashscore",
-      [QualityScore.BAD_ANGLES]: "tableBadAngles",
-      [QualityScore.BAD_BONDS]: "tableBadBonds",
-      [QualityScore.SUITENESS]: "tableSuiteness",
-      [QualityScore.SUGAR_PUCKER_OUT]: "tableSugarPuckerOut",
-    };
-
-    const selectedId = scoreToId[selectedScore];
-    const selectedEl = document.getElementById(selectedId);
-    if (selectedEl) {
-      selectedEl.style.borderColor = selectedBorderColor;
-      selectedEl.style.borderWidth = "3px";
+    if (!analyzeNeighborhood && neighborhoodScores.includes(selectedScore)) {
+      setSelectedScore(QualityScore.SUITENESS);
     }
-    colorColumn(selectedScore);
-  }, [selectedScore]);
+  }, [analyzeNeighborhood, selectedScore, setSelectedScore]);
 
   if (!data || data.length === 0) {
     return <p>No data available</p>;
@@ -153,7 +99,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
         <tbody>
           <tr>
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Index</td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-id-${index}`}
                 className={
@@ -166,7 +112,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           </tr>
           <tr>
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Base</td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-name-${index}`}
                 className={
@@ -181,7 +127,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
               Secondary Structure
             </td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-index-${index}`}
                 className={
@@ -196,7 +142,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
               Structural Element
             </td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
@@ -218,17 +164,24 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             id="tableClashscore"
             className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
             onClick={(_) => handleClick(QualityScore.CLASH_SCORE)}
-            style={{borderWidth: "3px"}}
+            style={{
+              borderWidth: "3px",
+              borderColor:
+                effectiveSelectedScore === QualityScore.CLASH_SCORE
+                  ? selectedBorderColor
+                  : "#a0b2a5",
+            }}
             >
               Neighborhood ClashScore
             </td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-CLASH_SCORE"
                 }
+                style={activeCellStyle(nucleotide, QualityScore.CLASH_SCORE)}
               >
                 {nucleotide.metrics ? nucleotide.metrics.clashscore : 
                   nucleotide.selected ? (
@@ -245,17 +198,24 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             id="tableBadAngles"
             className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
             onClick={(_) => handleClick(QualityScore.BAD_ANGLES)}
-            style={{borderWidth: "3px"}}
+            style={{
+              borderWidth: "3px",
+              borderColor:
+                effectiveSelectedScore === QualityScore.BAD_ANGLES
+                  ? selectedBorderColor
+                  : "#a0b2a5",
+            }}
             >
               Neighborhood Bad Angles
             </td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_ANGLES"
                 }
+                style={activeCellStyle(nucleotide, QualityScore.BAD_ANGLES)}
               >
                 {nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
@@ -274,17 +234,24 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             id="tableBadBonds"
             className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
             onClick={(_) => handleClick(QualityScore.BAD_BONDS)}
-            style={{borderWidth: "3px"}}
+            style={{
+              borderWidth: "3px",
+              borderColor:
+                effectiveSelectedScore === QualityScore.BAD_BONDS
+                  ? selectedBorderColor
+                  : "#a0b2a5",
+            }}
             >
               Neighborhood Bad Bond Lengths
             </td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_BONDS"
                 }
+                style={activeCellStyle(nucleotide, QualityScore.BAD_BONDS)}
               >
                 {nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
@@ -302,17 +269,24 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             id="tableSuiteness"
             className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
             onClick={(_) => handleClick(QualityScore.SUITENESS)}
-            style={{borderWidth: "3px"}}
+            style={{
+              borderWidth: "3px",
+              borderColor:
+                effectiveSelectedScore === QualityScore.SUITENESS
+                  ? selectedBorderColor
+                  : "#a0b2a5",
+            }}
             >
               Suiteness
             </td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUITENESS"
                 }
+                style={activeCellStyle(nucleotide, QualityScore.SUITENESS)}
               >
                 {nucleotide.residueMetrics ? nucleotide.residueMetrics.suiteness : ""}
               </td>
@@ -323,17 +297,24 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             id="tableSugarPuckerOut"
             className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
             onClick={(_) => handleClick(QualityScore.SUGAR_PUCKER_OUT)}
-            style={{borderWidth: "3px"}}
+            style={{
+              borderWidth: "3px",
+              borderColor:
+                effectiveSelectedScore === QualityScore.SUGAR_PUCKER_OUT
+                  ? selectedBorderColor
+                  : "#a0b2a5",
+            }}
             >
               Sugar Pucker Outlier Type
             </td>
-            {data && data.filter((nucleotide) => nucleotide.chainID === selectedChain).map((nucleotide, index) => (
+            {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
                   "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUGAR_PUCKER_OUT"
                 }
+                style={activeCellStyle(nucleotide, QualityScore.SUGAR_PUCKER_OUT)}
               >
                 {nucleotide.residueMetrics ? nucleotide.residueMetrics.pucker_outlier_type : ""}
               </td>

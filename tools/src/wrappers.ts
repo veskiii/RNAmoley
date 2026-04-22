@@ -32,11 +32,13 @@ interface NumerationItem {
   annotator_dotbracket: string;
   label_chain_id: string | undefined;
   label_residue_number: number | undefined;
-  auth_chain_id: string;
-  auth_residue_number: number;
-  auth_nucleotide_name: string;
+  auth_chain_id: string | undefined;
+  auth_residue_number: number | undefined;
+  auth_nucleotide_name: string | undefined;
   moley_residue_number?: number;
   moley_chain_id?: string;
+  original_label_asym_id?: string;
+  new_chain_id?: string;
 }
 
 interface NumerationMap {
@@ -76,12 +78,16 @@ export async function runConverter(id: string, filename: string) {
   return result;
 }
 
-export async function splitModels(id: string, sourceFormat: string) {
-  console.log(`Splitting ${JOBS_DIR}/${id}/${id}.pdb into models...`);
+export async function splitModels(
+  id: string,
+  sourceFormat: string,
+  modelsDir = "models"
+) {
+  console.log(`Splitting ${JOBS_DIR}/${id}/${id}.pdb into ${modelsDir}...`);
 
   const split = spawnSync(`${SCRIPTS_DIR}/Separate.py`, [
     `${JOBS_DIR}/${id}/${id}.${sourceFormat}`,
-    `${JOBS_DIR}/${id}/models`,
+    `${JOBS_DIR}/${id}/${modelsDir}`,
   ]);
   if (split.error) {
     console.error("Error running split: ", split.error);
@@ -104,14 +110,19 @@ export async function splitModels(id: string, sourceFormat: string) {
   return response;
 }
 
-export async function correctModels(id: string, numberOfModels: number, sourceFormat: string) {
+export async function correctModels(
+  id: string,
+  numberOfModels: number,
+  sourceFormat: string,
+  modelsDir = "models"
+) {
   console.log(`Correcting ${id} models...`);
 
   for (let i = 1; i <= numberOfModels; i++) {
     console.log(`Correcting model ${i}...`);
     const correct = spawnSync(`${SCRIPTS_DIR}/Correction.py`, [
-      `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
-      `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
+      `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
+      `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
     ]);
     if (correct.error) {
       console.error("Error running correct: ", correct.error);
@@ -122,7 +133,12 @@ export async function correctModels(id: string, numberOfModels: number, sourceFo
   return { success: true };
 }
 
-export async function runAnnotator(id: string, numberOfModels: number, sourceFormat: string) {
+export async function runAnnotator(
+  id: string,
+  numberOfModels: number,
+  sourceFormat: string,
+  modelsDir = "models"
+) {
   console.log(`Running annotator on ${id}...`);
   const results = [];
 
@@ -131,8 +147,8 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
       "annotator",
       [
         "-j",
-        `${JOBS_DIR}/${id}/models/${i}.json`,
-        `${JOBS_DIR}/${id}/models/${i}.${sourceFormat}`,
+        `${JOBS_DIR}/${id}/${modelsDir}/${i}.json`,
+        `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
       ],
       { encoding: "utf-8" }
     );
@@ -143,13 +159,21 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
       .split("\\n");
 
       
+
+    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}.json`));
+    const numerationFilename = `${i}_numeration.json`;
+    const numerationString = JSON.stringify(numeration);
+    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, numerationFilename);
+    await fs.writeFile(numerationFilePath, numerationString);
+
+      
     const labelToAuthorMap: Record<string, string> = {};
     if (sourceFormat === "cif") {
-      const numerationFilePath = resolve(`${JOBS_DIR}/${id}/models/${i}_numeration.json`);
-      let numerationData;
+      const numerationFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}_numeration.json`);
+      let numerationData: Record<string, any> = {};
       try {
         const numerationRaw = await fs.readFile(numerationFilePath, "utf-8");
-        numerationData = JSON.parse(numerationRaw);
+        numerationData = JSON.parse(numerationRaw) ?? {};
       }
       catch (error) {
         console.error(`Error reading numeration file ${numerationFilePath}:`, error);
@@ -162,11 +186,13 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
       }
     }
 
-    const numeration = await retrieveNumerationFromJson(resolve(`${JOBS_DIR}/${id}/models/${i}.json`));
-    const numerationFilename = `${i}_numeration.json`;
-    const numerationString = JSON.stringify(numeration);
-    const numerationFilePath = resolve(`${JOBS_DIR}/${id}/models`, numerationFilename);
-    await fs.writeFile(numerationFilePath, numerationString);
+    const basePairs = await retrieveBasePairsFromJson(
+      resolve(`${JOBS_DIR}/${id}/${modelsDir}/${i}.json`)
+    );
+    const basePairsFilename = `${i}_pairs.resid`;
+    const basePairsString = basePairs.map(([left, right]) => `${left} ${right}`).join("\n");
+    const basePairsFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, basePairsFilename);
+    await fs.writeFile(basePairsFilePath, basePairsString);
 
     // parse output as list of annotations
     // every 3 lines is a new annotation
@@ -200,14 +226,14 @@ export async function runAnnotator(id: string, numberOfModels: number, sourceFor
     };
     const mergedFilename = `${i}.dot`;
     const mergedString = `${merged.name}\n${merged.sequnece}\n${merged.dotbracket}`;
-    const mergedFilePath = resolve(`${JOBS_DIR}/${id}/models`, mergedFilename);
+    const mergedFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, mergedFilename);
     await fs.writeFile(mergedFilePath, mergedString);
 
     // save output as json file
     // const outputFilename = filename.split('.')[0] + '.json';
     const outputFilename = `${i}_annotation.json`;
     const outputString = JSON.stringify(output);
-    const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
+    const outputFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, outputFilename);
     await fs.writeFile(outputFilePath, outputString);
   }
 
@@ -315,6 +341,19 @@ const retrieveNumerationFromJson = async (
 
   if (jsonData.bpseq_index) {
     Object.entries(jsonData.bpseq_index).forEach(([annotator_residue_number, value]: [string, any]) => {
+      // Skip only if value is completely missing or not object-like
+      if (value === null || value === undefined) {
+        return;
+      }
+
+      const label = value.label && typeof value.label === "object" ? value.label : undefined;
+      const auth = value.auth && typeof value.auth === "object" ? value.auth : undefined;
+
+      // Fallback: use label fields if auth fields are missing
+      const chainId = auth?.chain ?? label?.chain ?? undefined;
+      const residueNumber = auth?.number ?? label?.number ?? undefined;
+      const nucleotideName = auth?.name ?? undefined;
+
       // get nucleotide name from jsonData.bpseq.sequence
       const annotator_nucleotide_name = jsonData.bpseq?.sequence?.[Number(annotator_residue_number) - 1] ?? "N";
       const annotator_dotbracket = jsonData.bpseq?.dot_bracket?.structure?.[Number(annotator_residue_number) - 1] ?? ".";
@@ -322,11 +361,11 @@ const retrieveNumerationFromJson = async (
         annotator_residue_number: Number(annotator_residue_number),
         annotator_nucleotide_name: annotator_nucleotide_name,
         annotator_dotbracket: annotator_dotbracket,
-        label_chain_id: value.label?.chain ?? undefined,
-        label_residue_number: value.label?.number ?? undefined,
-        auth_chain_id: value.auth.chain,
-        auth_residue_number: value.auth.number,
-        auth_nucleotide_name: value.auth.name,
+        label_chain_id: label?.chain ?? undefined,
+        label_residue_number: label?.number ?? undefined,
+        auth_chain_id: chainId,
+        auth_residue_number: residueNumber,
+        auth_nucleotide_name: nucleotideName,
       };
     });
   }
@@ -334,20 +373,64 @@ const retrieveNumerationFromJson = async (
   return numerationMap;
 };
 
-export async function runMotifExtractor(id: string, numberOfModels: number) {
+const retrieveBasePairsFromJson = async (
+  filePath: string
+): Promise<Array<[number, number]>> => {
+  const rawData = await fs.readFile(filePath, "utf-8");
+  const jsonData = JSON.parse(rawData);
+
+  const pairs = jsonData.bpseq?.pairs;
+  if (!pairs || typeof pairs !== "object") {
+    return [];
+  }
+
+  const uniquePairs = new Set<string>();
+  for (const [leftRaw, rightRaw] of Object.entries(pairs)) {
+    const left = Number(leftRaw);
+    const right = Number(rightRaw);
+
+    if (!Number.isFinite(left) || !Number.isFinite(right)) {
+      continue;
+    }
+
+    if (left < 1 || right < 1 || left === right) {
+      continue;
+    }
+
+    const first = Math.min(left, right);
+    const second = Math.max(left, right);
+    uniquePairs.add(`${first} ${second}`);
+  }
+
+  return Array.from(uniquePairs)
+    .map((pair) => pair.split(" ").map(Number) as [number, number])
+    .sort((a, b) => {
+      if (a[0] !== b[0]) {
+        return a[0] - b[0];
+      }
+
+      return a[1] - b[1];
+    });
+};
+
+export async function runMotifExtractor(
+  id: string,
+  numberOfModels: number,
+  modelsDir = "models"
+) {
   console.log(`Running motif extractor on ${id}...`);
   const results = [];
 
   for (let i = 1; i <= numberOfModels; i++) {
     const output = await retrieveMotifsFromJson(
-      `${JOBS_DIR}/${id}/models/${i}.json`
+      `${JOBS_DIR}/${id}/${modelsDir}/${i}.json`
     );
 
     results.push(output);
 
     const outputFilename = `${i}_motifs.json`;
     const outputString = JSON.stringify(output);
-    const outputFilePath = resolve(`${JOBS_DIR}/${id}/models`, outputFilename);
+    const outputFilePath = resolve(`${JOBS_DIR}/${id}/${modelsDir}`, outputFilename);
     await fs.writeFile(outputFilePath, outputString);
   }
 
@@ -360,7 +443,8 @@ export async function walkingSphere(
   id: string,
   modelNumber: number,
   radius: number,
-  interval: number
+  interval: number,
+  modelsDir = "models"
 ) {
   console.log(`Using walking sphere on model ${modelNumber} of ${id}...`);
 
@@ -377,8 +461,8 @@ export async function walkingSphere(
   }
 
   const sphere = spawnSync(`${SCRIPTS_DIR}/Walking_sphere.py`, [
-    `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
-    `${JOBS_DIR}/${id}/models/${modelNumber}_residues.json`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}.pdb`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_residues.json`,
     `${JOBS_DIR}/${id}/${modelNumber}_sphere`,
     radius.toString(),
     interval.toString(),
@@ -395,14 +479,15 @@ export async function walkingSphere(
 
 export async function runFragmentExtraction(
   id: string,
-  modelNumber: string
+  modelNumber: string,
+  modelsDir = "models"
 ) {
   console.log(`Running fragment extraction on model ${modelNumber} of ${id}...`);
 
   const fragment = spawnSync(`${SCRIPTS_DIR}/Extract_fragment.py`, [
-    `${JOBS_DIR}/${id}/models/${modelNumber}.pdb`,
-    `${JOBS_DIR}/${id}/models/${modelNumber}_residues.json`,
-    `${JOBS_DIR}/${id}/models/${modelNumber}_fragment.pdb`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}.pdb`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_residues.json`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_fragment.pdb`,
   ], { encoding: "utf-8" });
 
   // console.log("stdout:", fragment.stdout);
@@ -413,7 +498,7 @@ export async function runFragmentExtraction(
   }
 
   try {
-    await fs.access(`${JOBS_DIR}/${id}/models/${modelNumber}_fragment.pdb`);
+    await fs.access(`${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_fragment.pdb`);
   } catch (e) {
     console.error("Fragment file was not created!");
     throw new Error("Fragment file was not created!");

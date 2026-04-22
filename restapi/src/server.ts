@@ -6,6 +6,7 @@ import { cleanUpJobs } from "./jobs/controller.js";
 import cors from "cors";
 import { createAnalysisWorker } from "./jobs/analysis.js";
 import { createJobCreationWorker } from "./jobs/jobCreation.js";
+import { createSimulationWorker } from "./jobs/simulation.js";
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,9 @@ export const TOOLS_URL = process.env.TOOLS_URL
 export const MOLPROBITY_URL = process.env.MOLPROBITY_URL
   ? process.env.MOLPROBITY_URL
   : "http://molprobity:3001";
+export const SIM_URL = process.env.SIM_URL
+  ? process.env.SIM_URL
+  : "http://sim:3001";
 
 app.use(
   cors({
@@ -49,6 +53,7 @@ setInterval(() => {
 
 createJobCreationWorker();
 createAnalysisWorker();
+createSimulationWorker();
 
 app.listen(PORT, HOST, () => {
   console.log(`Server is running at http://${HOST}:${PORT}`);

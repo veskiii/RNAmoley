@@ -26,10 +26,11 @@ export function createJobCreationWorker() {
       new_filename: string;
       name: string;
       metadata: Metadata;
+      modelsDir?: string;
   }>(
     "create-job",
     async (job) => {
-      const { id, original_filename, original_extension, new_filename, name, metadata } = job.data;
+      const { id, original_filename, original_extension, new_filename, name, metadata, modelsDir = "models" } = job.data;
 
       await performJobCreation({
         id,
@@ -37,7 +38,8 @@ export function createJobCreationWorker() {
         original_extension,
         new_filename,
         name,
-        metadata
+        metadata,
+        modelsDir
       });
     },
       {
@@ -58,7 +60,8 @@ export async function addCreateJobTask(
   original_extension: string,
   new_filename: string,
   name: string,
-  metadata: Metadata
+  metadata: Metadata,
+  modelsDir = "models"
 ) {
   await createJobQueue.add("create-job", {
     id,
@@ -66,12 +69,14 @@ export async function addCreateJobTask(
     original_extension,
     new_filename,
     name,
-    metadata
+    metadata,
+    modelsDir
   });
 }
 
 
-export const performJobCreation = async (job:NewJob) => {
+export const performJobCreation = async (job:NewJob & { modelsDir?: string }) => {
+    const modelsDir = job.modelsDir || "models";
     var pdbFile;
 
     // Convert to PDB if needed
@@ -90,13 +95,13 @@ export const performJobCreation = async (job:NewJob) => {
     }
 
     // Split file into models
-    const numberOfModels = await splitFileIntoModels(job.id, job.original_extension);
+    const numberOfModels = await splitFileIntoModels(job.id, job.original_extension, modelsDir);
     console.log(`Number of models: ${numberOfModels} in job ${job.id}`);
 
     job.metadata.model_count = numberOfModels;
     await saveMetadata(job.id, job.metadata);
 
-    var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension);
+    var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension, modelsDir);
     if (!annotations) {
         handleAnalysisError(job.id, job.metadata, "Failed to annotate models.");
         return;
@@ -104,23 +109,23 @@ export const performJobCreation = async (job:NewJob) => {
 
 
     // Correct models
-    // await correctModels(job.id, job.metadata, numberOfModels, job.original_extension);
+    // await correctModels(job.id, job.metadata, numberOfModels, job.original_extension, modelsDir);
 
     if (job.original_extension !== "pdb") {
       // convert models to PDB
       for (let i = 0; i < numberOfModels; i++) {
-        const modelPath = `models/${i + 1}.${job.original_extension}`;
+        const modelPath = `${modelsDir}/${i + 1}.${job.original_extension}`;
         await convertToPDB(job.id, job.metadata, modelPath);
       }
     }
 
-    // var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension);
+    // var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension, modelsDir);
     // if (!annotations) {
     //     handleAnalysisError(job.id, job.metadata, "Failed to annotate models.");
     //     return;
     // }
 
-    var structuralElements = await extractStructuralElements(job.id, job.metadata, numberOfModels);
+    var structuralElements = await extractStructuralElements(job.id, job.metadata, numberOfModels, modelsDir);
     if (!structuralElements) {
         handleAnalysisError(job.id, job.metadata, "Failed to extract structural elements.");
         return;
@@ -146,9 +151,9 @@ const convertToPDB = async (jobId: UUID, metadata: Metadata, newFilename: string
     }
 }
 
-const splitFileIntoModels = async (jobId : UUID, sourceFormat: string) : Promise<number> => {
+const splitFileIntoModels = async (jobId : UUID, sourceFormat: string, modelsDir = "models") : Promise<number> => {
     var numberOfModels = 1;
-      const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}&sourceFormat=${sourceFormat}`, {
+      const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`, {
         method: "POST",
       });
       numberOfModels = ((await splitResponse.json()) as splitModelsResponse)
@@ -156,9 +161,9 @@ const splitFileIntoModels = async (jobId : UUID, sourceFormat: string) : Promise
     return numberOfModels;
 }
 
-const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string) => {
+const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string, modelsDir = "models") => {
     const correctResponse = await fetch(
-        `${TOOLS_URL}/correct?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}`,
+        `${TOOLS_URL}/correct?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
         {
             method: "POST",
         }
@@ -169,9 +174,9 @@ const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: nu
     }
 }
 
-const annotateModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string): Promise<Annotation[][] | undefined> => {
+const annotateModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string, modelsDir = "models"): Promise<Annotation[][] | undefined> => {
     const annotateResponse = await fetch(
-        `${TOOLS_URL}/annotate?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}`,
+        `${TOOLS_URL}/annotate?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
         {
           method: "POST",
         }
@@ -188,9 +193,9 @@ const annotateModels = async (jobId: UUID, metadata: Metadata, numberOfModels: n
       return annotateResult;
 }
 
-const extractStructuralElements = async (jobId: UUID, metadata: Metadata, numberOfModels: number) : Promise<StructuralElement[][] | undefined> => {
+const extractStructuralElements = async (jobId: UUID, metadata: Metadata, numberOfModels: number, modelsDir = "models") : Promise<StructuralElement[][] | undefined> => {
     const extractMotifsResponse = await fetch(
-        `${TOOLS_URL}/extractMotifs?id=${jobId}&numberOfModels=${numberOfModels}`,
+        `${TOOLS_URL}/extractMotifs?id=${jobId}&numberOfModels=${numberOfModels}&modelsDir=${modelsDir}`,
         {
           method: "POST",
         }

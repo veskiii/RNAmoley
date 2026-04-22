@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "../common/loading";
-import "../../App.css";
 import Molstar from "../visualizations/molStarSummaryComponent";
 import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
 import {
@@ -18,13 +17,16 @@ import DownloadFile from "../common/downloadFile";
 import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
 import { colorMapByRange, getColor } from "../utils/ColorUtils";
 import { transformJobToChains } from "../utils/transformJobToChains";
-import { fetchMyData } from "../utils/api";
+import { fetchMyData, startSimulation } from "../utils/api";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
+import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 
 const SummaryPanel: React.FC = () => {
+  type ResultsSource = "original" | "simulation";
+
   const { jobId, modelNumber } = useParams();
   const [selectedModel, setSelectedModel] = useState<number>(
     modelNumber ? parseInt(modelNumber) : 1
@@ -48,7 +50,91 @@ const SummaryPanel: React.FC = () => {
   );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [sidebarTab, setSidebarTab] = useState(0);
+  const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
+  const [isStartingSimulation, setIsStartingSimulation] = useState(false);
+  const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
+  const [simulationStartSuccess, setSimulationStartSuccess] = useState<string | null>(null);
+  const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
+  const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
+
+  const isSimulationStatus = (status: string) => status.startsWith("simulation_");
+  const selectedModelStatus = myData?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+  const canStartSimulation =
+    ["completed", "sim_completed", "sim_failed"].includes(selectedModelStatus || "") ||
+    (!selectedModelStatus && myData?.metadata.status === "completed");
+  const simulationTabEnabled = selectedModelStatus === "sim_completed";
+  const isSimulationInProgress = ["sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(selectedModelStatus || "");
+  const hasSimulationStarted = (selectedModelStatus || "").startsWith("sim_");
+
+  useEffect(() => {
+    if (selectedResultsSource === "simulation" && !simulationTabEnabled) {
+      setSelectedResultsSource("original");
+    }
+  }, [selectedResultsSource, simulationTabEnabled]);
+
+  const getModelStatusPresentation = (status?: string) => {
+    if (!status) {
+      return { label: "", className: "" };
+    }
+
+    if (status === "created") {
+      return { label: "Created", className: "bg-slate-200 text-slate-900" };
+    }
+
+    if (status === "starting") {
+      return { label: "Starting", className: "bg-yellow-300 text-black" };
+    }
+
+    if (status === "running") {
+      return {
+        label: "Running",
+        className: "bg-blue-500 text-white",
+      };
+    }
+
+    if (status === "completed") {
+      return { label: "Completed", className: "bg-green-600 text-white" };
+    }
+
+    if (status === "failed") {
+      return { label: "Failed", className: "bg-red-500 text-white" };
+    }
+
+    if (status === "sim_starting") {
+      return { label: "Simulation starting", className: "bg-cyan-300 text-cyan-950" };
+    }
+
+    if (status === "sim_running") {
+      return { label: "Simulation running", className: "bg-cyan-500 text-white" };
+    }
+
+    if (status === "sim_finished") {
+      return { label: "Simulation done", className: "bg-sky-600 text-white" };
+    }
+
+    if (status === "sim_analyzing") {
+      return { label: "Analyzing simulation", className: "bg-indigo-600 text-white" };
+    }
+
+    if (status === "sim_completed") {
+      return { label: "Simulation completed", className: "bg-cyan-700 text-white" };
+    }
+
+    if (status === "sim_failed") {
+      return { label: "Simulation failed", className: "bg-rose-600 text-white" };
+    }
+
+    return { label: status, className: "bg-gray-300 text-black" };
+  };
+
+  const getModelListStatus = (status?: string) => {
+    if (!status) return status;
+    if (status.startsWith("sim_")) return "completed";
+    return status;
+  };
+
+  const simulationStatusPresentation = getModelStatusPresentation(selectedModelStatus);
 
   const getClashesForForna = () => {
     if (showClashes && myData) {
@@ -85,25 +171,27 @@ const SummaryPanel: React.FC = () => {
       console.warn("No data in myData.results.data");
       return;
     }
-    // if (myData.results.mode === "fragment" || myData.results.mode === "full") {
+    //@ts-ignore
+    const nodes = d3.selectAll("circle.fornac-node");
+    nodes.style("fill", "white");
+
+    const nodeByNumber = new Map<number, any>();
+    nodes.each(function () {
       //@ts-ignore
-      const nodes = d3.selectAll("circle.fornac-node");
-      nodes.style("fill", "white");
-    // }
+      const node = d3.select(this);
+      const nodeNum = parseInt(node.attr("node_num"), 10);
+      if (!Number.isNaN(nodeNum)) {
+        nodeByNumber.set(nodeNum, node);
+      }
+    });
+
     myData.results.data.forEach((residue) => {
       try {
-        //@ts-ignore
-        const node = d3.select(
-          `circle.fornac-node[node_num="${residue.residue_number}"]`
-        );
-        if (!node.empty()) {
+        const node = nodeByNumber.get(residue.residue_number);
+        if (node) {
           node
             .classed("fornac-selectedNode", true)
             .style("fill", getColor(residue, selectedQualityScore));
-        // } else if (!node.empty() && myData.results.mode === "fragment") {
-        //   //@ts-ignore
-
-        //   node.classed("fornac-selectedNode", true).style("fill", "#6fc2d3");
         } else {
           // console.warn(`Node with index ${residue.residue_number} not found`);
         }
@@ -128,10 +216,10 @@ const SummaryPanel: React.FC = () => {
     myData,
   ]);
 
-  const getColorMap = () => {
+  const updateColorMaps = () => {
     if (!myData || !myData.results || !myData.results.data) {
       console.error("No data in myData.results.data");
-      return <ErrorPage />;
+      return;
     }
 
     myData.results.data.forEach((residue) => {
@@ -143,6 +231,10 @@ const SummaryPanel: React.FC = () => {
       badBondsColorMap.set(residue.residue_number, color);
     });
   };
+
+  useEffect(() => {
+    updateColorMaps();
+  }, [myData]);
 
 
   const toggleRangeMenuVisibility = () => {
@@ -158,7 +250,11 @@ const SummaryPanel: React.FC = () => {
     async function fetchData() {
       //console.log("Start to fetch data");
       try {
-        const response = await fetchMyData(jobId, selectedModel);
+        const effectiveResultsSource =
+          selectedResultsSource === "simulation" && simulationTabEnabled
+            ? "simulation"
+            : "original";
+        const response = await fetchMyData(jobId, selectedModel, effectiveResultsSource);
         const data = await response.json();
         if (!response.ok) {
           // console.log(
@@ -192,7 +288,8 @@ const SummaryPanel: React.FC = () => {
             return;
             }
             if (
-              data.metadata.status === "running" &&
+              data.results &&
+              (data.metadata.status === "running" || data.metadata.status === "completed" || isSimulationStatus(data.metadata.status)) &&
               data.results &&
               isLoading &&
               !hasStoppedLoading.current
@@ -202,8 +299,14 @@ const SummaryPanel: React.FC = () => {
               setIsLoading(false);
               hasStoppedLoading.current = true;
             }
-            if (data.metadata.status === "completed") {
-              if (isLoading) setInitialQualityScore(data);
+
+            const currentModelStatus = data.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+            const isBackgroundWorkActive =
+              ["creating", "starting", "running", "simulation_starting", "simulation_running"].includes(data.metadata.status) ||
+              ["starting", "running", "sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(currentModelStatus || "");
+
+            if (!isBackgroundWorkActive) {
+              if (isLoading && data.results) setInitialQualityScore(data);
               clearInterval(interval);
               setIsLoading(false);
             }
@@ -223,13 +326,46 @@ const SummaryPanel: React.FC = () => {
 
     // Cleanup interval when component unmounts or jobId changes
     return () => clearInterval(interval);
-  }, [jobId, selectedModel]);
+  }, [jobId, selectedModel, selectedResultsSource, refreshToken]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
       setQualityScore(QualityScore.CLASH_SCORE);
     } else {
       setQualityScore(QualityScore.SUITENESS);
+    }
+  };
+
+  const handleStartSimulation = async (values: SimulationFormValues) => {
+    if (!jobId) {
+      setSimulationStartError("Brak ID zadania.");
+      return;
+    }
+
+    setIsStartingSimulation(true);
+    setSimulationStartError(null);
+    setSimulationStartSuccess(null);
+
+    try {
+      await startSimulation({
+        id: jobId,
+        modelNumber: selectedModel,
+        restraintBackboneForce: values.restraintBackboneForce,
+        restraintGlobalForce: values.restraintGlobalForce,
+        restraintBasePairsForce: values.restraintBasePairsForce,
+        rmsdCutoff: values.rmsdCutoff,
+      });
+
+      setSimulationStartSuccess("Simulation started.");
+      setIsSimulationModalOpen(false);
+      setSelectedResultsSource("original");
+      setRefreshToken((prev) => prev + 1);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to start simulation.";
+      setSimulationStartError(message);
+    } finally {
+      setIsStartingSimulation(false);
     }
   };
 
@@ -375,11 +511,16 @@ const SummaryPanel: React.FC = () => {
         myData &&
         myData.metadata.resultsStatus &&
         myData.metadata.resultsStatus[modelNum.toString()] &&
-        !["running", "completed"].includes(myData.metadata.resultsStatus[modelNum.toString()].status)
+        myData.metadata.resultsStatus[modelNum.toString()].status === "starting"
       ) {
         return;
       }
-      setInitialized(false);
+
+      const targetModelStatus = myData?.metadata.resultsStatus?.[modelNum.toString()]?.status;
+      if (selectedResultsSource === "simulation" && targetModelStatus !== "sim_completed") {
+        setSelectedResultsSource("original");
+      }
+
       setSelectedModel(modelNum);
     }
 
@@ -489,11 +630,14 @@ const SummaryPanel: React.FC = () => {
                 <>
                   {Array.from({ length: myData.metadata.model_count }, (_, i) => {
                     const modelNum = i + 1;
+                    const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
+                    const modelListStatus = getModelListStatus(modelStatus);
+                    const modelStatusPresentation = getModelStatusPresentation(modelListStatus);
                     return (
                       <div
                         key={"model" + modelNum}
                         className={`mb-4 p-2 bg-white rounded shadow transition-all
-                          ${myData && myData.metadata.resultsStatus && ["created", "starting"].includes(myData.metadata.resultsStatus[modelNum].status) ?
+                          ${myData && myData.metadata.resultsStatus && myData.metadata.resultsStatus[modelNum].status === "starting" ?
                               "cursor-not-allowed" : "cursor-pointer"}
                           ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
                         } flex items-center justify-between`}
@@ -503,20 +647,11 @@ const SummaryPanel: React.FC = () => {
                         {myData && myData.metadata.resultsStatus && (
                           <div className="flex flex-col items-end">
                             <span
-                              className={`ml-2 p-2 rounded-full inline-block
-                                ${["created", "starting"].includes(myData.metadata.resultsStatus[modelNum].status) ?
-                              "bg-yellow-300 text-black" :
-                              myData.metadata.resultsStatus[modelNum].status === "running" ? "bg-blue-500 text-white" :
-                              myData.metadata.resultsStatus[modelNum].status === "completed" ? "bg-green-600 text-white" :
-                              myData.metadata.resultsStatus[modelNum].status === "failed" ? "bg-red-500 text-white" : ""}`}
-                              title={myData.metadata.resultsStatus[modelNum].status}
-                            >{["created", "starting"].includes(myData.metadata.resultsStatus[modelNum].status) ?
-                              "Queued" :
-                              myData.metadata.resultsStatus[modelNum].status === "running" ? "Running" :
-                              myData.metadata.resultsStatus[modelNum].status === "completed" ? "Completed" :
-                              myData.metadata.resultsStatus[modelNum].status === "failed" ? "Failed" : ""}
+                              className={`ml-2 p-2 rounded-full inline-block ${modelStatusPresentation.className}`}
+                              title={modelListStatus || ""}
+                            >{modelStatusPresentation.label}
                             </span>
-                            {myData.metadata.resultsStatus[modelNum].status === "failed" && (
+                            {["failed"].includes(modelStatus || "") && (
                               <div className="text-red-500 text-sm mt-1">${myData.metadata.resultsStatus[modelNum].error_message}</div>
                             )}
                           </div>
@@ -611,6 +746,101 @@ const SummaryPanel: React.FC = () => {
                 </div>
               </>)}
             </div>
+            <div className="mt-3 rounded-lg bg-white p-3 shadow">
+              <div
+                role="button"
+                tabIndex={canStartSimulation ? 0 : -1}
+                aria-disabled={!canStartSimulation}
+                onClick={() => {
+                  if (!canStartSimulation) return;
+                  setSimulationStartError(null);
+                  setSimulationStartSuccess(null);
+                  setIsSimulationModalOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (!canStartSimulation) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSimulationStartError(null);
+                    setSimulationStartSuccess(null);
+                    setIsSimulationModalOpen(true);
+                  }
+                }}
+                className={`w-full rounded-lg bg-moley-darkGreen px-4 py-2 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                  canStartSimulation ? "hover:opacity-95 cursor-pointer" : "cursor-not-allowed opacity-50"
+                }`}
+                title={canStartSimulation ? "" : "Structure correction is available after the analysis is completed."}
+              >
+                {canStartSimulation ? "Correct the structure" : "Correct the structure (available after completed)"}
+              </div>
+              {simulationStartSuccess && (
+                <p className="mt-2 text-sm text-green-700">{simulationStartSuccess}</p>
+              )}
+              {simulationStartError && (
+                <p className="mt-2 text-sm text-red-700">{simulationStartError}</p>
+              )}
+
+              {hasSimulationStarted && (
+                <div className="mt-3 border-t border-gray-200 pt-3">
+                  <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
+                  <div className="flex flex-col gap-2">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedResultsSource("original")}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedResultsSource("original");
+                        }
+                      }}
+                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                        selectedResultsSource === "original"
+                          ? "bg-moley-darkGreen text-white"
+                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                      }`}
+                    >
+                      Original results
+                    </div>
+
+                    <div
+                      role="button"
+                      tabIndex={simulationTabEnabled ? 0 : -1}
+                      aria-disabled={!simulationTabEnabled}
+                      onClick={() => {
+                        if (simulationTabEnabled) {
+                          setSelectedResultsSource("simulation");
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (!simulationTabEnabled) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedResultsSource("simulation");
+                        }
+                      }}
+                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                        selectedResultsSource === "simulation"
+                          ? "bg-moley-darkGreen text-white"
+                          : "bg-gray-100 text-gray-800"
+                      } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-200"}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Simulation results</span>
+                        {isSimulationInProgress && (
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                        )}
+                      </div>
+                      <div className="mt-1">
+                        <span className={`inline-block rounded-full px-2 py-1 text-xs ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                          {simulationStatusPresentation.label || "No simulation"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             {/* Przyciski pobierania*/}
             <div className="mt-4 flex justify-center">
             <DownloadLink />
@@ -633,6 +863,7 @@ const SummaryPanel: React.FC = () => {
               <div className="overflow-x-auto">
                 {/* residue table */}
                 <ResultsResidueTable
+                key={`residue-table-${selectedModel}-${selectedResultsSource}`}
                 data={myData.results.data}
                 analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
                 selectedScore={selectedQualityScore}
@@ -661,9 +892,7 @@ const SummaryPanel: React.FC = () => {
                 />
               </div>
               <div className="w-1/2 h-full p-5">
-                {getColorMap()}
                 <Molstar
-                  key={JSON.stringify(myData.results.data)}
                   useInterface={true}
                   file={myData.pdb_file_string}
                   chains={chainsState}
@@ -679,6 +908,17 @@ const SummaryPanel: React.FC = () => {
         </div>
       </div>
       <SmallScreenPage />
+      <SimulationStartModal
+        isOpen={isSimulationModalOpen}
+        isSubmitting={isStartingSimulation}
+        errorMessage={simulationStartError || undefined}
+        onClose={() => {
+          if (!isStartingSimulation) {
+            setIsSimulationModalOpen(false);
+          }
+        }}
+        onSubmit={handleStartSimulation}
+      />
     </div>
   );
 };

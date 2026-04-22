@@ -1,0 +1,9 @@
+vmd -dispdev text -e psfgen.tcl
+cp output.pdb target.pdb
+python run_restraints_single.py --namd-bin namd3
+
+API test (enqueue job):
+python tests/send_sim_job.py --environment-path "/usr/src/app/public/jobs/01_test" --model-number "1"
+
+API test (job status):
+python tests/get_sim_job_status.py 1
