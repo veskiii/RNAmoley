@@ -1,4 +1,4 @@
-FROM dnatco-cli:latest
+FROM ghcr.io/veskiii/dnatco-cli:2026-04-22
 
 ENV NODE_ENV=production
 
