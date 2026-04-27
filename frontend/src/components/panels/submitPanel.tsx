@@ -8,7 +8,7 @@ import React, {
 import "../../App.css";
 import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
-import HelpIcon from "../common/helpIcon";
+import HomeIcon from "../common/homeIcon";
 import Logo from "../common/logo";
 import { createJob, fetchJobCreation } from "../utils/api";
 import { isFileValid } from "../utils/fileValidation";
@@ -150,15 +150,14 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="desktop-content w-full h-full" style={{ color: "black" }}>
-      <div className="flex flex-row pt-2 pl-[10vw] gap-8">
+      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
         <Logo />
-        {/* <HomeIcon /> */}
-        <HelpIcon />
+        <HomeIcon />
       </div>
-      <div className="flex flex-col items-center px-[10vw] pt-6">
+      <div className="flex flex-col items-center px-[10vw] pt-12">
         <form onSubmit={handleSubmit}>
           <div className="flex flex-row">
-            <div className="space-y-12">
+            <div className="space-y-10">
               <h2 className="text-base/7 font-semibold text-gray-900">
                 Upload RNA 3D structure in the PDB/mmCIF file
               </h2>

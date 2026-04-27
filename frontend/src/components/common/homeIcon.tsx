@@ -1,16 +1,22 @@
-// import { FaHome } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const HomeIcon = () => {
-  const navigate = useNavigate();
-
   return (
     <div
-      className="justify-center flex flex-row items-center pl-2 text-md font-md z-[2000] font-medium cursor-pointer transition-colors hover:text-teal-600"
-      onClick={() => navigate("/")}
+      className="justify-start flex flex-row items-center gap-4 pl-2 text-md font-medium z-[2000] transition-colors"
     >
-      {/* <FaHome style={{ width: '2em', height: '2em', marginRight: '0.5em'}} /> */}
-      Submission Panel
+      <Link to="/" className="font-medium whitespace-nowrap hover:text-teal-600">
+        Home
+      </Link>
+      <Link to="/help" className="whitespace-nowrap hover:text-teal-600">
+        Help
+      </Link>
+      <Link to="/about" className="whitespace-nowrap hover:text-teal-600">
+        About
+      </Link>
+      <Link to="/cite" className="whitespace-nowrap hover:text-teal-600">
+        Cite Us
+      </Link>
     </div>
   );
 };

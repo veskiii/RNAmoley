@@ -6,7 +6,9 @@ import Panel from "./components/panels/analysisPanel";
 import SummaryPanel from "./components/panels/summaryPanel";
 import JobProcessing from "./components/common/JobProcessing";
 import ErrorPage from "./components/common/ErrorPage";
-import HelpPage from "./components/common/helpPage";
+import HelpPage from "./components/panels/helpPage";
+import AboutPage from "./components/panels/AboutPage";
+import CiteUsPage from "./components/panels/CiteUsPage";
 
 // export const API_URL = "https://rnamoley.cs.put.poznan.pl/api/v1";
 // export const API_URL = "http://localhost:3001/v1";
@@ -50,6 +52,8 @@ function App() {
           <Route path="/jobProcessing" element={<JobProcessing />} />
           <Route path="/errorPage" element={<ErrorPage />} />
           <Route path="/help" element={<HelpPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/cite" element={<CiteUsPage />} />
           <Route path="*" element={<ErrorPage />} />
         </Routes>
       </Router>
