@@ -901,6 +901,7 @@ const SummaryPanel: React.FC = () => {
                   setInitialized={setInitialized}
                   resultResidues={myData.results.data}
                   selectedQualityScore={selectedQualityScore}
+                  radius={myData.metadata.radius}
                 />
               </div>
             </div>

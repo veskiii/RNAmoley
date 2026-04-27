@@ -31,6 +31,14 @@ const SUPPORTED_QUALITY_SCORES = new Set([
   QualityScore.SUITENESS,
 ]);
 
+const C1_PRIME_SPHERES_QUALITY_SCORES = new Set([
+  QualityScore.BAD_ANGLES,
+  QualityScore.BAD_BONDS,
+  QualityScore.CLASH_SCORE,
+  // QualityScore.SUGAR_PUCKER_OUT,
+  // QualityScore.SUITENESS,
+]);
+
 const Molstar = (props) => {
   const {
     useInterface,
@@ -49,14 +57,20 @@ const Molstar = (props) => {
     setChains,
     resultResidues,
     selectedQualityScore,
+    radius,
   } = props;
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
   const coloringRunId = useRef(0);
   const isStructureLoading = useRef(false);
+  const c1PrimeComponentsRef = useRef([]);
   const [canColor, setCanColor] = useState(false);
   const [isContainerReady, setIsContainerReady] = useState(false);
+  const sphereRadiusAngstrom =
+    typeof radius === "number" && Number.isFinite(radius) && radius > 0
+      ? radius
+      : 2.2;
 
   const mapResiduesToColors = () => {
     if (!SUPPORTED_QUALITY_SCORES.has(selectedQualityScore)) {
@@ -367,6 +381,196 @@ const Molstar = (props) => {
     }
   }, [showAxes]);
 
+  useEffect(() => {
+    if (!initialized || !plugin.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      if (!C1_PRIME_SPHERES_QUALITY_SCORES.has(selectedQualityScore)) {
+        c1PrimeComponentsRef.current = [];
+        try {
+          isStructureLoading.current = true;
+          await loadStructure(pdbId, url, file, plugin.current);
+        } finally {
+          isStructureLoading.current = false;
+        }
+        if (!cancelled) {
+          await changeNucleotideColors();
+        }
+        return;
+      }
+
+      c1PrimeComponentsRef.current = [];
+      try {
+        isStructureLoading.current = true;
+        await loadStructure(pdbId, url, file, plugin.current);
+      } finally {
+        isStructureLoading.current = false;
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      await changeNucleotideColors();
+
+      if (cancelled) {
+        return;
+      }
+
+      const result = await addC1PrimeSpheres(plugin.current);
+      if (!cancelled && result) {
+        c1PrimeComponentsRef.current = result;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedQualityScore, resultResidues, initialized, radius]);
+
+  const addC1PrimeSpheres = async (pluginInstance) => {
+    const structureCell =
+      pluginInstance?.managers?.structure?.hierarchy?.current?.structures?.[0]
+        ?.cell;
+    const structureData = structureCell?.obj?.data;
+
+    if (!structureCell || !structureData) {
+      return null;
+    }
+
+    const coloredResidues = mapResiduesToColors().filter((entry) => {
+      const normalizedColor = String(entry?.color || "").trim().toLowerCase();
+      return normalizedColor !== "#ffffff" && normalizedColor !== "ffffff";
+    });
+
+    if (coloredResidues.length === 0) {
+      return null;
+    }
+
+    const isC1PrimeAtom = MS.core.logic.or([
+      MS.core.rel.eq([
+        MolScriptBuilder.struct.atomProperty.macromolecular.label_atom_id(),
+        "C1'",
+      ]),
+      MS.core.rel.eq([
+        MolScriptBuilder.struct.atomProperty.macromolecular.auth_atom_id(),
+        "C1'",
+      ]),
+      MS.core.rel.eq([
+        MolScriptBuilder.struct.atomProperty.macromolecular.label_atom_id(),
+        "C1*",
+      ]),
+      MS.core.rel.eq([
+        MolScriptBuilder.struct.atomProperty.macromolecular.auth_atom_id(),
+        "C1*",
+      ]),
+    ]);
+
+    const groupedByColor = {};
+
+    coloredResidues.forEach((entry) => {
+      if (!groupedByColor[entry.color]) {
+        groupedByColor[entry.color] = [];
+      }
+      groupedByColor[entry.color].push(entry);
+    });
+
+    const components = [];
+
+    for (const color in groupedByColor) {
+      const entries = groupedByColor[color];
+      const residueGroups = [];
+
+      for (const residue of entries) {
+        const residueByAuth = MS.struct.generator.atomGroups({
+          "chain-test": MS.core.rel.eq([
+            MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+            residue.chainId,
+          ]),
+          "residue-test": MS.core.rel.eq([
+            MolScriptBuilder.struct.atomProperty.macromolecular.auth_seq_id(),
+            residue.authResidueNumber,
+          ]),
+          "atom-test": isC1PrimeAtom,
+        });
+
+        residueGroups.push(
+          Number.isNaN(residue.labelResidueNumber)
+            ? residueByAuth
+            : MS.struct.combinator.merge([
+                residueByAuth,
+                MS.struct.generator.atomGroups({
+                  "chain-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+                    residue.chainId,
+                  ]),
+                  "residue-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.label_seq_id(),
+                    residue.labelResidueNumber,
+                  ]),
+                  "atom-test": isC1PrimeAtom,
+                }),
+              ])
+        );
+      }
+
+      if (residueGroups.length === 0) continue;
+
+      const c1PrimeAtoms = MS.struct.combinator.merge(residueGroups);
+
+      const c1PrimeSelection = Script.getStructureSelection(
+        c1PrimeAtoms,
+        structureData
+      );
+
+      if (!c1PrimeSelection) continue;
+
+      const c1PrimeLoci = StructureSelection.toLociWithSourceUnits(c1PrimeSelection);
+
+      if (!c1PrimeLoci?.elements?.length) {
+        continue;
+      }
+
+      try {
+        const c1PrimeComponent =
+          await pluginInstance.builders.structure.tryCreateComponentFromExpression(
+            structureCell,
+            c1PrimeAtoms,
+            `c1-prime-atoms-${color}`,
+            { label: `C1' atoms (${color})` }
+          );
+
+        if (!c1PrimeComponent) {
+          continue;
+        }
+
+        const c1PrimeRepr =
+          await pluginInstance.builders.structure.representation.addRepresentation(
+            c1PrimeComponent,
+            {
+              type: "spacefill",
+              typeParams: {
+                sizeFactor: (sphereRadiusAngstrom / 1.7),
+                alpha: 0.35,
+              },
+              color: "uniform",
+              colorParams: { value: Color(parseInt(color.replace("#", ""), 16)) },
+            }
+          );
+
+        components.push({ component: c1PrimeComponent, representation: c1PrimeRepr });
+      } catch (error) {
+        console.warn(`Failed to create C1' spheres for color ${color}`, error);
+      }
+    }
+
+    return components.length > 0 ? components : null;
+  };
+
   const loadStructure = async (pdbId, url, file = null, plugin) => {
     //console.log("Fetching:", pdbId);
     if (plugin) {
@@ -465,6 +669,7 @@ Molstar.propTypes = {
   is3dEnabled: PropTypes.bool,
   resultResidues: PropTypes.array.isRequired,
   selectedQualityScore: PropTypes.any.isRequired,
+  radius: PropTypes.number,
 };
 
 export default Molstar;

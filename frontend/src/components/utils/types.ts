@@ -181,6 +181,8 @@ export interface Metadata {
   model_count: number;
   error_message?: string;
   analyzeNeighborhoods?: boolean;
+  radius?: number;
+  interval?: number;
 }
 
 export enum QualityScore {
