@@ -80,6 +80,8 @@ export interface Metadata {
   resultsStatus?: Record<string, ModelStatus>;
   simulations?: Record<string, SimulationInfo>;
   model_count: number;
+  radius?: number;
+  interval?: number;
   error_message?: string;
   analyzeNeighborhoods?: boolean;
 }

@@ -385,6 +385,8 @@ export async function analyzeStructure(req: Request, res: Response) {
 
   analyzeNeighborhoods = (radius < 0 || interval < 0) ? false : true;
   metadata.analyzeNeighborhoods = analyzeNeighborhoods;
+  metadata.radius = Number(radius);
+  metadata.interval = Number(interval);
 
   metadata.status = "starting";
   if (metadata.resultsStatus === undefined) {

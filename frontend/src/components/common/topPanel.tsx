@@ -1,5 +1,4 @@
-import { Colors } from "./colors";
-import HelpIcon from "./helpIcon";
+import HomeIcon from "./homeIcon";
 import Logo from "./logo";
 
 export interface LogoProps {
@@ -8,13 +7,13 @@ export interface LogoProps {
 
 const TopPanel: React.FC<LogoProps> = ({ page = "Submission panel" }) => {
   return (
-    <div className="flex flex-wrap justify-between items-center mx-auto">
-      <div className="flex flex-none justify-between w-80">
+    <div className="flex overflow-hidden">
+      <div className="w-80">
         <Logo />
-        <HelpIcon />
+        <HomeIcon />
       </div>
-      <div className="flex-grow text-center">
-        <h1 className="text-2xl">{page}</h1>
+      <div className="flex-1 flex justify-center">
+        <h1 className="text-2xl content-center">{page}</h1>
       </div>
     </div>
   );
