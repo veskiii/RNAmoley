@@ -868,6 +868,7 @@ const SummaryPanel: React.FC = () => {
                 analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
                 selectedScore={selectedQualityScore}
                 setSelectedScore={setQualityScore}
+                modelStatus={selectedModelStatus}
                 />
               </div>
             </div>

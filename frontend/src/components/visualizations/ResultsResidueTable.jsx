@@ -3,13 +3,15 @@ import { QualityScore } from "../utils/types";
 import { getColor } from "../utils/ColorUtils";
 import { Colors } from "../common/colors";
 
-const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore }) => {
+const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore, modelStatus }) => {
   const selectedBorderColor = Colors.salmon;
   const neighborhoodScores = [
     QualityScore.CLASH_SCORE,
     QualityScore.BAD_ANGLES,
     QualityScore.BAD_BONDS,
   ];
+
+  const shouldHideSpinners = modelStatus === "completed" || (modelStatus && modelStatus.startsWith("sim_"));
 
   const chainOptions = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -184,7 +186,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 style={activeCellStyle(nucleotide, QualityScore.CLASH_SCORE)}
               >
                 {nucleotide.metrics ? nucleotide.metrics.clashscore : 
-                  nucleotide.selected ? (
+                  !shouldHideSpinners && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
@@ -220,7 +222,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 {nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
                 : 
-                  nucleotide.selected ? (
+                  !shouldHideSpinners && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
@@ -256,7 +258,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 {nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
                 : 
-                  nucleotide.selected ? (
+                  !shouldHideSpinners && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
