@@ -26,9 +26,9 @@ const Dashboard: React.FC = () => {
   const [sphereInterval, setSphereInterval] = useState<number>(1);
 
   const samples = [
-    { id: "good", value: "Example 1", label: "Example 1" },
-    { id: "medium", value: "Example 2", label: "Example 2" },
-    { id: "bad", value: "Example 3", label: "Example 3" },
+    { id: "good", value: "Example 1", label: "Example 1", file: "PZ39_Xiao_4.pdb"},
+    { id: "medium", value: "Example 2", label: "Example 2", file: "PZ39_RNAComposer_3.pdb" },
+    { id: "bad", value: "Example 3", label: "Example 3", file: "PZ39_Dfold_1.pdb" },
   ];
 
   const getSelectedJobName = () => {
@@ -194,6 +194,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => customSetState("example", samples[0].value)}
+                    title={samples[0].file}
                     className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
                       radiobutton == samples[0].value
                         ? "z-10 ring-2 ring-moley-blue text-moley-blue"
@@ -205,6 +206,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => customSetState("example", samples[1].value)}
+                    title={samples[1].file}
                     className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
                       radiobutton == samples[1].value
                         ? "z-10 ring-2 ring-moley-blue text-moley-blue"
@@ -216,6 +218,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => customSetState("example", samples[2].value)}
+                    title={samples[2].file}
                     className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
                       radiobutton == samples[2].value
                         ? "z-10 ring-2 ring-moley-blue text-moley-blue"
