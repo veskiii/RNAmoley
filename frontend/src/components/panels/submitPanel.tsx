@@ -10,6 +10,7 @@ import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import HomeIcon from "../common/homeIcon";
 import Logo from "../common/logo";
+import Footer from "../common/footerComponent";
 import { createJob, fetchJobCreation } from "../utils/api";
 import { isFileValid } from "../utils/fileValidation";
 
@@ -21,11 +22,48 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [useWalkingSphere, setUseWalkingSphere] = useState(false);
+  const [sphereRadius, setSphereRadius] = useState<number>(5);
+  const [sphereInterval, setSphereInterval] = useState<number>(1);
 
-  const samples = [
-    { id: "good", value: "good", label: "good" },
-    { id: "medium", value: "medium", label: "medium" },
-    { id: "bad", value: "bad", label: "bad" },
+  type SamplePreset = {
+    id: string;
+    value: string;
+    label: string;
+    file: string;
+    useWalkingSphere: boolean;
+    sphereRadius: number;
+    sphereInterval: number;
+  };
+
+  const samples: SamplePreset[] = [
+    {
+      id: "good",
+      value: "Example 1",
+      label: "Example 1",
+      file: "PZ39_Xiao_4.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 15,
+      sphereInterval: 5,
+    },
+    {
+      id: "medium",
+      value: "Example 2",
+      label: "Example 2",
+      file: "PZ39_RNAComposer_3.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 5,
+      sphereInterval: 1,
+    },
+    {
+      id: "bad",
+      value: "Example 3",
+      label: "Example 3",
+      file: "PZ39_Dfold_1.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 5,
+      sphereInterval: 1,
+    },
   ];
 
   const getSelectedJobName = () => {
@@ -34,7 +72,7 @@ const Dashboard: React.FC = () => {
     }
 
     if (radiobutton !== "None") {
-      return `Example (${radiobutton})`;
+      return `${radiobutton}`;
     }
 
     return pdbCode.trim();
@@ -48,6 +86,9 @@ const Dashboard: React.FC = () => {
     formData.append("pdbCode", pdbCode || "");
     formData.append("rnaFile", rnaFile || "");
     formData.append("radioButton", radiobutton || "None");
+    formData.append("useWalkingSphere", useWalkingSphere.toString());
+    formData.append("sphereRadius", sphereRadius.toString());
+    formData.append("sphereInterval", sphereInterval.toString());
     try {
       const response = await createJob(formData);
       if (response && response.id) {
@@ -132,6 +173,9 @@ const Dashboard: React.FC = () => {
       clearFileInput();
       setRnaFile(null);
       setRadiobutton("None");
+      setUseWalkingSphere(false);
+      setSphereRadius(5);
+      setSphereInterval(1);
 
       setPdbCode(newValue);
     } else if (field === "example") {
@@ -140,6 +184,12 @@ const Dashboard: React.FC = () => {
       setPdbCode("");
 
       setRadiobutton(newValue);
+      const selectedSample = samples.find(sample => sample.value === newValue);
+      if (selectedSample) {
+        setUseWalkingSphere(selectedSample.useWalkingSphere);
+        setSphereRadius(selectedSample.sphereRadius);
+        setSphereInterval(selectedSample.sphereInterval);
+      }
     } else {
       setPdbCode("");
       setRadiobutton("None");
@@ -149,20 +199,30 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="desktop-content w-full h-full" style={{ color: "black" }}>
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+    <div className="desktop-content min-h-screen w-full flex flex-col" style={{ color: "black" }}>
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
-      <div className="flex flex-col items-center px-[10vw] pt-12">
+      <div className="flex flex-1 flex-col items-center px-[10vw] pt-12">
         <form onSubmit={handleSubmit}>
           <div className="flex flex-row">
             <div className="space-y-10">
+            <div className="flex flex-col justify-center items-center p-5 text-center">
+              <div>
+                <div className="font-bold">Welcome to RNAmoley!</div>
+                <div>
+                  Welcome to RNAmoley, a web server for detailed analysis of RNA 3D 
+                  models (PDB/mmCIF), enabling local detection and refinement of 
+                  geometric and stereochemical errors. 
+                </div>
+              </div>
+            </div>
               <h2 className="text-base/7 font-semibold text-gray-900">
                 Upload RNA 3D structure in the PDB/mmCIF file
               </h2>
 
-              <div className="border-b border-gray-900/10 pb-6">
+              <div className="">
                 <label
                   htmlFor="examples"
                   className="block text-sm/6 font-medium text-gray-900"
@@ -178,6 +238,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => customSetState("example", samples[0].value)}
+                    title={samples[0].file}
                     className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
                       radiobutton == samples[0].value
                         ? "z-10 ring-2 ring-moley-blue text-moley-blue"
@@ -189,6 +250,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => customSetState("example", samples[1].value)}
+                    title={samples[1].file}
                     className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
                       radiobutton == samples[1].value
                         ? "z-10 ring-2 ring-moley-blue text-moley-blue"
@@ -200,6 +262,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => customSetState("example", samples[2].value)}
+                    title={samples[2].file}
                     className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
                       radiobutton == samples[2].value
                         ? "z-10 ring-2 ring-moley-blue text-moley-blue"
@@ -211,7 +274,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-b border-gray-900/10 pb-6">
+              <div >
                 <label
                   htmlFor="pdbCodeInput"
                   className="block text-sm/6 font-medium text-gray-900"
@@ -275,20 +338,47 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col justify-center items-center p-5 text-center">
-              <div>
-                <div className="font-bold">Welcome to RNAmoley!</div>
-                <div>
-                  The webserver analyzes RNA 3D structures to assess their
-                  quality by examining structural elements. You can upload
-                  PDB/mmCIF files, fetch data by PDB ID or use pre-selected
-                  samples.
-                </div>
-              </div>
-            </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-x-6">
+          <div className="flex items-center gap-2 p-4">
+            <label htmlFor="sequential-toggle" className="font-semibold">
+              Analyze residue neighborhoods
+            </label>
+            <input
+              id="sequential-toggle"
+              type="checkbox"
+              checked={useWalkingSphere}
+              onChange={e => setUseWalkingSphere(e.target.checked)}
+              className="w-5 h-5 accent-moley-accentGreen"
+            />
+            </div>
+            {useWalkingSphere && (
+              <div className="mb-4 p-2 bg-white rounded ">
+                <h3 className="font-bold mb-2">Neighborhood sphere</h3>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium mb-1">Radius</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={sphereRadius}
+                    onChange={e => setSphereRadius(parseInt(e.target.value))}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Interval</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={sphereInterval}
+                    onChange={e => setSphereInterval(parseInt(e.target.value))}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
+              </div>
+              )}
+
+          <div className="my-6 flex items-center justify-end gap-x-6">
             <button
               type="submit"
               className="rounded-md px-3 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors"
@@ -322,6 +412,7 @@ const Dashboard: React.FC = () => {
           </div>
         </form>
       </div>
+      <Footer />
     </div>
   );
 };

@@ -260,14 +260,14 @@ export async function createJob(req: Request, res: Response) {
     return;
   }
 
-  const possible_demo_files = ["good", "medium", "bad"];
+  const possible_demo_files = ["Example 1", "Example 2", "Example 3"];
   if (demoFileName !== "None" && !possible_demo_files.includes(demoFileName)) {
     res.status(422).send({ error: "Invalid demo file." });
     return;
   }
 
   if (demoFileName !== "None") {
-    const demoFileBuffer = await getDemoFiles(demoFileName + ".pdb");
+    const demoFileBuffer = await getDemoFiles(demoFileName);
 
     id = randomUUID();
     originalFilename = demoFileName + ".pdb";
@@ -316,6 +316,9 @@ export async function createJob(req: Request, res: Response) {
   const metadata: Metadata = {
     status: "creating",
     model_count: 1,
+    analyzeNeighborhoods: req.body.useWalkingSphere === "true" ? true : false,
+    radius: req.body.useWalkingSphere === "true" ? Number(req.body.sphereRadius) : undefined,
+    interval: req.body.useWalkingSphere === "true" ? Number(req.body.sphereInterval) : undefined,
   };
 
   await saveMetadata(id, metadata);

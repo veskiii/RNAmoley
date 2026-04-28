@@ -1,15 +1,16 @@
 import { Colors } from "../common/colors";
 import Logo from "../common/logo";
 import HomeIcon from "../common/homeIcon";
+import Footer from "../common/footerComponent";
 
 const HelpPage = () => {
   return (
-    <div>
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+    <div className="min-h-screen flex flex-col">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
-      <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
+      <div className="flex flex-1 flex-col items-center pb-16 pt-6">
         <div
           className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
           style={{ background: Colors.backgroundBeige }}
@@ -194,7 +195,7 @@ const HelpPage = () => {
                 <strong>Settings</strong>
                 <ul className="list-disc ml-6">
                   <li>
-                    <strong>Fornac settings:</strong> Customize the RNA secondary
+                    <strong>Forna settings:</strong> Customize the RNA secondary
                     structure graph view to fit your preferences.
                   </li>
                   <li>
@@ -219,7 +220,7 @@ const HelpPage = () => {
               className="text-xl font-bold mt-5 mb-4"
               style={{ color: Colors.blue }}
             >
-              Graph customization - Fornac options
+              Graph customization - Forna options
             </h3>
             <p>
               Enhance the visual experience in both Analysis and Result Panel
@@ -339,6 +340,7 @@ const HelpPage = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

@@ -4,42 +4,176 @@ import "../../App.css";
 import Molstar from "../visualizations/molStarComponent";
 import FornaComponent from "../visualizations/fornacWrapper";
 import { useNavigate, useParams } from "react-router-dom";
-import FornaControls from "../common/fornaControls";
-import Accordion from "@mui/material/Accordion";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import AccordionDetails from "@mui/material/AccordionDetails";
-import Typography from "@mui/material/Typography";
-import Select, { SelectChangeEvent } from "@mui/material/Select";
+import { SelectChangeEvent } from "@mui/material/Select";
 import { Job, Chain, Nucleotide, SelectedFragment, ChainElement } from "../utils/types";
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
-import { Colors } from "../common/colors";
-import Logo from "../common/logo";
 import ErrorPage from "../common/ErrorPage";
 import RangeSelecting from "../common/rangeSelecting";
-import HomeIcon from "../common/homeIcon";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
+import Footer from "../common/footerComponent";
 import ResidueTable from "../visualizations/ResidueTable";
+
+type AutoSelectFragmentSpec = {
+  model: number;
+  chainName: string;
+  start: number;
+  end: number;
+  label: string;
+};
+
+type AutoSelectFragmentConfig = {
+  fragment: string;
+  label: string;
+};
+
+const AUTO_SELECT_FRAGMENTS_BY_JOB: Record<string, AutoSelectFragmentConfig[]> = {
+  "Example 1": [{ fragment: "(1:A:1-90)", label: "Range 1-90" }],
+  "Example 2": [{ fragment: "(1:A:11-36)", label: "Range 11-36" }],
+  "Example 3": [{ fragment: "(1:A:42-83)", label: "Range 42-83" }],
+};
+
+function parseAutoSelectFragmentSpec(
+  entry: AutoSelectFragmentConfig
+): AutoSelectFragmentSpec | null {
+  const { fragment, label } = entry;
+  const match = fragment.match(/^\(\s*(\d+)\s*:\s*([^:()]+)\s*:\s*(\d+)(?:-(\d+))?\s*\)$/);
+  if (!match) {
+    return null;
+  }
+
+  const model = Number(match[1]);
+  const chainName = match[2].trim();
+  const start = Number(match[3]);
+  const end = Number(match[4] ?? match[3]);
+
+  if (
+    !Number.isFinite(model) ||
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    start <= 0 ||
+    end <= 0 ||
+    start > end
+  ) {
+    return null;
+  }
+
+  return {
+    model,
+    chainName,
+    start,
+    end,
+    label,
+  };
+}
+
+function applyConfiguredSelections(
+  jobName: string | undefined,
+  model: number,
+  chains: Chain[]
+): {
+  chains: Chain[];
+  selectedFragments: SelectedFragment[];
+  selectedChain: string;
+} {
+  const configuredSpecs = jobName ? AUTO_SELECT_FRAGMENTS_BY_JOB[jobName] ?? [] : [];
+  if (configuredSpecs.length === 0) {
+    return {
+      chains,
+      selectedFragments: [],
+      selectedChain: chains[0]?.name || "",
+    };
+  }
+
+  const parsedSpecs = configuredSpecs
+    .map(parseAutoSelectFragmentSpec)
+    .filter((spec): spec is AutoSelectFragmentSpec => spec !== null)
+    .filter((spec) => spec.model === model);
+
+  if (parsedSpecs.length === 0) {
+    return {
+      chains,
+      selectedFragments: [],
+      selectedChain: chains[0]?.name || "",
+    };
+  }
+
+  const selectedFragments: SelectedFragment[] = [];
+  const selectedResiduesByChain = new Map<string, Set<number>>();
+  let selectedChain = chains[0]?.name || "";
+
+  parsedSpecs.forEach((spec) => {
+    const chain = chains.find((candidate) => candidate.name === spec.chainName);
+    if (!chain) {
+      return;
+    }
+
+    const residueIds = chain.nucleotides
+      .filter(
+        (nucleotide) =>
+          nucleotide.original_index >= spec.start && nucleotide.original_index <= spec.end
+      )
+      .map((nucleotide) => nucleotide.index);
+
+    if (residueIds.length === 0) {
+      return;
+    }
+
+    if (!selectedResiduesByChain.has(spec.chainName)) {
+      selectedResiduesByChain.set(spec.chainName, new Set<number>());
+    }
+
+    const selectedResidues = selectedResiduesByChain.get(spec.chainName);
+    residueIds.forEach((residueId) => selectedResidues?.add(residueId));
+
+    selectedFragments.push({
+      name: spec.label,
+      chainName: spec.chainName,
+      residues: residueIds,
+      deselectedResidues: [],
+    });
+
+    if (!selectedChain) {
+      selectedChain = spec.chainName;
+    }
+  });
+
+  const selectedChains = chains.map((chain) => {
+    const selectedResidues = selectedResiduesByChain.get(chain.name);
+    if (!selectedResidues || selectedResidues.size === 0) {
+      return chain;
+    }
+
+    return {
+      ...chain,
+      nucleotides: chain.nucleotides.map((nucleotide) =>
+        selectedResidues.has(nucleotide.index)
+          ? { ...nucleotide, selected: true }
+          : nucleotide
+      ),
+    };
+  });
+
+  return {
+    chains: selectedChains,
+    selectedFragments,
+    selectedChain,
+  };
+}
 
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
-
-  const [sphereRadius, setSphereRadius] = useState<number>(5);
-  const [sphereInterval, setSphereInterval] = useState<number>(1);
-
   const [labelInterval, setLabelInterval] = useState(10);
   const [numbering, setNumbering] = useState(false);
   const [nodeOutline, setNodeOutline] = useState(true);
   const [nodeLabel, setNodeLabel] = useState(true);
   const [links, setLinks] = useState(true);
-  const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [selectedModel, setSelectedModel] = useState<number>(1);
-  const [useWalkingSphere, setUseWalkingSphere] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>(
     chainsState[0]?.name|| ""
   );
@@ -54,6 +188,7 @@ const Panel: React.FC = () => {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [sidebarTab, setSidebarTab] = useState(0);
+  const [showFornaSettings, setShowFornaSettings] = useState(false);
   const [modelSelections, setModelSelections] = useState<Record<number, {chainsState: Chain[], selectedFragments: SelectedFragment[]}>>({});
 
   const selectedList = useMemo<ChainElement[]>(() => {
@@ -78,8 +213,15 @@ const Panel: React.FC = () => {
   const isDisabled = selectedList.length === 0;
 
   useEffect(() => {
-    setSelectedChain(chainsState[0]?.name || "");
-  }, [chainsState]);
+    if (chainsState.length === 0) {
+      setSelectedChain("");
+      return;
+    }
+
+    if (!selectedChain || !chainsState.some((chain) => chain.name === selectedChain)) {
+      setSelectedChain(chainsState[0]?.name || "");
+    }
+  }, [chainsState, selectedChain]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -95,6 +237,10 @@ const Panel: React.FC = () => {
 
   //do placeholder z max i min original_id nukleotydów podanego chain
   useEffect(() => {
+    if (!selectedChain) {
+      return;
+    }
+
     chainsState.forEach((chain) => {
       if (chain.name === selectedChain) {
         const indices = chain.nucleotides.map((nucleotide) => nucleotide.index);
@@ -107,7 +253,7 @@ const Panel: React.FC = () => {
         setInputValueEnd(max.toString());
       }
     });
-  }, [selectedChain]);
+  }, [chainsState, selectedChain]);
 
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
@@ -115,7 +261,10 @@ const Panel: React.FC = () => {
       setMyData(data);
       console.log(data);
       const chains = transformJobToChains(data);
-      setChainsState(chains);
+      const configuredSelection = applyConfiguredSelections(data.name, model, chains);
+      setChainsState(configuredSelection.chains);
+      setSelectedFragments(configuredSelection.selectedFragments);
+      setSelectedChain(configuredSelection.selectedChain);
       setSelectedModel(model);
     } catch (error) {
       if (error instanceof Error) {
@@ -141,29 +290,18 @@ const Panel: React.FC = () => {
     });
     console.log("Selected models map:", selectedModelsMap);
 
-    if (useWalkingSphere) {
-      if (sphereRadius < 1) {
-        alert(
-          `Invalid radius value: ${sphereRadius}. Enter value greater or equal 1.`
-        );
-        return;
-      } else if (sphereInterval < 1) {
-        alert(
-          `Invalid interval value: ${sphereInterval}. Enter value greater or equal 1.`
-        );
-        return;
-      }
+    if (myData?.metadata.analyzeNeighborhoods) {
       await sendDataToAnalyze(
-        useWalkingSphere,
+        myData.metadata.analyzeNeighborhoods,
         jobID,
         selectedModelsMap,
-        sphereRadius,
-        sphereInterval
+        myData.metadata.radius,
+        myData.metadata.interval
       );
     }
     else {
       await sendDataToAnalyze(
-        useWalkingSphere,
+        myData?.metadata.analyzeNeighborhoods || false,
         jobID,
         selectedModelsMap
       );
@@ -198,14 +336,6 @@ const Panel: React.FC = () => {
       if (saved) {
         setChainsState(saved.chainsState);
         setSelectedFragments(saved.selectedFragments);
-      } else {
-        setChainsState(prev =>
-          prev.map(chain => ({
-            ...chain,
-            nucleotides: chain.nucleotides.map(n => ({ ...n, selected: false }))
-          }))
-        );
-        setSelectedFragments([]);
       }
       setSelectedModel(model);
     });
@@ -464,6 +594,106 @@ const Panel: React.FC = () => {
     throw new Error(`Residue with index ${index} not found`);
   }
 
+  // Helpers for formatting residues for arbitrary model chains (used when showing selections from other models)
+  const getResidueByIndexForChains = (index: number, chains: Chain[]): Nucleotide => {
+    for (const chain of chains) {
+      const nucleotide = chain.nucleotides.find(n => n.index === index);
+      if (nucleotide) return nucleotide;
+    }
+    throw new Error(`Residue with index ${index} not found in provided chains`);
+  }
+
+  const formatResidueRangesForChains = (residues: number[], chains: Chain[]): string => {
+    if (!residues || residues.length === 0) return "";
+    const sorted = [...residues].sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = sorted[0];
+    let end = sorted[0];
+
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === end + 1) {
+        end = sorted[i];
+      } else {
+        ranges.push(
+          start === end
+            ? `${getResidueByIndexForChains(start, chains).original_index}`
+            : `${getResidueByIndexForChains(start, chains).original_index}-${getResidueByIndexForChains(end, chains).original_index}`
+        );
+        start = end = sorted[i];
+      }
+    }
+    ranges.push(
+      start === end
+        ? `${getResidueByIndexForChains(start, chains).original_index}`
+        : `${getResidueByIndexForChains(start, chains).original_index}-${getResidueByIndexForChains(end, chains).original_index}`
+    );
+    return ranges.join(",");
+  }
+
+  const getAllSelectedFragmentsGrouped = () => {
+    const groups = new Map<number, SelectedFragment[]>();
+
+    // from saved modelSelections
+    Object.entries(modelSelections).forEach(([modelKey, sel]) => {
+      const modelNum = Number(modelKey);
+      if (sel?.selectedFragments && sel.selectedFragments.length > 0) {
+        groups.set(modelNum, sel.selectedFragments);
+      }
+    });
+
+    // include current model's selections
+    if (selectedFragments && selectedFragments.length > 0) {
+      groups.set(selectedModel, selectedFragments);
+    }
+
+    // convert to sorted array
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([model, fragments]) => ({ model, fragments }));
+  }
+
+  const removeFragmentFromModel = (modelNum: number, fragmentName: string) => {
+    if (modelNum === selectedModel) {
+      removeSelectedFragment(fragmentName);
+      return;
+    }
+
+    setModelSelections((prev) => {
+      const prevSel = prev[modelNum];
+      if (!prevSel) return prev;
+      const fragmentToRemove = prevSel.selectedFragments.find((f) => f.name === fragmentName);
+      if (!fragmentToRemove) return prev;
+
+      const newSelectedFragments = prevSel.selectedFragments.filter((f) => f.name !== fragmentName);
+
+      const newChainsState = prevSel.chainsState.map((chain) => {
+        if (chain.name === fragmentToRemove.chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              const shouldRemainSelected = prevSel.selectedFragments.some(
+                (f) => f.name !== fragmentName && f.chainName === chain.name && f.residues.includes(nucleotide.index)
+              );
+              if (fragmentToRemove.residues.includes(nucleotide.index) && !shouldRemainSelected) {
+                return { ...nucleotide, selected: false };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      });
+
+      return {
+        ...prev,
+        [modelNum]: {
+          chainsState: newChainsState,
+          selectedFragments: newSelectedFragments,
+        },
+      };
+    });
+  }
+
   useEffect(() => {
     if (!jobID) return;
     loadData(jobID, 1);
@@ -476,9 +706,7 @@ const Panel: React.FC = () => {
   return (
     <div className="desktop-content h-screen w-screen overflow-hidden">
       {/* Top panel */}
-      <div className="sticky top-0 z-50 bg-white">
         <TopPanel />
-      </div>
 
       {/* Side view + Main content */}
       <div className="flex overflow-hidden h-[calc(100vh-64px)]">
@@ -500,16 +728,10 @@ const Panel: React.FC = () => {
               {/* Tabs */}
               <div className="flex mb-4">
                 <div
-                  className={`flex-1 py-2 rounded-tl-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  className={`flex-1 py-2 rounded-t-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
                   onClick={() => setSidebarTab(0)}
                 >
                   Models
-                </div>
-                <div
-                  className={`flex-1 py-2 rounded-tr-lg text-center ${sidebarTab === 1 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
-                  onClick={() => setSidebarTab(1)}
-                >
-                  Settings
                 </div>
               </div>
               {/* Inside tabs */}
@@ -540,106 +762,7 @@ const Panel: React.FC = () => {
                 </>
               )}
               {sidebarTab === 1 && (
-                <>
-                  {/* Neighborhood sphere group */}
-                  {useWalkingSphere && (
-                    <div className="mb-4 p-2 bg-white rounded shadow">
-                      <h3 className="font-bold mb-2">Neighborhood sphere</h3>
-                      <div className="mb-2">
-                        <label className="block text-sm font-medium mb-1">Radius</label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={sphereRadius}
-                          onChange={e => setSphereRadius(parseInt(e.target.value))}
-                          className="w-full border rounded px-2 py-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Interval</label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={sphereInterval}
-                          onChange={e => setSphereInterval(parseInt(e.target.value))}
-                          className="w-full border rounded px-2 py-1"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {/* Fornac group */}
-                  <div className="mb-4 p-2 bg-white rounded shadow">
-                    <h3 className="font-bold mb-2">Fornac settings</h3>
-                    <div className="flex flex-col gap-2">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={numbering}
-                          onChange={e => setNumbering(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Numbering
-                      </label>
-                      {numbering && (
-                        <div className="mb-2">
-                          <label className="block text-sm font-medium mb-1">Label interval</label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={labelInterval}
-                            onChange={e => setLabelInterval(Number(e.target.value))}
-                            className="w-full border rounded px-2 py-1"
-                          />
-                        </div>
-                      )}
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={nodeOutline}
-                          onChange={e => setNodeOutline(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Node outline
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={nodeLabel}
-                          onChange={e => setNodeLabel(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Node label
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={directionArrows}
-                          onChange={e => setDirectionArrows(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Direction arrows
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={links}
-                          onChange={e => setLinks(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Show connectivity
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={animation}
-                          onChange={e => setAnimation(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Animation
-                      </label>
-                    </div>
-                  </div>
-                </>
+                <></>
               )}
             </div>
             {/* Analyze button */}
@@ -660,19 +783,6 @@ const Panel: React.FC = () => {
           key={myData.id}
           className="flex-1 overflow-y-auto overflow-x-hidden"
         >
-          {/* Analyze neighborhood switch */}
-            <div className="flex items-center gap-2 p-4">
-            <label htmlFor="sequential-toggle" className="font-semibold">
-              Analyze residue neighborhoods
-            </label>
-            <input
-              id="sequential-toggle"
-              type="checkbox"
-              checked={useWalkingSphere}
-              onChange={e => setUseWalkingSphere(e.target.checked)}
-              className="w-5 h-5 accent-moley-accentGreen"
-            />
-            </div>
           {myData ? (
             <div className="flex flex-col min-h-full">
               <div className="bg-transparent z-10">
@@ -706,50 +816,155 @@ const Panel: React.FC = () => {
                   selectFragment={selectFragment}
                 />
                 <div className="bg-moley-backgroundGreen h-48 m-2 w-full overflow-y-auto p-2 rounded-md">
-                  {selectedFragments.length === 0 ? (
-                    <span >No fragments selected</span>
-                  ) : (
-                    <table className="w-full">
-                      <thead>
-                        <tr>
-                          <th></th>
-                          <th className="text-left">Name</th>
-                          <th className="text-left">Chain</th>
-                          <th className="text-left">Residues</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedFragments.map((fragment, idx) => (
-                          <tr key={fragment.name + fragment.chainName + idx}>
-                            <td>
-                              <div
-                                className="ml-2 px-1 py-1 bg-white text-center text-red-600 rounded hover:bg-gray-200"
-                                onClick={() => removeSelectedFragment(fragment.name)}
-                                title="Usuń fragment"
-                              >
-                                X
-                              </div>
-                            </td>
-                            <td>{fragment.name}</td>
-                            <td>{fragment.chainName}</td>
-                            <td>
-                              {formatResidueRanges(fragment.residues)}
-                              {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
-                                <span className="ml-2 text-xs text-yellow-200">
-                                  (except: {formatResidueRanges(fragment.deselectedResidues)})
-                                </span>
-                              )}
-                            </td>
-                          </tr>
+                  {(() => {
+                    const grouped = getAllSelectedFragmentsGrouped();
+                    if (!grouped || grouped.length === 0) {
+                      return <span>No fragments selected</span>;
+                    }
+
+                    return (
+                      <div className="w-full">
+                        {grouped.map(({ model, fragments }) => (
+                          <div key={`model-${model}`} className="mb-2">
+                            <div className="font-semibold">Model {model}</div>
+                            <table className="w-full table-fixed">
+                              <colgroup>
+                                <col style={{ width: '40px' }} />
+                                <col style={{ width: '25%' }} />
+                                <col style={{ width: '15%' }} />
+                                <col style={{ width: '60%' }} />
+                              </colgroup>
+                              <thead>
+                                <tr>
+                                  <th></th>
+                                  <th className="text-left">Name</th>
+                                  <th className="text-left">Chain</th>
+                                  <th className="text-left">Residues</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {fragments.map((fragment, idx) => (
+                                  <tr key={`${model}-${fragment.name}-${fragment.chainName}-${idx}`}>
+                                    <td>
+                                      <div
+                                        className="ml-1 px-1 py-0.5 bg-white text-center text-red-600 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
+                                        onClick={() => removeFragmentFromModel(model, fragment.name)}
+                                        title="Usuń fragment"
+                                      >
+                                        X
+                                      </div>
+                                    </td>
+                                    <td>{fragment.name}</td>
+                                    <td>{fragment.chainName}</td>
+                                    <td>
+                                      {model === selectedModel
+                                        ? formatResidueRanges(fragment.residues)
+                                        : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
+                                      {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
+                                        <span className="ml-2 text-xs text-yellow-200">
+                                          (except: {model === selectedModel
+                                            ? formatResidueRanges(fragment.deselectedResidues)
+                                            : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               {/* Forna + Molstar */}
               <div className="flex flex-row h-[60vh] min-h-[400px]">
-                <div className="w-1/2 h-full p-5">
+                <div className="w-1/2 h-full p-5 relative">
+                  {/* Gear icon button */}
+                  <button
+                    onClick={() => setShowFornaSettings(!showFornaSettings)}
+                    className="absolute top-5 right-5 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                    title="Toggle Forna settings"
+                  >
+                    ⚙️
+                  </button>
+
+                  {/* Floating settings panel */}
+                  {showFornaSettings && (
+                    <div className="absolute inset-0 z-30 p-5 bg-white rounded-lg shadow-lg overflow-auto">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold">Forna settings</h3>
+                        <button
+                          onClick={() => setShowFornaSettings(false)}
+                          className="px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 text-gray-500 hover:text-gray-700 text-lg w-fit"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={numbering}
+                            onChange={e => setNumbering(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Numbering</span>
+                        </label>
+                        {numbering && (
+                          <div className="ml-4 mb-2">
+                            <label className="block text-sm font-medium mb-1">Label interval</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={labelInterval}
+                              onChange={e => setLabelInterval(Number(e.target.value))}
+                              className="w-full border rounded px-2 py-1"
+                            />
+                          </div>
+                        )}
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={nodeOutline}
+                            onChange={e => setNodeOutline(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Node outline</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={nodeLabel}
+                            onChange={e => setNodeLabel(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Node label</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={links}
+                            onChange={e => setLinks(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Show connectivity</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={animation}
+                            onChange={e => setAnimation(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Animation</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <FornaComponent
                     chains={chainsState}
                     setChains={setChainsState}
@@ -758,7 +973,7 @@ const Panel: React.FC = () => {
                     nodeOutline={nodeOutline}
                     nodeLabel={nodeLabel}
                     links={links}
-                    directionArrows={directionArrows}
+                    directionArrows={false}
                     setAnimation={animation}
                     setIsViewInitialized={setIsViewInitialized}
                   />
@@ -775,6 +990,9 @@ const Panel: React.FC = () => {
                     setIsViewInitialized={setIsViewInitialized}
                   />
                 </div>
+              </div>
+              <div className="mt-auto">
+                <Footer />
               </div>
             </div>
           ) : (

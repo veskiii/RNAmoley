@@ -20,7 +20,11 @@ module.exports = {
       },
       screens: {
         "3xl": "2000px",
+      },
+      boxShadow: {
+        'bottom': '0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
       }
+
     },
   },
   plugins: [],

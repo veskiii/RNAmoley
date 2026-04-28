@@ -59,7 +59,16 @@ export async function uploadFile(
   await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, buffer);
 }
 
-export async function getDemoFiles(filename: string) {
+export async function getDemoFiles(name: string) {
+  let filename = "";
+  if (name == "Example 1") {
+    filename = "good.pdb";
+  } else if (name == "Example 2") {
+    filename = "medium.pdb";
+  } else if (name == "Example 3") {
+    filename = "bad.pdb";
+  }
+  console.log(`Fetching demo file ${name} -  ${filename} from ${DEMO_FILES_DIR}`);
   const data = await fs.readFile(`${DEMO_FILES_DIR}/${filename}`);
   return data;
 }

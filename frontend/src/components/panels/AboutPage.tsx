@@ -1,17 +1,18 @@
 import { Colors } from "../common/colors";
 import Logo from "../common/logo";
 import HomeIcon from "../common/homeIcon";
+import Footer from "../common/footerComponent";
 
 const AboutPage = () => {
   return (
-    <div>
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+    <div className="min-h-screen flex flex-col">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
-      <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
+      <div className="flex flex-1 flex-col items-center pb-16 pt-6">
         <div
-          className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
+          className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8"
           style={{ background: Colors.backgroundBeige }}
         >
           <h2
@@ -20,7 +21,7 @@ const AboutPage = () => {
           >
             About RNAmoley
           </h2>
-          <p >
+          <p className="text-justify">
             RNAmoley is a web server for local quality assessment of RNA 3D structures. 
             The tool enables detection and characterization of local geometric inaccuracies 
             in RNA models, including steric clashes, bond geometry deviations, and backbone 
@@ -36,21 +37,26 @@ const AboutPage = () => {
             >
               Authors
             </h3>
-            <p><strong>Prototype development:</strong></p>
-            <p>Dawid Grajek, Lena Niedzialkowska, Julia Pawlowska, Piotr Walczak (engineering project work), Marta Szachniuk (supervision)</p>
-            <p><strong>Final implementation and development:</strong></p>
-            <p>Mikolaj Mlynarczyk (RNAmoley core development, algorithmic improvements, and feature extension), Simon Poblete, Marta Szachniuk (testing, supervision)</p>
+            <p>Prototype development</p>
+            <p>Dawid Grajek<sup>1</sup>, Lena Niedzialkowska<sup>1</sup>, Julia Pawlowska<sup>1</sup>, Piotr Walczak<sup>1</sup> (engineering project work), Marta Szachniuk<sup>1,2</sup> (supervision)</p>
+            <p className="pt-2">Final implementation and development</p>
+            <p>Mikolaj Mlynarczyk<sup>1</sup> (RNAmoley core development, algorithmic improvements, and feature extension), Simon Poblete<sup>3,4</sup>, Marta Szachniuk<sup>1,2</sup> (testing, supervision)</p>
+            <p className="pt-2"><sup>1</sup> Institute of Computing Science, Poznan University of Technology, Poland</p>
+            <p><sup>2</sup> Institute of Bioorganic Chemistry, Polish Academy of Sciences, Poznan, Poland</p>
+            <p><sup>3</sup> Facultad de Ingeniería, Universidad San Sebastián, Santiago, Chile</p>
+            <p><sup>4</sup> Centro BASAL Ciencia & Vida, Universidad San Sebastián, Santiago, Chile</p>
             <h3
               className="text-xl font-bold mt-5 mb-4"
               style={{ color: Colors.blue }}
             >
               Acknowledgements and Funding
             </h3>
-            <p>
-              RNAmoley was supported by the National Science Centre, Poland (NCN), under a research grant 2024/53/B/ST6/02789 awarded to M.S. The system is hosted and maintained by the Institute of Computing Science, Poznan University of Technology. 
+            <p className="text-justify">
+              RNAmoley is supported by the National Science Centre, Poland (NCN), under a research grant 2024/53/B/ST6/02789 awarded to M.S. The system is hosted and maintained by the Institute of Computing Science, Poznan University of Technology. 
             </p>
           </div>
       </div>
+      <Footer />
     </div>
   );
 };
