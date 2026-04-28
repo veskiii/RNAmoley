@@ -4,20 +4,12 @@ import "../../App.css";
 import Molstar from "../visualizations/molStarComponent";
 import FornaComponent from "../visualizations/fornacWrapper";
 import { useNavigate, useParams } from "react-router-dom";
-import FornaControls from "../common/fornaControls";
-import Accordion from "@mui/material/Accordion";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import AccordionDetails from "@mui/material/AccordionDetails";
-import Typography from "@mui/material/Typography";
-import Select, { SelectChangeEvent } from "@mui/material/Select";
+import { SelectChangeEvent } from "@mui/material/Select";
 import { Job, Chain, Nucleotide, SelectedFragment, ChainElement } from "../utils/types";
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
-import { Colors } from "../common/colors";
-import Logo from "../common/logo";
 import ErrorPage from "../common/ErrorPage";
 import RangeSelecting from "../common/rangeSelecting";
-import HomeIcon from "../common/homeIcon";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import ResidueTable from "../visualizations/ResidueTable";
@@ -25,10 +17,6 @@ import ResidueTable from "../visualizations/ResidueTable";
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
-
-  const [sphereRadius, setSphereRadius] = useState<number>(5);
-  const [sphereInterval, setSphereInterval] = useState<number>(1);
-
   const [labelInterval, setLabelInterval] = useState(10);
   const [numbering, setNumbering] = useState(false);
   const [nodeOutline, setNodeOutline] = useState(true);
@@ -39,7 +27,6 @@ const Panel: React.FC = () => {
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [selectedModel, setSelectedModel] = useState<number>(1);
-  const [useWalkingSphere, setUseWalkingSphere] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>(
     chainsState[0]?.name|| ""
   );
@@ -141,29 +128,18 @@ const Panel: React.FC = () => {
     });
     console.log("Selected models map:", selectedModelsMap);
 
-    if (useWalkingSphere) {
-      if (sphereRadius < 1) {
-        alert(
-          `Invalid radius value: ${sphereRadius}. Enter value greater or equal 1.`
-        );
-        return;
-      } else if (sphereInterval < 1) {
-        alert(
-          `Invalid interval value: ${sphereInterval}. Enter value greater or equal 1.`
-        );
-        return;
-      }
+    if (myData?.metadata.analyzeNeighborhoods) {
       await sendDataToAnalyze(
-        useWalkingSphere,
+        myData.metadata.analyzeNeighborhoods,
         jobID,
         selectedModelsMap,
-        sphereRadius,
-        sphereInterval
+        myData.metadata.radius,
+        myData.metadata.interval
       );
     }
     else {
       await sendDataToAnalyze(
-        useWalkingSphere,
+        myData?.metadata.analyzeNeighborhoods || false,
         jobID,
         selectedModelsMap
       );
@@ -539,32 +515,6 @@ const Panel: React.FC = () => {
               )}
               {sidebarTab === 1 && (
                 <>
-                  {/* Neighborhood sphere group */}
-                  {useWalkingSphere && (
-                    <div className="mb-4 p-2 bg-white rounded shadow">
-                      <h3 className="font-bold mb-2">Neighborhood sphere</h3>
-                      <div className="mb-2">
-                        <label className="block text-sm font-medium mb-1">Radius</label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={sphereRadius}
-                          onChange={e => setSphereRadius(parseInt(e.target.value))}
-                          className="w-full border rounded px-2 py-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Interval</label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={sphereInterval}
-                          onChange={e => setSphereInterval(parseInt(e.target.value))}
-                          className="w-full border rounded px-2 py-1"
-                        />
-                      </div>
-                    </div>
-                  )}
                   {/* Forna group */}
                   <div className="mb-4 p-2 bg-white rounded shadow">
                     <h3 className="font-bold mb-2">Forna settings</h3>
@@ -658,19 +608,6 @@ const Panel: React.FC = () => {
           key={myData.id}
           className="flex-1 overflow-y-auto overflow-x-hidden"
         >
-          {/* Analyze neighborhood switch */}
-            <div className="flex items-center gap-2 p-4">
-            <label htmlFor="sequential-toggle" className="font-semibold">
-              Analyze residue neighborhoods
-            </label>
-            <input
-              id="sequential-toggle"
-              type="checkbox"
-              checked={useWalkingSphere}
-              onChange={e => setUseWalkingSphere(e.target.checked)}
-              className="w-5 h-5 accent-moley-accentGreen"
-            />
-            </div>
           {myData ? (
             <div className="flex flex-col min-h-full">
               <div className="bg-transparent z-10">

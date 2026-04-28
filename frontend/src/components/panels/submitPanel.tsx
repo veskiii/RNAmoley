@@ -21,6 +21,9 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [useWalkingSphere, setUseWalkingSphere] = useState(false);
+  const [sphereRadius, setSphereRadius] = useState<number>(5);
+  const [sphereInterval, setSphereInterval] = useState<number>(1);
 
   const samples = [
     { id: "good", value: "Example 1", label: "Example 1" },
@@ -48,6 +51,9 @@ const Dashboard: React.FC = () => {
     formData.append("pdbCode", pdbCode || "");
     formData.append("rnaFile", rnaFile || "");
     formData.append("radioButton", radiobutton || "None");
+    formData.append("useWalkingSphere", useWalkingSphere.toString());
+    formData.append("sphereRadius", sphereRadius.toString());
+    formData.append("sphereInterval", sphereInterval.toString());
     try {
       const response = await createJob(formData);
       if (response && response.id) {
@@ -162,10 +168,9 @@ const Dashboard: React.FC = () => {
               <div>
                 <div className="font-bold">Welcome to RNAmoley!</div>
                 <div>
-                  The webserver analyzes RNA 3D structures to assess their
-                  quality by examining structural elements. You can upload
-                  PDB/mmCIF files, fetch data by PDB ID or use pre-selected
-                  samples.
+                  Welcome to RNAmoley, a web server for detailed analysis of RNA 3D 
+                  models (PDB/mmCIF), enabling local detection and refinement of 
+                  geometric and stereochemical errors. 
                 </div>
               </div>
             </div>
@@ -173,7 +178,7 @@ const Dashboard: React.FC = () => {
                 Upload RNA 3D structure in the PDB/mmCIF file
               </h2>
 
-              <div className="border-b border-gray-900/10 pb-6">
+              <div className="">
                 <label
                   htmlFor="examples"
                   className="block text-sm/6 font-medium text-gray-900"
@@ -287,6 +292,44 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
+
+          <div className="flex items-center gap-2 p-4">
+            <label htmlFor="sequential-toggle" className="font-semibold">
+              Analyze residue neighborhoods
+            </label>
+            <input
+              id="sequential-toggle"
+              type="checkbox"
+              checked={useWalkingSphere}
+              onChange={e => setUseWalkingSphere(e.target.checked)}
+              className="w-5 h-5 accent-moley-accentGreen"
+            />
+            </div>
+            {useWalkingSphere && (
+              <div className="mb-4 p-2 bg-white rounded ">
+                <h3 className="font-bold mb-2">Neighborhood sphere</h3>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium mb-1">Radius</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={sphereRadius}
+                    onChange={e => setSphereRadius(parseInt(e.target.value))}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Interval</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={sphereInterval}
+                    onChange={e => setSphereInterval(parseInt(e.target.value))}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
+              </div>
+              )}
 
           <div className="mt-6 flex items-center justify-end gap-x-6">
             <button

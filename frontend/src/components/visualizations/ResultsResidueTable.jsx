@@ -4,7 +4,7 @@ import { getColor } from "../utils/ColorUtils";
 import { Colors } from "../common/colors";
 
 const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore, modelStatus }) => {
-  const selectedBorderColor = Colors.salmon;
+  const selectedBorderColor = Colors.white; // Colors.salmon;
   const neighborhoodScores = [
     QualityScore.CLASH_SCORE,
     QualityScore.BAD_ANGLES,
@@ -101,12 +101,12 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
       <table className="mt-4 w-max border-separate border-spacing-1">
         <tbody>
           <tr>
-            <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Index</td>
+            <td className="w-32 p-2 text-center">Index</td>
             {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-id-${index}`}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen"
+                  "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide.original_index}
@@ -114,12 +114,12 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>
           <tr>
-            <td className="w-32 p-2 bg-moley-backgroundGreen text-center">Base</td>
+            <td className="w-32 p-2 text-center">Base</td>
             {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-name-${index}`}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen"
+                  "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide.base}
@@ -127,14 +127,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>
           <tr>
-            <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
+            <td className="w-32 p-2 text-center">
               Secondary Structure
             </td>
             {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-index-${index}`}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen"
+                  "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide.structure}
@@ -142,14 +142,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>
           <tr>
-            <td className="w-32 p-2 bg-moley-backgroundGreen text-center">
+            <td className="w-32 p-2 text-center">
               Structural Element
             </td>
             {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen"
+                  "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide.structuralElements && nucleotide.structuralElements.length > 0
@@ -165,14 +165,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           <tr>
             <td
             id="tableClashscore"
-            className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
+            className="w-32 p-2 text-center cursor-pointer"
             onClick={(_) => handleClick(QualityScore.CLASH_SCORE)}
             style={{
               borderWidth: "3px",
               borderColor:
                 effectiveSelectedScore === QualityScore.CLASH_SCORE
                   ? selectedBorderColor
-                  : "#a0b2a5",
+                  : "#ffffff",
             }}
             >
               Neighborhood ClashScore
@@ -182,7 +182,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-CLASH_SCORE"
+                  "w-12 p-2 text-center column-CLASH_SCORE even:bg-gray-50"
                 }
                 style={activeCellStyle(nucleotide, QualityScore.CLASH_SCORE)}
               >
@@ -199,14 +199,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           <tr>
             <td 
             id="tableBadAngles"
-            className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
+            className="w-32 p-2 text-center cursor-pointer"
             onClick={(_) => handleClick(QualityScore.BAD_ANGLES)}
             style={{
               borderWidth: "3px",
               borderColor:
                 effectiveSelectedScore === QualityScore.BAD_ANGLES
                   ? selectedBorderColor
-                  : "#a0b2a5",
+                  : "#ffffff",
             }}
             >
               Neighborhood Bad Angles
@@ -216,7 +216,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_ANGLES"
+                  "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
                 }
                 style={activeCellStyle(nucleotide, QualityScore.BAD_ANGLES)}
               >
@@ -235,14 +235,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           <tr>
             <td 
             id="tableBadBonds"
-            className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
+            className="w-32 p-2 text-center cursor-pointer"
             onClick={(_) => handleClick(QualityScore.BAD_BONDS)}
             style={{
               borderWidth: "3px",
               borderColor:
                 effectiveSelectedScore === QualityScore.BAD_BONDS
                   ? selectedBorderColor
-                  : "#a0b2a5",
+                  : "#ffffff",
             }}
             >
               Neighborhood Bad Bond Lengths
@@ -252,7 +252,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-BAD_BONDS"
+                  "w-12 p-2 text-center column-BAD_BONDS even:bg-gray-50"
                 }
                 style={activeCellStyle(nucleotide, QualityScore.BAD_BONDS)}
               >
@@ -270,14 +270,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           <tr>
             <td 
             id="tableSuiteness"
-            className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
+            className="w-32 p-2 text-center cursor-pointer"
             onClick={(_) => handleClick(QualityScore.SUITENESS)}
             style={{
               borderWidth: "3px",
               borderColor:
                 effectiveSelectedScore === QualityScore.SUITENESS
                   ? selectedBorderColor
-                  : "#a0b2a5",
+                  : "#ffffff",
             }}
             >
               Suiteness
@@ -287,7 +287,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUITENESS"
+                  "w-12 p-2 text-center column-SUITENESS even:bg-gray-50"
                 }
                 style={activeCellStyle(nucleotide, QualityScore.SUITENESS)}
               >
@@ -298,14 +298,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           <tr>
             <td 
             id="tableSugarPuckerOut"
-            className="w-32 p-2 bg-moley-backgroundGreen text-center border-moley-backgroundGreen cursor-pointer"
+            className="w-32 p-2 text-center cursor-pointer"
             onClick={(_) => handleClick(QualityScore.SUGAR_PUCKER_OUT)}
             style={{
               borderWidth: "3px",
               borderColor:
                 effectiveSelectedScore === QualityScore.SUGAR_PUCKER_OUT
                   ? selectedBorderColor
-                  : "#a0b2a5",
+                  : "#ffffff",
             }}
             >
               Sugar Pucker Outlier Type
@@ -315,7 +315,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide.residue_number}
                 className={
-                  "w-12 p-2 bg-moley-backgroundLightGreen text-center border-2 border-moley-backgroundLightGreen column-SUGAR_PUCKER_OUT"
+                  "w-12 p-2 text-center  column-SUGAR_PUCKER_OUT even:bg-gray-50"
                 }
                 style={activeCellStyle(nucleotide, QualityScore.SUGAR_PUCKER_OUT)}
               >

@@ -316,6 +316,9 @@ export async function createJob(req: Request, res: Response) {
   const metadata: Metadata = {
     status: "creating",
     model_count: 1,
+    analyzeNeighborhoods: req.body.useWalkingSphere === "true" ? true : false,
+    radius: req.body.useWalkingSphere === "true" ? Number(req.body.sphereRadius) : undefined,
+    interval: req.body.useWalkingSphere === "true" ? Number(req.body.sphereInterval) : undefined,
   };
 
   await saveMetadata(id, metadata);
