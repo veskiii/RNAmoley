@@ -28,7 +28,7 @@ type AutoSelectFragmentConfig = {
 };
 
 const AUTO_SELECT_FRAGMENTS_BY_JOB: Record<string, AutoSelectFragmentConfig[]> = {
-  // "Example 1": [{ fragment: "(1:A:50-78)", label: "Range 50-78" }],
+  "Example 1": [{ fragment: "(1:A:1-90)", label: "Range 1-90" }],
   // "Example 2": [{ fragment: "(1:A:50-78)", label: "Range 50-78" }],
   "Example 3": [{ fragment: "(1:A:42-83)", label: "Range 42-83" }],
 };
@@ -593,6 +593,106 @@ const Panel: React.FC = () => {
     throw new Error(`Residue with index ${index} not found`);
   }
 
+  // Helpers for formatting residues for arbitrary model chains (used when showing selections from other models)
+  const getResidueByIndexForChains = (index: number, chains: Chain[]): Nucleotide => {
+    for (const chain of chains) {
+      const nucleotide = chain.nucleotides.find(n => n.index === index);
+      if (nucleotide) return nucleotide;
+    }
+    throw new Error(`Residue with index ${index} not found in provided chains`);
+  }
+
+  const formatResidueRangesForChains = (residues: number[], chains: Chain[]): string => {
+    if (!residues || residues.length === 0) return "";
+    const sorted = [...residues].sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = sorted[0];
+    let end = sorted[0];
+
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === end + 1) {
+        end = sorted[i];
+      } else {
+        ranges.push(
+          start === end
+            ? `${getResidueByIndexForChains(start, chains).original_index}`
+            : `${getResidueByIndexForChains(start, chains).original_index}-${getResidueByIndexForChains(end, chains).original_index}`
+        );
+        start = end = sorted[i];
+      }
+    }
+    ranges.push(
+      start === end
+        ? `${getResidueByIndexForChains(start, chains).original_index}`
+        : `${getResidueByIndexForChains(start, chains).original_index}-${getResidueByIndexForChains(end, chains).original_index}`
+    );
+    return ranges.join(",");
+  }
+
+  const getAllSelectedFragmentsGrouped = () => {
+    const groups = new Map<number, SelectedFragment[]>();
+
+    // from saved modelSelections
+    Object.entries(modelSelections).forEach(([modelKey, sel]) => {
+      const modelNum = Number(modelKey);
+      if (sel?.selectedFragments && sel.selectedFragments.length > 0) {
+        groups.set(modelNum, sel.selectedFragments);
+      }
+    });
+
+    // include current model's selections
+    if (selectedFragments && selectedFragments.length > 0) {
+      groups.set(selectedModel, selectedFragments);
+    }
+
+    // convert to sorted array
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([model, fragments]) => ({ model, fragments }));
+  }
+
+  const removeFragmentFromModel = (modelNum: number, fragmentName: string) => {
+    if (modelNum === selectedModel) {
+      removeSelectedFragment(fragmentName);
+      return;
+    }
+
+    setModelSelections((prev) => {
+      const prevSel = prev[modelNum];
+      if (!prevSel) return prev;
+      const fragmentToRemove = prevSel.selectedFragments.find((f) => f.name === fragmentName);
+      if (!fragmentToRemove) return prev;
+
+      const newSelectedFragments = prevSel.selectedFragments.filter((f) => f.name !== fragmentName);
+
+      const newChainsState = prevSel.chainsState.map((chain) => {
+        if (chain.name === fragmentToRemove.chainName) {
+          return {
+            ...chain,
+            nucleotides: chain.nucleotides.map((nucleotide) => {
+              const shouldRemainSelected = prevSel.selectedFragments.some(
+                (f) => f.name !== fragmentName && f.chainName === chain.name && f.residues.includes(nucleotide.index)
+              );
+              if (fragmentToRemove.residues.includes(nucleotide.index) && !shouldRemainSelected) {
+                return { ...nucleotide, selected: false };
+              }
+              return nucleotide;
+            }),
+          };
+        }
+        return chain;
+      });
+
+      return {
+        ...prev,
+        [modelNum]: {
+          chainsState: newChainsState,
+          selectedFragments: newSelectedFragments,
+        },
+      };
+    });
+  }
+
   useEffect(() => {
     if (!jobID) return;
     loadData(jobID, 1);
@@ -715,45 +815,67 @@ const Panel: React.FC = () => {
                   selectFragment={selectFragment}
                 />
                 <div className="bg-moley-backgroundGreen h-48 m-2 w-full overflow-y-auto p-2 rounded-md">
-                  {selectedFragments.length === 0 ? (
-                    <span >No fragments selected</span>
-                  ) : (
-                    <table className="w-full">
-                      <thead>
-                        <tr>
-                          <th></th>
-                          <th className="text-left">Name</th>
-                          <th className="text-left">Chain</th>
-                          <th className="text-left">Residues</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedFragments.map((fragment, idx) => (
-                          <tr key={fragment.name + fragment.chainName + idx}>
-                            <td>
-                              <div
-                                className="ml-2 px-1 py-1 bg-white text-center text-red-600 rounded hover:bg-gray-200"
-                                onClick={() => removeSelectedFragment(fragment.name)}
-                                title="Usuń fragment"
-                              >
-                                X
-                              </div>
-                            </td>
-                            <td>{fragment.name}</td>
-                            <td>{fragment.chainName}</td>
-                            <td>
-                              {formatResidueRanges(fragment.residues)}
-                              {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
-                                <span className="ml-2 text-xs text-yellow-200">
-                                  (except: {formatResidueRanges(fragment.deselectedResidues)})
-                                </span>
-                              )}
-                            </td>
-                          </tr>
+                  {(() => {
+                    const grouped = getAllSelectedFragmentsGrouped();
+                    if (!grouped || grouped.length === 0) {
+                      return <span>No fragments selected</span>;
+                    }
+
+                    return (
+                      <div className="w-full">
+                        {grouped.map(({ model, fragments }) => (
+                          <div key={`model-${model}`} className="mb-2">
+                            <div className="font-semibold">Model {model}</div>
+                            <table className="w-full table-fixed">
+                              <colgroup>
+                                <col style={{ width: '40px' }} />
+                                <col style={{ width: '25%' }} />
+                                <col style={{ width: '15%' }} />
+                                <col style={{ width: '60%' }} />
+                              </colgroup>
+                              <thead>
+                                <tr>
+                                  <th></th>
+                                  <th className="text-left">Name</th>
+                                  <th className="text-left">Chain</th>
+                                  <th className="text-left">Residues</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {fragments.map((fragment, idx) => (
+                                  <tr key={`${model}-${fragment.name}-${fragment.chainName}-${idx}`}>
+                                    <td>
+                                      <div
+                                        className="ml-1 px-1 py-0.5 bg-white text-center text-red-600 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
+                                        onClick={() => removeFragmentFromModel(model, fragment.name)}
+                                        title="Usuń fragment"
+                                      >
+                                        X
+                                      </div>
+                                    </td>
+                                    <td>{fragment.name}</td>
+                                    <td>{fragment.chainName}</td>
+                                    <td>
+                                      {model === selectedModel
+                                        ? formatResidueRanges(fragment.residues)
+                                        : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
+                                      {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
+                                        <span className="ml-2 text-xs text-yellow-200">
+                                          (except: {model === selectedModel
+                                            ? formatResidueRanges(fragment.deselectedResidues)
+                                            : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               {/* Forna + Molstar */}
