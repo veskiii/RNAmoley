@@ -14,6 +14,153 @@ import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import ResidueTable from "../visualizations/ResidueTable";
 
+type AutoSelectFragmentSpec = {
+  model: number;
+  chainName: string;
+  start: number;
+  end: number;
+  label: string;
+};
+
+type AutoSelectFragmentConfig = {
+  fragment: string;
+  label: string;
+};
+
+const AUTO_SELECT_FRAGMENTS_BY_JOB: Record<string, AutoSelectFragmentConfig[]> = {
+  // "Example 1": [{ fragment: "(1:A:50-78)", label: "Range 50-78" }],
+  // "Example 2": [{ fragment: "(1:A:50-78)", label: "Range 50-78" }],
+  "Example 3": [{ fragment: "(1:A:42-83)", label: "Range 42-83" }],
+};
+
+function parseAutoSelectFragmentSpec(
+  entry: AutoSelectFragmentConfig
+): AutoSelectFragmentSpec | null {
+  const { fragment, label } = entry;
+  const match = fragment.match(/^\(\s*(\d+)\s*:\s*([^:()]+)\s*:\s*(\d+)(?:-(\d+))?\s*\)$/);
+  if (!match) {
+    return null;
+  }
+
+  const model = Number(match[1]);
+  const chainName = match[2].trim();
+  const start = Number(match[3]);
+  const end = Number(match[4] ?? match[3]);
+
+  if (
+    !Number.isFinite(model) ||
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    start <= 0 ||
+    end <= 0 ||
+    start > end
+  ) {
+    return null;
+  }
+
+  return {
+    model,
+    chainName,
+    start,
+    end,
+    label,
+  };
+}
+
+function applyConfiguredSelections(
+  jobName: string | undefined,
+  model: number,
+  chains: Chain[]
+): {
+  chains: Chain[];
+  selectedFragments: SelectedFragment[];
+  selectedChain: string;
+} {
+  const configuredSpecs = jobName ? AUTO_SELECT_FRAGMENTS_BY_JOB[jobName] ?? [] : [];
+  if (configuredSpecs.length === 0) {
+    return {
+      chains,
+      selectedFragments: [],
+      selectedChain: chains[0]?.name || "",
+    };
+  }
+
+  const parsedSpecs = configuredSpecs
+    .map(parseAutoSelectFragmentSpec)
+    .filter((spec): spec is AutoSelectFragmentSpec => spec !== null)
+    .filter((spec) => spec.model === model);
+
+  if (parsedSpecs.length === 0) {
+    return {
+      chains,
+      selectedFragments: [],
+      selectedChain: chains[0]?.name || "",
+    };
+  }
+
+  const selectedFragments: SelectedFragment[] = [];
+  const selectedResiduesByChain = new Map<string, Set<number>>();
+  let selectedChain = chains[0]?.name || "";
+
+  parsedSpecs.forEach((spec) => {
+    const chain = chains.find((candidate) => candidate.name === spec.chainName);
+    if (!chain) {
+      return;
+    }
+
+    const residueIds = chain.nucleotides
+      .filter(
+        (nucleotide) =>
+          nucleotide.original_index >= spec.start && nucleotide.original_index <= spec.end
+      )
+      .map((nucleotide) => nucleotide.index);
+
+    if (residueIds.length === 0) {
+      return;
+    }
+
+    if (!selectedResiduesByChain.has(spec.chainName)) {
+      selectedResiduesByChain.set(spec.chainName, new Set<number>());
+    }
+
+    const selectedResidues = selectedResiduesByChain.get(spec.chainName);
+    residueIds.forEach((residueId) => selectedResidues?.add(residueId));
+
+    selectedFragments.push({
+      name: spec.label,
+      chainName: spec.chainName,
+      residues: residueIds,
+      deselectedResidues: [],
+    });
+
+    if (!selectedChain) {
+      selectedChain = spec.chainName;
+    }
+  });
+
+  const selectedChains = chains.map((chain) => {
+    const selectedResidues = selectedResiduesByChain.get(chain.name);
+    if (!selectedResidues || selectedResidues.size === 0) {
+      return chain;
+    }
+
+    return {
+      ...chain,
+      nucleotides: chain.nucleotides.map((nucleotide) =>
+        selectedResidues.has(nucleotide.index)
+          ? { ...nucleotide, selected: true }
+          : nucleotide
+      ),
+    };
+  });
+
+  return {
+    chains: selectedChains,
+    selectedFragments,
+    selectedChain,
+  };
+}
+
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +212,15 @@ const Panel: React.FC = () => {
   const isDisabled = selectedList.length === 0;
 
   useEffect(() => {
-    setSelectedChain(chainsState[0]?.name || "");
-  }, [chainsState]);
+    if (chainsState.length === 0) {
+      setSelectedChain("");
+      return;
+    }
+
+    if (!selectedChain || !chainsState.some((chain) => chain.name === selectedChain)) {
+      setSelectedChain(chainsState[0]?.name || "");
+    }
+  }, [chainsState, selectedChain]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
     setInputValueStart(event.target.value);
@@ -82,6 +236,10 @@ const Panel: React.FC = () => {
 
   //do placeholder z max i min original_id nukleotydów podanego chain
   useEffect(() => {
+    if (!selectedChain) {
+      return;
+    }
+
     chainsState.forEach((chain) => {
       if (chain.name === selectedChain) {
         const indices = chain.nucleotides.map((nucleotide) => nucleotide.index);
@@ -94,7 +252,7 @@ const Panel: React.FC = () => {
         setInputValueEnd(max.toString());
       }
     });
-  }, [selectedChain]);
+  }, [chainsState, selectedChain]);
 
   async function loadData(jobID: string | undefined, model: number = 1) {
     try {
@@ -102,7 +260,10 @@ const Panel: React.FC = () => {
       setMyData(data);
       console.log(data);
       const chains = transformJobToChains(data);
-      setChainsState(chains);
+      const configuredSelection = applyConfiguredSelections(data.name, model, chains);
+      setChainsState(configuredSelection.chains);
+      setSelectedFragments(configuredSelection.selectedFragments);
+      setSelectedChain(configuredSelection.selectedChain);
       setSelectedModel(model);
     } catch (error) {
       if (error instanceof Error) {
@@ -174,14 +335,6 @@ const Panel: React.FC = () => {
       if (saved) {
         setChainsState(saved.chainsState);
         setSelectedFragments(saved.selectedFragments);
-      } else {
-        setChainsState(prev =>
-          prev.map(chain => ({
-            ...chain,
-            nucleotides: chain.nucleotides.map(n => ({ ...n, selected: false }))
-          }))
-        );
-        setSelectedFragments([]);
       }
       setSelectedModel(model);
     });
