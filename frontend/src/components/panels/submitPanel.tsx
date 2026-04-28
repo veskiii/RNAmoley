@@ -25,10 +25,44 @@ const Dashboard: React.FC = () => {
   const [sphereRadius, setSphereRadius] = useState<number>(5);
   const [sphereInterval, setSphereInterval] = useState<number>(1);
 
-  const samples = [
-    { id: "good", value: "Example 1", label: "Example 1", file: "PZ39_Xiao_4.pdb"},
-    { id: "medium", value: "Example 2", label: "Example 2", file: "PZ39_RNAComposer_3.pdb" },
-    { id: "bad", value: "Example 3", label: "Example 3", file: "PZ39_Dfold_1.pdb" },
+  type SamplePreset = {
+    id: string;
+    value: string;
+    label: string;
+    file: string;
+    useWalkingSphere: boolean;
+    sphereRadius: number;
+    sphereInterval: number;
+  };
+
+  const samples: SamplePreset[] = [
+    {
+      id: "good",
+      value: "Example 1",
+      label: "Example 1",
+      file: "PZ39_Xiao_4.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 15,
+      sphereInterval: 5,
+    },
+    {
+      id: "medium",
+      value: "Example 2",
+      label: "Example 2",
+      file: "PZ39_RNAComposer_3.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 5,
+      sphereInterval: 1,
+    },
+    {
+      id: "bad",
+      value: "Example 3",
+      label: "Example 3",
+      file: "PZ39_Dfold_1.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 5,
+      sphereInterval: 1,
+    },
   ];
 
   const getSelectedJobName = () => {
@@ -138,6 +172,9 @@ const Dashboard: React.FC = () => {
       clearFileInput();
       setRnaFile(null);
       setRadiobutton("None");
+      setUseWalkingSphere(false);
+      setSphereRadius(5);
+      setSphereInterval(1);
 
       setPdbCode(newValue);
     } else if (field === "example") {
@@ -146,6 +183,12 @@ const Dashboard: React.FC = () => {
       setPdbCode("");
 
       setRadiobutton(newValue);
+      const selectedSample = samples.find(sample => sample.value === newValue);
+      if (selectedSample) {
+        setUseWalkingSphere(selectedSample.useWalkingSphere);
+        setSphereRadius(selectedSample.sphereRadius);
+        setSphereInterval(selectedSample.sphereInterval);
+      }
     } else {
       setPdbCode("");
       setRadiobutton("None");

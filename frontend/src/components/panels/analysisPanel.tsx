@@ -29,7 +29,7 @@ type AutoSelectFragmentConfig = {
 
 const AUTO_SELECT_FRAGMENTS_BY_JOB: Record<string, AutoSelectFragmentConfig[]> = {
   "Example 1": [{ fragment: "(1:A:1-90)", label: "Range 1-90" }],
-  // "Example 2": [{ fragment: "(1:A:50-78)", label: "Range 50-78" }],
+  "Example 2": [{ fragment: "(1:A:11-36)", label: "Range 11-36" }],
   "Example 3": [{ fragment: "(1:A:42-83)", label: "Range 42-83" }],
 };
 
