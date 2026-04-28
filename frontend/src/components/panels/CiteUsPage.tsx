@@ -5,11 +5,11 @@ import HomeIcon from "../common/homeIcon";
 const CiteUsPage = () => {
   return (
     <div>
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
-      <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
+      <div className="flex flex-col items-center pb-16 pt-6">
         <div
           className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
           style={{ background: Colors.backgroundBeige }}
@@ -23,8 +23,8 @@ const CiteUsPage = () => {
           <p>
             Any published work that has made use of RNAmoley should cite the following paper:
           </p>
-          <p className="font-semibold">
-            Mikolaj Mlynarczyk, Simon Poblete, Marta Szachniuk (2026) RNAmoley: uncovering and refining local inaccuracies in RNA 3D structures. submitted 
+          <p>
+            Mikolaj Mlynarczyk, Simon Poblete, Marta Szachniuk (2026) RNAmoley: uncovering and refining local inaccuracies in RNA 3D structures. <i>submitted</i> 
           </p>
         </div>
       </div>

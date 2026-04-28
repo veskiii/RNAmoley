@@ -150,7 +150,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="desktop-content w-full h-full" style={{ color: "black" }}>
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
@@ -158,6 +158,17 @@ const Dashboard: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div className="flex flex-row">
             <div className="space-y-10">
+            <div className="flex flex-col justify-center items-center p-5 text-center">
+              <div>
+                <div className="font-bold">Welcome to RNAmoley!</div>
+                <div>
+                  The webserver analyzes RNA 3D structures to assess their
+                  quality by examining structural elements. You can upload
+                  PDB/mmCIF files, fetch data by PDB ID or use pre-selected
+                  samples.
+                </div>
+              </div>
+            </div>
               <h2 className="text-base/7 font-semibold text-gray-900">
                 Upload RNA 3D structure in the PDB/mmCIF file
               </h2>
@@ -211,7 +222,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-b border-gray-900/10 pb-6">
+              <div >
                 <label
                   htmlFor="pdbCodeInput"
                   className="block text-sm/6 font-medium text-gray-900"
@@ -272,17 +283,6 @@ const Dashboard: React.FC = () => {
                       <p className="text-xs/5 text-gray-600">PDB, mmCIF</p>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col justify-center items-center p-5 text-center">
-              <div>
-                <div className="font-bold">Welcome to RNAmoley!</div>
-                <div>
-                  The webserver analyzes RNA 3D structures to assess their
-                  quality by examining structural elements. You can upload
-                  PDB/mmCIF files, fetch data by PDB ID or use pre-selected
-                  samples.
                 </div>
               </div>
             </div>

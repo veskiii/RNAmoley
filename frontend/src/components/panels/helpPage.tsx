@@ -5,11 +5,11 @@ import HomeIcon from "../common/homeIcon";
 const HelpPage = () => {
   return (
     <div>
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
-      <div className="flex min-h-screen flex-col items-center pb-16 pt-6">
+      <div className="flex flex-col items-center pb-16 pt-6">
         <div
           className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
           style={{ background: Colors.backgroundBeige }}

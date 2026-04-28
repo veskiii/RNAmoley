@@ -1,22 +1,45 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+
+const navBaseClass = "whitespace-nowrap hover:text-teal-600";
 
 const HomeIcon = () => {
   return (
     <div
       className="justify-start flex flex-row items-center gap-4 pl-2 text-md font-medium z-[2000] transition-colors"
     >
-      <Link to="/" className="font-medium whitespace-nowrap hover:text-teal-600">
+      <NavLink
+        to="/"
+        end
+        className={({ isActive }) =>
+          `${navBaseClass} ${isActive ? "font-bold" : "font-medium"}`
+        }
+      >
         Home
-      </Link>
-      <Link to="/help" className="whitespace-nowrap hover:text-teal-600">
+      </NavLink>
+      <NavLink
+        to="/help"
+        className={({ isActive }) =>
+          `${navBaseClass} ${isActive ? "font-bold" : ""}`.trim()
+        }
+      >
         Help
-      </Link>
-      <Link to="/about" className="whitespace-nowrap hover:text-teal-600">
+      </NavLink>
+      <NavLink
+        to="/about"
+        className={({ isActive }) =>
+          `${navBaseClass} ${isActive ? "font-bold" : ""}`.trim()
+        }
+      >
         About
-      </Link>
-      <Link to="/cite" className="whitespace-nowrap hover:text-teal-600">
+      </NavLink>
+      <NavLink
+        to="/cite"
+        className={({ isActive }) =>
+          `${navBaseClass} ${isActive ? "font-bold" : ""}`.trim()
+        }
+      >
         Cite Us
-      </Link>
+      </NavLink>
     </div>
   );
 };

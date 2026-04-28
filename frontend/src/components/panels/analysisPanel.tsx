@@ -476,9 +476,7 @@ const Panel: React.FC = () => {
   return (
     <div className="desktop-content h-screen w-screen overflow-hidden">
       {/* Top panel */}
-      <div className="sticky top-0 z-50 bg-white">
         <TopPanel />
-      </div>
 
       {/* Side view + Main content */}
       <div className="flex overflow-hidden h-[calc(100vh-64px)]">

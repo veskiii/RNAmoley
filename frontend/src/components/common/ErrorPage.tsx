@@ -12,7 +12,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
 }) => {
   return (
     <div>
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>

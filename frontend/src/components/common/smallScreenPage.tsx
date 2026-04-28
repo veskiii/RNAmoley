@@ -5,7 +5,7 @@ import "../../App.css";
 const SmallScreenPage = () => {
   return (
     <div className="mobile-message">
-      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         {/* <HomeIcon /> */}
       </div>
