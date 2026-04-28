@@ -22,7 +22,6 @@ const Panel: React.FC = () => {
   const [nodeOutline, setNodeOutline] = useState(true);
   const [nodeLabel, setNodeLabel] = useState(true);
   const [links, setLinks] = useState(true);
-  const [directionArrows, setDirectionArrows] = useState(false);
   const [animation, setAnimation] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
@@ -41,6 +40,7 @@ const Panel: React.FC = () => {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [sidebarTab, setSidebarTab] = useState(0);
+  const [showFornaSettings, setShowFornaSettings] = useState(false);
   const [modelSelections, setModelSelections] = useState<Record<number, {chainsState: Chain[], selectedFragments: SelectedFragment[]}>>({});
 
   const selectedList = useMemo<ChainElement[]>(() => {
@@ -474,16 +474,10 @@ const Panel: React.FC = () => {
               {/* Tabs */}
               <div className="flex mb-4">
                 <div
-                  className={`flex-1 py-2 rounded-tl-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  className={`flex-1 py-2 rounded-t-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
                   onClick={() => setSidebarTab(0)}
                 >
                   Models
-                </div>
-                <div
-                  className={`flex-1 py-2 rounded-tr-lg text-center ${sidebarTab === 1 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
-                  onClick={() => setSidebarTab(1)}
-                >
-                  Settings
                 </div>
               </div>
               {/* Inside tabs */}
@@ -514,80 +508,7 @@ const Panel: React.FC = () => {
                 </>
               )}
               {sidebarTab === 1 && (
-                <>
-                  {/* Forna group */}
-                  <div className="mb-4 p-2 bg-white rounded shadow">
-                    <h3 className="font-bold mb-2">Forna settings</h3>
-                    <div className="flex flex-col gap-2">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={numbering}
-                          onChange={e => setNumbering(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Numbering
-                      </label>
-                      {numbering && (
-                        <div className="mb-2">
-                          <label className="block text-sm font-medium mb-1">Label interval</label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={labelInterval}
-                            onChange={e => setLabelInterval(Number(e.target.value))}
-                            className="w-full border rounded px-2 py-1"
-                          />
-                        </div>
-                      )}
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={nodeOutline}
-                          onChange={e => setNodeOutline(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Node outline
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={nodeLabel}
-                          onChange={e => setNodeLabel(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Node label
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={directionArrows}
-                          onChange={e => setDirectionArrows(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Direction arrows
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={links}
-                          onChange={e => setLinks(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Show connectivity
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={animation}
-                          onChange={e => setAnimation(e.target.checked)}
-                          className="mr-2"
-                        />
-                        Animation
-                      </label>
-                    </div>
-                  </div>
-                </>
+                <></>
               )}
             </div>
             {/* Analyze button */}
@@ -684,7 +605,90 @@ const Panel: React.FC = () => {
               </div>
               {/* Forna + Molstar */}
               <div className="flex flex-row h-[60vh] min-h-[400px]">
-                <div className="w-1/2 h-full p-5">
+                <div className="w-1/2 h-full p-5 relative">
+                  {/* Gear icon button */}
+                  <button
+                    onClick={() => setShowFornaSettings(!showFornaSettings)}
+                    className="absolute top-5 right-5 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                    title="Toggle Forna settings"
+                  >
+                    ⚙️
+                  </button>
+
+                  {/* Floating settings panel */}
+                  {showFornaSettings && (
+                    <div className="absolute inset-0 z-30 p-5 bg-white rounded-lg shadow-lg overflow-auto">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold">Forna settings</h3>
+                        <button
+                          onClick={() => setShowFornaSettings(false)}
+                          className="px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 text-gray-500 hover:text-gray-700 text-lg w-fit"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={numbering}
+                            onChange={e => setNumbering(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Numbering</span>
+                        </label>
+                        {numbering && (
+                          <div className="ml-4 mb-2">
+                            <label className="block text-sm font-medium mb-1">Label interval</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={labelInterval}
+                              onChange={e => setLabelInterval(Number(e.target.value))}
+                              className="w-full border rounded px-2 py-1"
+                            />
+                          </div>
+                        )}
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={nodeOutline}
+                            onChange={e => setNodeOutline(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Node outline</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={nodeLabel}
+                            onChange={e => setNodeLabel(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Node label</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={links}
+                            onChange={e => setLinks(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Show connectivity</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={animation}
+                            onChange={e => setAnimation(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span>Animation</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <FornaComponent
                     chains={chainsState}
                     setChains={setChainsState}
@@ -693,7 +697,7 @@ const Panel: React.FC = () => {
                     nodeOutline={nodeOutline}
                     nodeLabel={nodeLabel}
                     links={links}
-                    directionArrows={directionArrows}
+                    directionArrows={false}
                     setAnimation={animation}
                     setIsViewInitialized={setIsViewInitialized}
                   />
