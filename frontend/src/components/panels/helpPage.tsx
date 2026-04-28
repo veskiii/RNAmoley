@@ -194,7 +194,7 @@ const HelpPage = () => {
                 <strong>Settings</strong>
                 <ul className="list-disc ml-6">
                   <li>
-                    <strong>Fornac settings:</strong> Customize the RNA secondary
+                    <strong>Forna settings:</strong> Customize the RNA secondary
                     structure graph view to fit your preferences.
                   </li>
                   <li>
@@ -219,7 +219,7 @@ const HelpPage = () => {
               className="text-xl font-bold mt-5 mb-4"
               style={{ color: Colors.blue }}
             >
-              Graph customization - Fornac options
+              Graph customization - Forna options
             </h3>
             <p>
               Enhance the visual experience in both Analysis and Result Panel

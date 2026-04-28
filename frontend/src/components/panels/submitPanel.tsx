@@ -23,9 +23,9 @@ const Dashboard: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const samples = [
-    { id: "good", value: "good", label: "good" },
-    { id: "medium", value: "medium", label: "medium" },
-    { id: "bad", value: "bad", label: "bad" },
+    { id: "good", value: "Example 1", label: "Example 1" },
+    { id: "medium", value: "Example 2", label: "Example 2" },
+    { id: "bad", value: "Example 3", label: "Example 3" },
   ];
 
   const getSelectedJobName = () => {
@@ -34,7 +34,7 @@ const Dashboard: React.FC = () => {
     }
 
     if (radiobutton !== "None") {
-      return `Example (${radiobutton})`;
+      return `${radiobutton}`;
     }
 
     return pdbCode.trim();

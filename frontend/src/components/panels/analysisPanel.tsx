@@ -565,9 +565,9 @@ const Panel: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  {/* Fornac group */}
+                  {/* Forna group */}
                   <div className="mb-4 p-2 bg-white rounded shadow">
-                    <h3 className="font-bold mb-2">Fornac settings</h3>
+                    <h3 className="font-bold mb-2">Forna settings</h3>
                     <div className="flex flex-col gap-2">
                       <label>
                         <input
