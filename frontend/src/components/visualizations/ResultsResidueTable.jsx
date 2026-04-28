@@ -88,6 +88,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
         <select
           id="chain-select"
           value={selectedChain}
+          className="cursor-pointer"
           onChange={(e) => setSelectedChain(e.target.value)}
         >
           {chainOptions.map((chain) => (
