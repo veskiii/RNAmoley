@@ -612,13 +612,13 @@ const SummaryPanel: React.FC = () => {
               {/* Tabs */}
               <div className="flex mb-4">
                 <div
-                  className={`flex-1 py-2 rounded-tl-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  className={`flex-1 py-2 rounded-tl-lg text-center cursor-pointer ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
                   onClick={() => setSidebarTab(0)}
                 >
                   Models
                 </div>
                 <div
-                  className={`flex-1 py-2 rounded-tr-lg text-center ${sidebarTab === 1 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
+                  className={`flex-1 py-2 rounded-tr-lg text-center cursor-pointer ${sidebarTab === 1 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
                   onClick={() => setSidebarTab(1)}
                 >
                   Settings
@@ -633,15 +633,16 @@ const SummaryPanel: React.FC = () => {
                     const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
                     const modelListStatus = getModelListStatus(modelStatus);
                     const modelStatusPresentation = getModelStatusPresentation(modelListStatus);
+                    const isModelAccessable = modelStatus && ["running", "completed", "sim_starting", "sim_running", "sim_finished", "sim_analyzing", "sim_completed", "sim_failed"].includes(modelStatus);
                     return (
                       <div
                         key={"model" + modelNum}
                         className={`mb-4 p-2 bg-white rounded shadow transition-all
-                          ${myData && myData.metadata.resultsStatus && myData.metadata.resultsStatus[modelNum].status === "starting" ?
-                              "cursor-not-allowed" : "cursor-pointer"}
+                          ${myData && isModelAccessable ?
+                              "cursor-pointer" : "cursor-not-allowed"}
                           ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
                         } flex items-center justify-between`}
-                        onClick={() => changeModel(modelNum)}
+                        onClick={() => isModelAccessable && changeModel(modelNum)}
                       >
                         <span>Model {modelNum}</span>
                         {myData && myData.metadata.resultsStatus && (
