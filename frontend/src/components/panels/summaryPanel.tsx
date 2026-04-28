@@ -20,6 +20,7 @@ import { transformJobToChains } from "../utils/transformJobToChains";
 import { fetchMyData, startSimulation } from "../utils/api";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
+import Footer from "../common/footerComponent";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
@@ -906,6 +907,9 @@ const SummaryPanel: React.FC = () => {
                   radius={myData.metadata.radius}
                 />
               </div>
+            </div>
+            <div className="mt-auto">
+              <Footer />
             </div>
           </div>
         </div>

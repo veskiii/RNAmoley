@@ -10,6 +10,7 @@ import { NameContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import HomeIcon from "../common/homeIcon";
 import Logo from "../common/logo";
+import Footer from "../common/footerComponent";
 import { createJob, fetchJobCreation } from "../utils/api";
 import { isFileValid } from "../utils/fileValidation";
 
@@ -198,12 +199,12 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="desktop-content w-full h-full" style={{ color: "black" }}>
+    <div className="desktop-content min-h-screen w-full flex flex-col" style={{ color: "black" }}>
       <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
-      <div className="flex flex-col items-center px-[10vw] pt-12">
+      <div className="flex flex-1 flex-col items-center px-[10vw] pt-12">
         <form onSubmit={handleSubmit}>
           <div className="flex flex-row">
             <div className="space-y-10">
@@ -411,6 +412,7 @@ const Dashboard: React.FC = () => {
           </div>
         </form>
       </div>
+      <Footer />
     </div>
   );
 };

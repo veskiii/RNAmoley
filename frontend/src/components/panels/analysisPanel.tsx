@@ -12,6 +12,7 @@ import ErrorPage from "../common/ErrorPage";
 import RangeSelecting from "../common/rangeSelecting";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
+import Footer from "../common/footerComponent";
 import ResidueTable from "../visualizations/ResidueTable";
 
 type AutoSelectFragmentSpec = {
@@ -989,6 +990,9 @@ const Panel: React.FC = () => {
                     setIsViewInitialized={setIsViewInitialized}
                   />
                 </div>
+              </div>
+              <div className="mt-auto">
+                <Footer />
               </div>
             </div>
           ) : (
