@@ -1,15 +1,13 @@
 import ReactLoading from "react-loading";
 import Logo from "./logo";
-import HelpIcon from "./helpIcon";
 import HomeIcon from "./homeIcon";
 
 export default function Loading({ page = "Loading", message = "Loading..." }) {
   return (
     <div>
-      <div className="flex flex-row pt-2 pl-4 gap-8">
+      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
         <Logo />
         <HomeIcon />
-        <HelpIcon />
       </div>
       <div className="flex flex-col items-center text-4xl font-bold">
         <h1 className="my-36">{message}</h1>

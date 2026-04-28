@@ -1,15 +1,13 @@
 import Logo from "./logo";
-import HelpIcon from "./helpIcon";
 import HomeIcon from "./homeIcon";
 import "../../App.css";
 
 const SmallScreenPage = () => {
   return (
     <div className="mobile-message">
-      <div className="flex flex-row pl-2 gap-8">
+      <div className="pl-[10vw] flex flex-col gap-2 pt-2">
         <Logo />
         {/* <HomeIcon /> */}
-        <HelpIcon />
       </div>
       <div className="flex min-h-screen justify-center  flex-col items-center p-24 pt-0">
         <span className="p-24">

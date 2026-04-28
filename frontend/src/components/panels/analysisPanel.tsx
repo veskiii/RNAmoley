@@ -14,7 +14,6 @@ import { Job, Chain, Nucleotide, SelectedFragment, ChainElement } from "../utils
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { Colors } from "../common/colors";
-import HelpIcon from "../common/helpIcon";
 import Logo from "../common/logo";
 import ErrorPage from "../common/ErrorPage";
 import RangeSelecting from "../common/rangeSelecting";
