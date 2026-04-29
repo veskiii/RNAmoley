@@ -611,7 +611,9 @@ const SummaryPanel: React.FC = () => {
                     Sphere radius (Å):
                   </span>
                   <span className="truncate text-sm font-semibold ml-2 text-gray-900">
-                    {myData.metadata.radius || "N/A"}
+                    {myData.metadata.radius === undefined || myData.metadata.radius === null || myData.metadata.radius === -1
+                      ? "N/A"
+                      : myData.metadata.radius}
                   </span>
                 </div>
                 <div>
@@ -619,7 +621,9 @@ const SummaryPanel: React.FC = () => {
                     Sphere interval:
                   </span>
                   <span className="truncate text-sm font-semibold ml-2 text-gray-900">
-                    {myData.metadata.interval || "N/A"}
+                    {myData.metadata.interval === undefined || myData.metadata.interval === null || myData.metadata.interval === -1
+                      ? "N/A"
+                      : myData.metadata.interval}
                   </span>
                 </div>
               </div>
