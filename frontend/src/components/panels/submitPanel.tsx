@@ -296,12 +296,25 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
               <div >
-                <label
-                  htmlFor="pdbCodeInput"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  Fetch a structure from Protein Data Bank
-                </label>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="pdbCodeInput"
+                    className="block text-sm/6 font-medium text-gray-900"
+                  >
+                    Fetch a structure from Protein Data Bank
+                  </label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Enter a single PDB ID. Provide either a 4-character or 12-character identifier.
+                    </span>
+                  </span>
+                </div>
                 <div className="mt-2">
                   <input
                     id="pdbCodeInput"
@@ -315,12 +328,25 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
               <div className=" pb-6">
-                <label
-                  htmlFor="examples"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  Select from ready-to-use examples
-                </label>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="examples"
+                    className="block text-sm/6 font-medium text-gray-900"
+                  >
+                    Select from ready-to-use examples
+                  </label>
+                <span className="group relative inline-flex cursor-help items-center justify-center">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Select one of five preloaded example structures from RNA-Puzzles submissions.
+                    </span>
+                  </span>
+                </div>
 
                 <div
                   id="examples"
@@ -396,9 +422,22 @@ const Dashboard: React.FC = () => {
           <div className="mt-6 text-base/7"><strong>Local analysis settings</strong></div>
           <div>
           <div className="flex items-center gap-2 py-4">
-            <label htmlFor="sequential-toggle" className="font-semibold text-sm/6">
-              Enable local analysis
-            </label>
+            <div className="flex items-center gap-2">
+              <label htmlFor="sequential-toggle" className="font-semibold text-sm/6">
+                Enable local analysis
+              </label>
+              <span className="group relative inline-flex cursor-help items-center justify-center">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Apply spatial neighborhood analysis to identify local structural irregularities.
+                    </span>
+                  </span>
+                </div>
             <input
               id="sequential-toggle"
               type="checkbox"
@@ -410,7 +449,20 @@ const Dashboard: React.FC = () => {
             {(
               <div className="mb-4 py-2 bg-white rounded text-sm/6">
                 <div className="mb-2 flex flex-row items-center">
-                  <label className="block text-sm font-medium">Sphere radius (Å):</label>
+                  <div className="flex items-center gap-2">
+                    <label className="block text-sm font-medium">Sphere radius (Å):</label>
+                    <span className="group relative inline-flex cursor-help items-center justify-center">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Defines the radius of the local neighborhood centered at each C1′ atom.
+                    </span>
+                  </span>
+                </div>
                   <input
                     type="number"
                     min={1}
@@ -421,7 +473,20 @@ const Dashboard: React.FC = () => {
                   />
                 </div>
                 <div className="flex flex-row items-center">
+                  <div className="flex items-center gap-2">
                   <label className="block text-sm font-medium">Sampling Interval:</label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Defines how frequently local neighborhoods are sampled along the chain. Neighborhoods are centered at C1′ atoms: 1 = every nucleotide, 2 = every second nucleotide, etc.
+                    </span>
+                  </span>
+                </div>
                   <input
                     type="number"
                     min={1}
