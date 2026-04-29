@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import type { UUID } from "crypto";
+import { join } from "path";
 import type {
   Metadata,
   metrics,
@@ -15,12 +16,125 @@ import type {
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
 import {
     JOBS_DIR,
+    DEMO_FILES_DIR,
     saveMetadata,
     saveResults,
     fetchJSONFile,
     updateModelMetadata,
 } from "./utils.js";
 import { Queue, Worker } from "bullmq";
+
+const PRE_CALCULATED_RESULTS: Record<string, { filename: string; radius: number; interval: number; selection: string }> = {
+  "Example 1": {"filename" : "example_1.json", "radius": 15, "interval": 5, "selection": "(1:A:1-90)"},
+  "Example 2": {"filename" : "example_2.json", "radius": 5, "interval": 1, "selection": "(1:A:11-36)"},
+  "Example 3": {"filename" : "example_3.json", "radius": 5, "interval": 1, "selection": "(1:A:8-12),(1:A:44-49)"},
+  "Example 4": {"filename" : "example_4.json", "radius": 5, "interval": 1, "selection": "(1:A:42-83)"},
+  "Example 5": {"filename" : "example_5.json", "radius": 8, "interval": 2, "selection": "(1:A:1-39),(1:A:83-90)"},
+}
+
+function normalizeSelection(selection: string) {
+  return selection.replace(/\s+/g, "");
+}
+
+function buildSelectionSignature(models: Record<number, ChainElement[]>) {
+  const modelEntries = Object.values(models);
+  if (modelEntries.length !== 1) {
+    return null;
+  }
+
+  const residues = modelEntries[0] || [];
+  if (residues.length === 0) {
+    return null;
+  }
+
+  const chainIds = [...new Set(residues.map((residue) => residue.chainID).filter(Boolean))].sort();
+  const selectionParts: string[] = [];
+
+  chainIds.forEach((chainID, chainIndex) => {
+    const residueIds = residues
+      .filter((residue) => residue.chainID === chainID)
+      .map((residue) => residue.residueID)
+      .filter((residueID): residueID is number => Number.isInteger(residueID))
+      .sort((left, right) => left - right);
+
+    if (residueIds.length === 0) {
+      return;
+    }
+
+    const firstResidueID = residueIds[0];
+    if (firstResidueID === undefined) {
+      return;
+    }
+
+    let rangeStart = firstResidueID;
+    let previousResidueID = firstResidueID;
+
+    for (let index = 1; index < residueIds.length; index++) {
+      const residueID = residueIds[index];
+      if (residueID === undefined) {
+        return;
+      }
+      if (residueID === previousResidueID + 1) {
+        previousResidueID = residueID;
+        continue;
+      }
+
+      selectionParts.push(`(${chainIndex + 1}:${chainID}:${rangeStart}-${previousResidueID})`);
+      rangeStart = residueID;
+      previousResidueID = residueID;
+    }
+
+    selectionParts.push(`(${chainIndex + 1}:${chainID}:${rangeStart}-${previousResidueID})`);
+  });
+
+  return selectionParts.join(",");
+}
+
+export function getPreCalculatedDemoResult(
+  jobName: string,
+  radius: number,
+  interval: number,
+  models: Record<number, ChainElement[]>
+) {
+  const demoResult = PRE_CALCULATED_RESULTS[jobName];
+  if (!demoResult) {
+    return null;
+  }
+
+  const selectedResiduesSelection = buildSelectionSignature(models);
+  if (!selectedResiduesSelection) {
+    return null;
+  }
+
+  if (
+    Number(radius) !== demoResult.radius ||
+    Number(interval) !== demoResult.interval ||
+    normalizeSelection(selectedResiduesSelection) !== normalizeSelection(demoResult.selection)
+  ) {
+    return null;
+  }
+
+  return demoResult;
+}
+
+export async function applyPreCalculatedDemoResult(
+  jobID: UUID,
+  metadata: Metadata,
+  demoResult: { filename: string; radius: number; interval: number; selection: string }
+): Promise<Analysis_results> {
+  const sourceFilePath = join(DEMO_FILES_DIR, demoResult.filename);
+  const destinationFilePath = join(JOBS_DIR, jobID, "1_results.json");
+
+  await fs.copyFile(sourceFilePath, destinationFilePath);
+
+  const analysisResult = JSON.parse(await fs.readFile(sourceFilePath, "utf-8")) as Analysis_results;
+
+  metadata.status = "completed";
+  updateModelMetadata(metadata, "1", "completed");
+  await saveMetadata(jobID, metadata);
+
+  return analysisResult;
+}
 
 export const analysisQueue = new Queue("analysis", {
   connection: {

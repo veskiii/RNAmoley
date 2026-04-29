@@ -66,6 +66,10 @@ export async function getDemoFiles(name: string) {
   } else if (name == "Example 2") {
     filename = "medium.pdb";
   } else if (name == "Example 3") {
+    filename = "medium.pdb";
+  } else if (name == "Example 4") {
+    filename = "bad.pdb";
+  } else if (name == "Example 5") {
     filename = "bad.pdb";
   }
   console.log(`Fetching demo file ${name} -  ${filename} from ${DEMO_FILES_DIR}`);
