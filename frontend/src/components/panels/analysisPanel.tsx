@@ -724,17 +724,21 @@ const Panel: React.FC = () => {
                 <div className="truncate text-sm font-semibold text-gray-900" title={myData.name || "Unnamed job"}>
                   {myData.name || "Unnamed job"}
                 </div>
-                <div className="text-xs uppercase tracking-wide mt-2 text-gray-500">
-                  Sphere radius (Å):
+                <div>
+                  <span className="text-xs uppercase tracking-wide mt-2 text-gray-500">
+                    Sphere radius (Å):
+                  </span>
+                  <span className="truncate text-sm font-semibold ml-2 text-gray-900">
+                    {myData.metadata.radius || "N/A"}
+                  </span>
                 </div>
-                <div className="truncate text-sm font-semibold text-gray-900">
-                  {myData.metadata.radius || "N/A"}
-                </div>
-                <div className="text-xs uppercase tracking-wide mt-2 text-gray-500">
-                  Sphere interval:
-                </div>
-                <div className="truncate text-sm font-semibold text-gray-900">
-                  {myData.metadata.interval || "N/A"}
+                <div>
+                  <span className="text-xs uppercase tracking-wide mt-2 text-gray-500">
+                    Sphere interval:
+                  </span>
+                  <span className="truncate text-sm font-semibold ml-2 text-gray-900">
+                    {myData.metadata.interval || "N/A"}
+                  </span>
                 </div>
               </div>
               {/* Tabs */}

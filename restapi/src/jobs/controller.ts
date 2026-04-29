@@ -291,7 +291,7 @@ export async function createJob(req: Request, res: Response) {
     originalExtension = rnaFile.originalname.split(".").pop() as string;
   } else {
     // use pdbCode
-    if (pdbCode && pdbCode.length !== 4) {
+    if (pdbCode && (pdbCode.length !== 4 && pdbCode.length !== 12)) {
       res.status(422).send({ error: "Invalid PDB code." });
       return;
     }

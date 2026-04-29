@@ -319,7 +319,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 }
                 style={activeCellStyle(nucleotide, QualityScore.SUGAR_PUCKER_OUT)}
               >
-                {nucleotide.residueMetrics ? nucleotide.residueMetrics.pucker_outlier_type : ""}
+                {nucleotide.residueMetrics?.pucker_outlier_type ? nucleotide.residueMetrics.pucker_outlier_type : "-"}
               </td>
             ))}
           </tr>

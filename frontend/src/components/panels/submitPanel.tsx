@@ -238,7 +238,7 @@ const Dashboard: React.FC = () => {
       <div className="flex flex-1 flex-col items-center px-[10vw] pt-12">
         <form onSubmit={handleSubmit}>
           <div className="flex flex-row">
-            <div className="space-y-10">
+            <div className="space-y-3">
             <div className="flex flex-col justify-center items-start text-left">
               <div>
                 <div>
@@ -308,7 +308,7 @@ const Dashboard: React.FC = () => {
                     type="text"
                     value={pdbCode}
                     onChange={(e) => customSetState("pdbCode", e.target.value)}
-                    pattern="[A-Za-z0-9]{4}"
+                    pattern="[A-Za-z0-9]{4}|pdb_[A-Za-z0-9]{8}"
                     placeholder="Enter PDB ID"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:border-moley-blue focus:ring-1 focus:ring-moley-blue sm:text-sm"
                   />
