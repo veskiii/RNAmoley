@@ -724,6 +724,18 @@ const Panel: React.FC = () => {
                 <div className="truncate text-sm font-semibold text-gray-900" title={myData.name || "Unnamed job"}>
                   {myData.name || "Unnamed job"}
                 </div>
+                <div className="text-xs uppercase tracking-wide mt-2 text-gray-500">
+                  Sphere radius (Å):
+                </div>
+                <div className="truncate text-sm font-semibold text-gray-900">
+                  {myData.metadata.radius || "N/A"}
+                </div>
+                <div className="text-xs uppercase tracking-wide mt-2 text-gray-500">
+                  Sphere interval:
+                </div>
+                <div className="truncate text-sm font-semibold text-gray-900">
+                  {myData.metadata.interval || "N/A"}
+                </div>
               </div>
               {/* Tabs */}
               <div className="flex mb-4">
@@ -849,7 +861,6 @@ const Panel: React.FC = () => {
                                       <div
                                         className="ml-1 px-1 py-0.5 bg-white text-center text-red-600 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
                                         onClick={() => removeFragmentFromModel(model, fragment.name)}
-                                        title="Usuń fragment"
                                       >
                                         X
                                       </div>

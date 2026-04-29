@@ -22,7 +22,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [useWalkingSphere, setUseWalkingSphere] = useState(false);
+  const [useWalkingSphere, setUseWalkingSphere] = useState(true);
   const [sphereRadius, setSphereRadius] = useState<number>(5);
   const [sphereInterval, setSphereInterval] = useState<number>(1);
 
@@ -40,8 +40,8 @@ const Dashboard: React.FC = () => {
     {
       id: "good",
       value: "Example 1",
-      label: "Example 1",
-      file: "PZ39_Xiao_4.pdb",
+      label: "1",
+      file: "Model 04 submitted by Xiao to RNA-Puzzles (Puzzle PZ39)",
       useWalkingSphere: true,
       sphereRadius: 15,
       sphereInterval: 5,
@@ -49,7 +49,16 @@ const Dashboard: React.FC = () => {
     {
       id: "medium",
       value: "Example 2",
-      label: "Example 2",
+      label: "2",
+      file: "PZ39_RNAComposer_3.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 5,
+      sphereInterval: 1,
+    },
+    {
+      id: "medium2",
+      value: "Example 3",
+      label: "3",
       file: "PZ39_RNAComposer_3.pdb",
       useWalkingSphere: true,
       sphereRadius: 5,
@@ -57,11 +66,20 @@ const Dashboard: React.FC = () => {
     },
     {
       id: "bad",
-      value: "Example 3",
-      label: "Example 3",
+      value: "Example 4",
+      label: "4",
       file: "PZ39_Dfold_1.pdb",
       useWalkingSphere: true,
-      sphereRadius: 5,
+      sphereRadius: 5, //todo
+      sphereInterval: 1,
+    },
+    {
+      id: "bad2",
+      value: "Example 5",
+      label: "5",
+      file: "PZ39_Dfold_1.pdb",
+      useWalkingSphere: true,
+      sphereRadius: 5, //todo
       sphereInterval: 1,
     },
   ];
@@ -198,9 +216,22 @@ const Dashboard: React.FC = () => {
     }
   }
 
+  function resetSettings() {
+    setUseWalkingSphere(true);
+    setSphereRadius(5);
+    setSphereInterval(1);
+    clearFileInput();
+    setPdbCode("");
+    setRadiobutton("None");
+  }
+
+  const isFormFilled = () => {
+    return (pdbCode.trim() !== "" || rnaFile !== null || radiobutton !== "None");
+  };
+
   return (
     <div className="desktop-content min-h-screen w-full flex flex-col" style={{ color: "black" }}>
-      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
+      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom z-20">
         <Logo />
         <HomeIcon />
       </div>
@@ -208,9 +239,8 @@ const Dashboard: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div className="flex flex-row">
             <div className="space-y-10">
-            <div className="flex flex-col justify-center items-center p-5 text-center">
+            <div className="flex flex-col justify-center items-start text-left">
               <div>
-                <div className="font-bold">Welcome to RNAmoley!</div>
                 <div>
                   Welcome to RNAmoley, a web server for detailed analysis of RNA 3D 
                   models (PDB/mmCIF), enabling local detection and refinement of 
@@ -218,89 +248,17 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-              <h2 className="text-base/7 font-semibold text-gray-900">
-                Upload RNA 3D structure in the PDB/mmCIF file
+              <h2 className="text-base/7 font-bold text-gray-900">
+                Input RNA 3D structure
               </h2>
 
               <div className="">
-                <label
-                  htmlFor="examples"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  from example
-                </label>
-
-                <div
-                  id="examples"
-                  className="inline-flex rounded-md shadow-xs mt-2"
-                  role="group"
-                >
-                  <button
-                    type="button"
-                    onClick={() => customSetState("example", samples[0].value)}
-                    title={samples[0].file}
-                    className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
-                      radiobutton == samples[0].value
-                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
-                        : "text-gray-900 ring-0 z-0"
-                    }`}
-                  >
-                    {samples[0].label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => customSetState("example", samples[1].value)}
-                    title={samples[1].file}
-                    className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
-                      radiobutton == samples[1].value
-                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
-                        : "text-gray-900 ring-0 z-0"
-                    }`}
-                  >
-                    {samples[1].label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => customSetState("example", samples[2].value)}
-                    title={samples[2].file}
-                    className={`px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
-                      radiobutton == samples[2].value
-                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
-                        : "text-gray-900 ring-0 z-0"
-                    }`}
-                  >
-                    {samples[2].label}
-                  </button>
-                </div>
-              </div>
-
-              <div >
-                <label
-                  htmlFor="pdbCodeInput"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  from Protein Data Bank
-                </label>
-                <div className="mt-2">
-                  <input
-                    id="pdbCodeInput"
-                    type="text"
-                    value={pdbCode}
-                    onChange={(e) => customSetState("pdbCode", e.target.value)}
-                    pattern="[A-Za-z0-9]{4}"
-                    placeholder="Enter PDB ID"
-                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:border-moley-blue focus:ring-1 focus:ring-moley-blue sm:text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="border-b border-gray-900/10 pb-6">
                 <div className="col-span-full">
                   <label
                     htmlFor="cover-photo"
                     className="block text-sm/6 font-medium text-gray-900"
                   >
-                    from local repository
+                    Upload a PDB/mmCIF file (single or multiple models)
                   </label>
                   <div
                     className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10"
@@ -337,12 +295,109 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
+              <div >
+                <label
+                  htmlFor="pdbCodeInput"
+                  className="block text-sm/6 font-medium text-gray-900"
+                >
+                  Fetch a structure from Protein Data Bank
+                </label>
+                <div className="mt-2">
+                  <input
+                    id="pdbCodeInput"
+                    type="text"
+                    value={pdbCode}
+                    onChange={(e) => customSetState("pdbCode", e.target.value)}
+                    pattern="[A-Za-z0-9]{4}"
+                    placeholder="Enter PDB ID"
+                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 border border-gray-300 placeholder:text-gray-400 focus:border-moley-blue focus:ring-1 focus:ring-moley-blue sm:text-sm"
+                  />
+                </div>
+              </div>
+              <div className=" pb-6">
+                <label
+                  htmlFor="examples"
+                  className="block text-sm/6 font-medium text-gray-900"
+                >
+                  Select from ready-to-use examples
+                </label>
+
+                <div
+                  id="examples"
+                  className="inline-flex rounded-md shadow-xs mt-2"
+                  role="group"
+                >
+                  <button
+                    type="button"
+                    onClick={() => customSetState("example", samples[0].value)}
+                    title={samples[0].file}
+                    className={`w-12 mx-1 px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
+                      radiobutton == samples[0].value
+                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
+                        : "text-gray-900 ring-0 z-0"
+                    }`}
+                  >
+                    {samples[0].label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => customSetState("example", samples[1].value)}
+                    title={samples[1].file}
+                    className={`w-12 mx-1 px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
+                      radiobutton == samples[1].value
+                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
+                        : "text-gray-900 ring-0 z-0"
+                    }`}
+                  >
+                    {samples[1].label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => customSetState("example", samples[2].value)}
+                    title={samples[2].file}
+                    className={`w-12 mx-1 px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
+                      radiobutton == samples[2].value
+                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
+                        : "text-gray-900 ring-0 z-0"
+                    }`}
+                  >
+                    {samples[2].label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => customSetState("example", samples[3].value)}
+                    title={samples[3].file}
+                    className={`w-12 mx-1 px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
+                      radiobutton == samples[3].value
+                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
+                        : "text-gray-900 ring-0 z-0"
+                    }`}
+                  >
+                    {samples[3].label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => customSetState("example", samples[4].value)}
+                    title={samples[4].file}
+                    className={`w-12 mx-1 px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
+                      radiobutton == samples[4].value
+                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
+                        : "text-gray-900 ring-0 z-0"
+                    }`}
+                  >
+                    {samples[4].label}
+                  </button>
+                </div>
+              </div>
+              
             </div>
           </div>
 
-          <div className="flex items-center gap-2 p-4">
-            <label htmlFor="sequential-toggle" className="font-semibold">
-              Analyze residue neighborhoods
+          <div className="mt-6 text-base/7"><strong>Local analysis settings</strong></div>
+          <div>
+          <div className="flex items-center gap-2 py-4">
+            <label htmlFor="sequential-toggle" className="font-semibold text-sm/6">
+              Enable local analysis
             </label>
             <input
               id="sequential-toggle"
@@ -352,36 +407,38 @@ const Dashboard: React.FC = () => {
               className="w-5 h-5 accent-moley-accentGreen"
             />
             </div>
-            {useWalkingSphere && (
-              <div className="mb-4 p-2 bg-white rounded ">
-                <h3 className="font-bold mb-2">Neighborhood sphere</h3>
-                <div className="mb-2">
-                  <label className="block text-sm font-medium mb-1">Radius</label>
+            {(
+              <div className="mb-4 py-2 bg-white rounded text-sm/6">
+                <div className="mb-2 flex flex-row items-center">
+                  <label className="block text-sm font-medium">Sphere radius (Å):</label>
                   <input
                     type="number"
                     min={1}
                     value={sphereRadius}
+                    disabled={!useWalkingSphere}
                     onChange={e => setSphereRadius(parseInt(e.target.value))}
-                    className="w-full border rounded px-2 py-1"
+                    className="border rounded px-2 py-1 mx-2"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Interval</label>
+                <div className="flex flex-row items-center">
+                  <label className="block text-sm font-medium">Sampling Interval:</label>
                   <input
                     type="number"
                     min={1}
                     value={sphereInterval}
+                    disabled={!useWalkingSphere}
                     onChange={e => setSphereInterval(parseInt(e.target.value))}
-                    className="w-full border rounded px-2 py-1"
+                    className="border rounded px-2 py-1 mx-2"
                   />
                 </div>
               </div>
-              )}
+              )}</div>
 
-          <div className="my-6 flex items-center justify-end gap-x-6">
+          <div className="my-6 flex items-center justify-start gap-x-6">
             <button
               type="submit"
-              className="rounded-md px-3 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors"
+              disabled={isFormFilled() ? false : true || isSubmitting}
+              className="rounded-md px-3 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <span className="flex items-center transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
@@ -406,8 +463,14 @@ const Dashboard: React.FC = () => {
                   </div>
                 </span>
               ) : (
-                "Run"
+                "Next"
               )}
+            </button>
+            <button 
+            type="button"
+            className="rounded-md px-3 py-2 bg-gray-500 text-sm font-semibold text-white shadow-xs hover:bg-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors "
+            onClick={resetSettings}>
+              Reset settings
             </button>
           </div>
         </form>

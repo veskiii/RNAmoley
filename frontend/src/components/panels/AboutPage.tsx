@@ -40,7 +40,7 @@ const AboutPage = () => {
             <p>Prototype development</p>
             <p>Dawid Grajek<sup>1</sup>, Lena Niedzialkowska<sup>1</sup>, Julia Pawlowska<sup>1</sup>, Piotr Walczak<sup>1</sup> (engineering project work), Marta Szachniuk<sup>1,2</sup> (supervision)</p>
             <p className="pt-2">Final implementation and development</p>
-            <p>Mikolaj Mlynarczyk<sup>1</sup> (RNAmoley core development, algorithmic improvements, and feature extension), Simon Poblete<sup>3,4</sup>, Marta Szachniuk<sup>1,2</sup> (testing, supervision)</p>
+            <p>Mikolaj Mlynarczyk<sup>1</sup> (RNAmoley core development, algorithmic improvements, and feature extension), Simón Poblete<sup>3,4</sup>, Marta Szachniuk<sup>1,2</sup> (testing, supervision)</p>
             <p className="pt-2"><sup>1</sup> Institute of Computing Science, Poznan University of Technology, Poland</p>
             <p><sup>2</sup> Institute of Bioorganic Chemistry, Polish Academy of Sciences, Poznan, Poland</p>
             <p><sup>3</sup> Facultad de Ingeniería, Universidad San Sebastián, Santiago, Chile</p>
