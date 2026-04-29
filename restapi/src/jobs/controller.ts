@@ -35,7 +35,7 @@ import type {
   StructuralElement,
 } from "./types.js";
 import { TOOLS_URL } from "../server.js";
-import { addAnalysisTask } from "./analysis.js";
+import { addAnalysisTask, applyPreCalculatedDemoResult, getPreCalculatedDemoResult } from "./analysis.js";
 import { addSimulationTask, fetchSimulationStatus, type SimulationParameters } from "./simulation.js";
 import { existsSync } from "fs";
 import { join } from "path";
@@ -391,17 +391,6 @@ export async function analyzeStructure(req: Request, res: Response) {
   metadata.radius = Number(radius);
   metadata.interval = Number(interval);
 
-  metadata.status = "starting";
-  if (metadata.resultsStatus === undefined) {
-    metadata.resultsStatus = {};
-  }
-  for (let modelNumber in models) {
-    metadata.resultsStatus[modelNumber] = {modelNumber: modelNumber, status: "starting"};
-  }
-  await saveMetadata(id, metadata);
-
-  addAnalysisTask(id, models, radius, interval, metadata, analyzeNeighborhoods);
-
   db.query(getJobByIdQuery, [id], async (err, result) => {
     if (err) {
       console.error(err);
@@ -412,6 +401,39 @@ export async function analyzeStructure(req: Request, res: Response) {
       res.status(404).send({ error: "Job not found." });
       return;
     }
+
+    const demoResult = getPreCalculatedDemoResult(result.rows[0].name, Number(radius), Number(interval), models);
+    if (demoResult) {
+      try {
+        await applyPreCalculatedDemoResult(id, metadata, demoResult);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: "Failed to load demo results." });
+        return;
+      }
+
+      res.status(200).json({
+        id: result.rows[0].id,
+        original_filename: result.rows[0].original_filename,
+        name: result.rows[0].name,
+        metadata: metadata,
+        created_at: result.rows[0].created_at,
+        updated_at: result.rows[0].updated_at,
+        message: "Demo results loaded. Analysis completed.",
+      });
+      return;
+    }
+
+    metadata.status = "starting";
+    if (metadata.resultsStatus === undefined) {
+      metadata.resultsStatus = {};
+    }
+    for (let modelNumber in models) {
+      metadata.resultsStatus[modelNumber] = {modelNumber: modelNumber, status: "starting"};
+    }
+    await saveMetadata(id, metadata);
+
+    addAnalysisTask(id, models, radius, interval, metadata, analyzeNeighborhoods);
 
     res.status(200).json({
       id: result.rows[0].id,
