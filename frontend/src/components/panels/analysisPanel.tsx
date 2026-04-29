@@ -28,44 +28,65 @@ type AutoSelectFragmentConfig = {
   label: string;
 };
 
+const AUTO_SELECT_FRAGMENT_REGEX =
+  /^\(\s*(\d+)\s*:\s*([^:()]+)\s*:\s*(\d+)(?:-(\d+))?\s*\)$/;
+
+function extractAutoSelectFragments(fragment: string): string[] {
+  const trimmed = fragment.trim();
+  if (AUTO_SELECT_FRAGMENT_REGEX.test(trimmed)) {
+    return [trimmed];
+  }
+
+  const matches = trimmed.match(/\(\s*\d+\s*:\s*[^:()]+\s*:\s*\d+(?:-\d+)?\s*\)/g);
+  return matches ?? [];
+}
+
 const AUTO_SELECT_FRAGMENTS_BY_JOB: Record<string, AutoSelectFragmentConfig[]> = {
   "Example 1": [{ fragment: "(1:A:1-90)", label: "Range 1-90" }],
   "Example 2": [{ fragment: "(1:A:11-36)", label: "Range 11-36" }],
-  "Example 3": [{ fragment: "(1:A:42-83)", label: "Range 42-83" }],
+  "Example 3": [{ fragment: "(1:A:8-12),(1:A:44-49)", label: "Range" }],
+  "Example 4": [{ fragment: "(1:A:42-83)", label: "Range 42-83" }],
+  "Example 5": [{ fragment: "(1:A:1-39),(1:A:83-90)", label: "Range" }],
 };
 
 function parseAutoSelectFragmentSpec(
   entry: AutoSelectFragmentConfig
-): AutoSelectFragmentSpec | null {
+): AutoSelectFragmentSpec[] {
   const { fragment, label } = entry;
-  const match = fragment.match(/^\(\s*(\d+)\s*:\s*([^:()]+)\s*:\s*(\d+)(?:-(\d+))?\s*\)$/);
-  if (!match) {
-    return null;
-  }
+  const fragments = extractAutoSelectFragments(fragment);
 
-  const model = Number(match[1]);
-  const chainName = match[2].trim();
-  const start = Number(match[3]);
-  const end = Number(match[4] ?? match[3]);
+  return fragments
+    .map((fragmentSpec, index) => {
+      const match = fragmentSpec.match(AUTO_SELECT_FRAGMENT_REGEX);
+      if (!match) {
+        return null;
+      }
 
-  if (
-    !Number.isFinite(model) ||
-    !Number.isFinite(start) ||
-    !Number.isFinite(end) ||
-    start <= 0 ||
-    end <= 0 ||
-    start > end
-  ) {
-    return null;
-  }
+      const model = Number(match[1]);
+      const chainName = match[2].trim();
+      const start = Number(match[3]);
+      const end = Number(match[4] ?? match[3]);
 
-  return {
-    model,
-    chainName,
-    start,
-    end,
-    label,
-  };
+      if (
+        !Number.isFinite(model) ||
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        start <= 0 ||
+        end <= 0 ||
+        start > end
+      ) {
+        return null;
+      }
+
+      return {
+        model,
+        chainName,
+        start,
+        end,
+        label: fragments.length === 1 ? label : `${label} ${index + 1}`,
+      };
+    })
+    .filter((spec): spec is AutoSelectFragmentSpec => spec !== null);
 }
 
 function applyConfiguredSelections(
@@ -87,8 +108,7 @@ function applyConfiguredSelections(
   }
 
   const parsedSpecs = configuredSpecs
-    .map(parseAutoSelectFragmentSpec)
-    .filter((spec): spec is AutoSelectFragmentSpec => spec !== null)
+    .flatMap(parseAutoSelectFragmentSpec)
     .filter((spec) => spec.model === model);
 
   if (parsedSpecs.length === 0) {
@@ -101,6 +121,7 @@ function applyConfiguredSelections(
 
   const selectedFragments: SelectedFragment[] = [];
   const selectedResiduesByChain = new Map<string, Set<number>>();
+  const usedFragmentNames = new Map<string, number>();
   let selectedChain = chains[0]?.name || "";
 
   parsedSpecs.forEach((spec) => {
@@ -127,8 +148,12 @@ function applyConfiguredSelections(
     const selectedResidues = selectedResiduesByChain.get(spec.chainName);
     residueIds.forEach((residueId) => selectedResidues?.add(residueId));
 
+    const occurrence = (usedFragmentNames.get(spec.label) ?? 0) + 1;
+    usedFragmentNames.set(spec.label, occurrence);
+    const uniqueFragmentName = occurrence === 1 ? spec.label : `${spec.label} (${occurrence})`;
+
     selectedFragments.push({
-      name: spec.label,
+      name: uniqueFragmentName,
       chainName: spec.chainName,
       residues: residueIds,
       deselectedResidues: [],

@@ -260,7 +260,7 @@ export async function createJob(req: Request, res: Response) {
     return;
   }
 
-  const possible_demo_files = ["Example 1", "Example 2", "Example 3"];
+  const possible_demo_files = ["Example 1", "Example 2", "Example 3", "Example 4", "Example 5"];
   if (demoFileName !== "None" && !possible_demo_files.includes(demoFileName)) {
     res.status(422).send({ error: "Invalid demo file." });
     return;

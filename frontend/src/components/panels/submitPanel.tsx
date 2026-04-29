@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
       id: "medium",
       value: "Example 2",
       label: "2",
-      file: "PZ39_RNAComposer_3.pdb",
+      file: "Model 03 submitted by RNAComposer to RNA-Puzzles (Puzzle PZ39)",
       useWalkingSphere: true,
       sphereRadius: 5,
       sphereInterval: 1,
@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
       id: "medium2",
       value: "Example 3",
       label: "3",
-      file: "PZ39_RNAComposer_3.pdb",
+      file: "Model 03 submitted by RNAComposer to RNA-Puzzles (Puzzle PZ39)",
       useWalkingSphere: true,
       sphereRadius: 5,
       sphereInterval: 1,
@@ -68,19 +68,19 @@ const Dashboard: React.FC = () => {
       id: "bad",
       value: "Example 4",
       label: "4",
-      file: "PZ39_Dfold_1.pdb",
+      file: "Model 01 submitted by Dfold to RNA-Puzzles (Puzzle PZ39)",
       useWalkingSphere: true,
-      sphereRadius: 5, //todo
+      sphereRadius: 5,
       sphereInterval: 1,
     },
     {
       id: "bad2",
       value: "Example 5",
       label: "5",
-      file: "PZ39_Dfold_1.pdb",
+      file: "Model 01 submitted by Dfold to RNA-Puzzles (Puzzle PZ39)",
       useWalkingSphere: true,
-      sphereRadius: 5, //todo
-      sphereInterval: 1,
+      sphereRadius: 8,
+      sphereInterval: 2,
     },
   ];
 
