@@ -191,9 +191,6 @@ const Dashboard: React.FC = () => {
       clearFileInput();
       setRnaFile(null);
       setRadiobutton("None");
-      setUseWalkingSphere(false);
-      setSphereRadius(5);
-      setSphereInterval(1);
 
       setPdbCode(newValue);
     } else if (field === "example") {
