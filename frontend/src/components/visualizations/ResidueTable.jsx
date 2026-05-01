@@ -64,7 +64,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
     <table className="mt-4 w-max border-separate">
       <tbody>
         <tr>
-          <td className="w-32 p-2 text-center">Index</td>
+          <td className="w-16 p-2 text-left">Index</td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-id-${index}`}
@@ -81,7 +81,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-32 p-2 text-center">Residue</td>
+          <td className="w-16 p-2 text-left">Residue</td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-name-${index}`}
@@ -98,7 +98,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-32 p-2 text-center">
+          <td className="w-16 p-2 text-left">
             Secondary Structure
           </td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
@@ -117,7 +117,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-32 p-2 text-center">
+          <td className="w-16 p-2 text-left">
             Structural Element
           </td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
