@@ -64,12 +64,12 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
     <table className="mt-4 w-max border-separate">
       <tbody>
         <tr>
-          <td className="w-16 p-2 text-left">Index</td>
+          <td className="w-16 p-1 text-left">Index</td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-id-${index}`}
               className={[
-                "w-12 p-2 text-center border-2 cursor-pointer even:bg-gray-50",
+                "w-12 p-1 text-center border-2 cursor-pointer even:bg-gray-50",
                 selectedResidueIdSet.has(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-white"
@@ -81,12 +81,12 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-16 p-2 text-left">Residue</td>
+          <td className="w-16 p-1 text-left">Residue</td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-name-${index}`}
               className={[
-                "w-12 p-2 text-center border-2 cursor-pointer even:bg-gray-50",
+                "w-12 p-1 text-center border-2 cursor-pointer even:bg-gray-50",
                 selectedResidueIdSet.has(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-white"
@@ -98,14 +98,14 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-16 p-2 text-left">
+          <td className="w-16 p-1 text-left">
             Secondary Structure
           </td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-index-${index}`}
               className={[
-                "w-12 p-2 text-center border-2 cursor-pointer even:bg-gray-50",
+                "w-12 p-1 text-center border-2 cursor-pointer even:bg-gray-50",
                 selectedResidueIdSet.has(nucleotide.index)
                   ? "border-moley-accentGreen"
                   : "border-white"
@@ -117,13 +117,13 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-16 p-2 text-left">
+          <td className="w-16 p-1 text-left">
             Structural Element
           </td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-name-${index}`}
-              className="w-12 p-2 text-center border-2 border-white cursor-pointer even:bg-gray-50"
+              className="w-12 p-1 text-center border-2 border-white cursor-pointer even:bg-gray-50"
               onClick={() => handleStructuralElementClick(nucleotide.index)}
             >
               {nucleotide.structuralElements && nucleotide.structuralElements.length > 0
