@@ -740,6 +740,31 @@ const Panel: React.FC = () => {
     });
   }
 
+  const handleSubmitSelection = () => {
+    const start = parseInt(inputValueStart, 10);
+    const end = parseInt(inputValueEnd, 10);
+    
+        console.log(`Selected range: ${start} to ${end} on chain ${selectedChain}`);
+
+    if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
+        alert(`Invalid range: ${start} to ${end}`);
+        return;
+    }
+    if (minId && maxId && start >= parseInt(minId, 10) && end <= parseInt(maxId, 10)) {
+
+        const selectedNucleotides = chainsState
+            .find(chain => chain.name === selectedChain)
+            ?.nucleotides
+            .filter(nucleotide => nucleotide.index >= start && nucleotide.index <= end)
+            .map(nucleotide => nucleotide.index) || [];
+        
+        selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
+    } else {
+        alert("Type valid range on selected chain");
+    }
+
+  };
+
   const resetSettings = () => {
     const clearedCurrentChains = clearChainSelections(chainsState);
 
@@ -813,7 +838,7 @@ const Panel: React.FC = () => {
           </div>
           {/* Analysis setup */}
           <div className="mt-10">
-            <h1 className="font-semibold">Analysis Setup</h1>
+            <h1 className="font-semibold">Analysis setup</h1>
             {/* Model selection */}
             <div className="mt-2">
               <div>
@@ -851,12 +876,13 @@ const Panel: React.FC = () => {
                 <button
                   className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
                   onClick={() => setShowVisualization(!showVisualization)}
+                  title={"Displays/hides 2D and 3D views of the selected RNA model."}
                 >
                   {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
                 </button>
                 {showVisualization && (
                 <div className="flex flex-row h-[60vh] min-h-[400px]">
-                  <div className="w-1/2 h-full p-5 relative">
+                  <div className="w-1/2 h-full relative border border-gray-300">
                     {/* Gear icon button */}
                     <button
                       onClick={() => setShowFornaSettings(!showFornaSettings)}
@@ -951,7 +977,7 @@ const Panel: React.FC = () => {
                       setIsViewInitialized={setIsViewInitialized}
                     />
                   </div>
-                  <div className="w-1/2 h-full p-5">
+                  <div className="w-1/2 h-full">
                     <Molstar
                       useInterface={true}
                       file={myData.pdb_file_string}
@@ -1044,20 +1070,25 @@ const Panel: React.FC = () => {
                 <button
                   className="ml-4 my-0 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800 disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed"
                   disabled={inputValueStart === "" || inputValueEnd === "" || selectedModel === 0 || !selectedChain}
+                  onClick={handleSubmitSelection}
+                  title={"Adds the specified residue range to the selection and highlights it below."}
                 >
-                  Select
+                  Add to selection
                 </button>
               </div>
-              <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
-                <ResidueTable
-                  data={chainsState}
-                  selectedChain={selectedChain}
-                  selectedResidueIds={selectedResidueIdsForChain}
-                  selectResidue={selectResidue}
-                  selectFragment={selectFragment}
-                  deselectResidue={deselectResidue}
-                  deselectFragment={removeSelectedFragment}
-                />
+              <div className="mt-2">
+                <label>Selected regions are highlighted below. Click residues to add or remove them from the selection.</label>
+                <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+                  <ResidueTable
+                    data={chainsState}
+                    selectedChain={selectedChain}
+                    selectedResidueIds={selectedResidueIdsForChain}
+                    selectResidue={selectResidue}
+                    selectFragment={selectFragment}
+                    deselectResidue={deselectResidue}
+                    deselectFragment={removeSelectedFragment}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -1103,6 +1134,7 @@ const Panel: React.FC = () => {
                                 <div
                                   className="ml-1 px-1 py-0.5 bg-white text-center text-gray-800 border border-gray-800 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
                                   onClick={() => removeFragmentFromModel(model, fragment.name)}
+                                  title={"Removes the entry from the selection summary."}
                                 >
                                   X
                                 </div>
