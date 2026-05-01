@@ -7,12 +7,15 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
   );
 
   if (!data || data.length === 0) {
-    return <p>No data available</p>;
+    return <div></div>;
   }
 
   const selectedChainData = data.find(
     (chain) => chain.name === selectedChain
   );
+  if (!selectedChain) {
+    return <div></div>;
+  }
   if (!selectedChainData) {
     return <p>No data available for the selected chain {selectedChain}</p>;
   }
@@ -78,7 +81,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
           ))}
         </tr>
         <tr>
-          <td className="w-32 p-2 text-center">Base</td>
+          <td className="w-32 p-2 text-center">Residue</td>
           {selectedChainData.nucleotides.map((nucleotide, index) => (
             <td
               key={`${selectedChain}-name-${index}`}

@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
       id: "good",
       value: "Example 1",
       label: "1",
-      file: "Model 04 submitted by Xiao to RNA-Puzzles (Puzzle PZ39)",
+      file: "Xiao model 04 submitted to PZ39",
       useWalkingSphere: true,
       sphereRadius: 15,
       sphereInterval: 5,
@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
       id: "medium",
       value: "Example 2",
       label: "2",
-      file: "Model 03 submitted by RNAComposer to RNA-Puzzles (Puzzle PZ39)",
+      file: "RNAComposer model 03 submitted to PZ39",
       useWalkingSphere: true,
       sphereRadius: 5,
       sphereInterval: 1,
@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
       id: "medium2",
       value: "Example 3",
       label: "3",
-      file: "Model 03 submitted by RNAComposer to RNA-Puzzles (Puzzle PZ39)",
+      file: "RNAComposer model 03 submitted to PZ39",
       useWalkingSphere: true,
       sphereRadius: 5,
       sphereInterval: 1,
@@ -68,7 +68,7 @@ const Dashboard: React.FC = () => {
       id: "bad",
       value: "Example 4",
       label: "4",
-      file: "Model 01 submitted by Dfold to RNA-Puzzles (Puzzle PZ39)",
+      file: "Dfold model 01 submitted to PZ39",
       useWalkingSphere: true,
       sphereRadius: 5,
       sphereInterval: 1,
@@ -77,7 +77,7 @@ const Dashboard: React.FC = () => {
       id: "bad2",
       value: "Example 5",
       label: "5",
-      file: "Model 01 submitted by Dfold to RNA-Puzzles (Puzzle PZ39)",
+      file: "Dfold model 01 submitted to PZ39",
       useWalkingSphere: true,
       sphereRadius: 8,
       sphereInterval: 2,
@@ -191,9 +191,6 @@ const Dashboard: React.FC = () => {
       clearFileInput();
       setRnaFile(null);
       setRadiobutton("None");
-      setUseWalkingSphere(false);
-      setSphereRadius(5);
-      setSphereInterval(1);
 
       setPdbCode(newValue);
     } else if (field === "example") {
@@ -474,7 +471,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex flex-row items-center">
                   <div className="flex items-center gap-2">
-                  <label className="block text-sm font-medium">Sampling Interval:</label>
+                  <label className="block text-sm font-medium">Sampling interval:</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center">
                     <span
                       aria-label="What this field does"

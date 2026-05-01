@@ -571,21 +571,67 @@ const Molstar = (props) => {
     return components.length > 0 ? components : null;
   };
 
+  const detectTrajectoryFormat = (fileContent) => {
+    if (typeof fileContent !== "string") {
+      return null;
+    }
+
+    const trimmed = fileContent.trimStart();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.startsWith("data_")) {
+      return "mmcif";
+    }
+
+    return "pdb";
+  };
+
+  const loadTrajectory = async (pluginInstance, data, format) => {
+    const traj = await pluginInstance.builders.structure.parseTrajectory(
+      data,
+      format
+    );
+    await pluginInstance.builders.structure.hierarchy.applyPreset(traj, "default");
+  };
+
   const loadStructure = async (pdbId, url, file = null, plugin) => {
     //console.log("Fetching:", pdbId);
     if (plugin) {
       plugin.clear();
       if (file) {
-        //console.log(file)
-        //console.log("FILE TYPE:", file.type);
-        const data = await plugin.builders.data.rawData({
-          data: file, //await file.text()
-        });
-        const traj = await plugin.builders.structure.parseTrajectory(
-          data,
-          "pdb"
-        );
-        await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
+        const format = detectTrajectoryFormat(file);
+
+        if (!format) {
+          console.warn("Skipping structure load because the file payload is empty.");
+          return;
+        }
+
+        try {
+          const data = await plugin.builders.data.rawData({
+            data: file,
+          });
+
+          await loadTrajectory(plugin, data, format);
+        } catch (error) {
+          console.warn("Failed to load structure with detected format", format, error);
+
+          if (format === "pdb") {
+            try {
+              const data = await plugin.builders.data.rawData({
+                data: file,
+              });
+
+              await loadTrajectory(plugin, data, "mmcif");
+              return;
+            } catch (fallbackError) {
+              console.warn("MMcIF fallback also failed", fallbackError);
+            }
+          }
+
+          return;
+        }
       } else {
         const structureUrl = url
           ? url

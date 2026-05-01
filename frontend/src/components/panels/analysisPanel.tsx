@@ -14,6 +14,7 @@ import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResidueTable from "../visualizations/ResidueTable";
+import { min } from "d3";
 
 type AutoSelectFragmentSpec = {
   model: number;
@@ -103,7 +104,7 @@ function applyConfiguredSelections(
     return {
       chains,
       selectedFragments: [],
-      selectedChain: chains[0]?.name || "",
+      selectedChain: "",
     };
   }
 
@@ -115,7 +116,7 @@ function applyConfiguredSelections(
     return {
       chains,
       selectedFragments: [],
-      selectedChain: chains[0]?.name || "",
+      selectedChain: "",
     };
   }
 
@@ -187,6 +188,16 @@ function applyConfiguredSelections(
   };
 }
 
+function clearChainSelections(chains: Chain[]): Chain[] {
+  return chains.map((chain) => ({
+    ...chain,
+    nucleotides: chain.nucleotides.map((nucleotide) => ({
+      ...nucleotide,
+      selected: false,
+    })),
+  }));
+}
+
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
@@ -198,7 +209,7 @@ const Panel: React.FC = () => {
   const [animation, setAnimation] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [chainsState, setChainsState] = useState<Chain[]>([]);
-  const [selectedModel, setSelectedModel] = useState<number>(1);
+  const [selectedModel, setSelectedModel] = useState<number>(0);
   const [selectedChain, setSelectedChain] = useState<string>(
     chainsState[0]?.name|| ""
   );
@@ -211,6 +222,7 @@ const Panel: React.FC = () => {
   const { jobId } = useParams();
   const jobID = jobId;
   const navigate = useNavigate();
+  const [showVisualization, setShowVisualization] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [sidebarTab, setSidebarTab] = useState(0);
   const [showFornaSettings, setShowFornaSettings] = useState(false);
@@ -243,9 +255,9 @@ const Panel: React.FC = () => {
       return;
     }
 
-    if (!selectedChain || !chainsState.some((chain) => chain.name === selectedChain)) {
-      setSelectedChain(chainsState[0]?.name || "");
-    }
+    // if (!selectedChain || !chainsState.some((chain) => chain.name === selectedChain)) {
+    //   setSelectedChain(chainsState[0]?.name || "");
+    // }
   }, [chainsState, selectedChain]);
 
   const handleInputChangeStart = (event: SelectChangeEvent) => {
@@ -289,8 +301,16 @@ const Panel: React.FC = () => {
       const configuredSelection = applyConfiguredSelections(data.name, model, chains);
       setChainsState(configuredSelection.chains);
       setSelectedFragments(configuredSelection.selectedFragments);
-      setSelectedChain(configuredSelection.selectedChain);
-      setSelectedModel(model);
+      /* If user selected model or there is only one model, select this model */
+      if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
+        setSelectedModel(model);
+        /* If there is only one chain, select it. Otherwise, select preselected or none */
+        if (configuredSelection.chains.length < 2) {
+          setSelectedChain(configuredSelection.chains[0]?.name || "");
+        } else {
+          setSelectedChain(configuredSelection.selectedChain);
+        }
+      }
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -363,6 +383,9 @@ const Panel: React.FC = () => {
         setSelectedFragments(saved.selectedFragments);
       }
       setSelectedModel(model);
+      if (chainsState.length === 1) {
+        setSelectedChain(chainsState[0]?.name || "");
+      }
     });
   };
 
@@ -719,6 +742,47 @@ const Panel: React.FC = () => {
     });
   }
 
+  const resetSettings = () => {
+    const clearedCurrentChains = clearChainSelections(chainsState);
+
+    setChainsState(clearedCurrentChains);
+    setSelectedFragments([]);
+    setModelSelections((prev) => {
+      const clearedModels: Record<number, { chainsState: Chain[]; selectedFragments: SelectedFragment[] }> = {};
+
+      Object.entries(prev).forEach(([modelKey, modelSelection]) => {
+        const modelNum = Number(modelKey);
+        clearedModels[modelNum] = {
+          chainsState: clearChainSelections(modelSelection.chainsState),
+          selectedFragments: [],
+        };
+      });
+
+      if (selectedModel !== 0) {
+        clearedModels[selectedModel] = {
+          chainsState: clearedCurrentChains,
+          selectedFragments: [],
+        };
+      }
+
+      return clearedModels;
+    });
+
+    /* Resetting model and chain */
+    // if ( myData && myData.metadata.model_count === 1 ) {
+    //   setSelectedModel(1);
+    //   /* If there is only one chain, select it.*/
+    //   if (chainsState.length < 2) {
+    //     setSelectedChain(chainsState[0]?.name || "");
+    //   } else {
+    //     setSelectedChain("");
+    //   }
+    // } else {
+    //   setSelectedModel(0);
+    //   setSelectedChain("");
+    // }
+  }
+
   useEffect(() => {
     if (!jobID) return;
     loadData(jobID, 1);
@@ -729,316 +793,358 @@ const Panel: React.FC = () => {
     return <Loading page="Analysis panel" />;
   }
   return (
-    <div className="desktop-content h-screen w-screen overflow-hidden">
+    <div className="desktop-content h-screen w-screen overflow-hidden flex flex-col">
       {/* Top panel */}
-        <TopPanel />
-
-      {/* Side view + Main content */}
-      <div className="flex overflow-hidden h-[calc(100vh-64px)]">
-        {/* Sidebar */}
-        <div className="w-80">
-          <div
-            className="flex flex-col  bg-moley-backgroundGreen h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
-          >
-            {/* Inside sidebar */}
-            <div className="rounded-scrollbar overflow-auto flex-1">
-              <div className="mb-4 rounded-lg bg-white p-3 shadow">
-                <div className="text-xs uppercase tracking-wide text-gray-500">
-                  Job name
-                </div>
-                <div className="truncate text-sm font-semibold text-gray-900" title={myData.name || "Unnamed job"}>
-                  {myData.name || "Unnamed job"}
-                </div>
-                <div>
-                  <span className="text-xs uppercase tracking-wide mt-2 text-gray-500">
-                    Sphere radius (Å):
-                  </span>
-                  <span className="truncate text-sm font-semibold ml-2 text-gray-900">
-                    {myData.metadata.radius || "N/A"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-xs uppercase tracking-wide mt-2 text-gray-500">
-                    Sphere interval:
-                  </span>
-                  <span className="truncate text-sm font-semibold ml-2 text-gray-900">
-                    {myData.metadata.interval || "N/A"}
-                  </span>
-                </div>
-              </div>
-              {/* Tabs */}
-              <div className="flex mb-4">
-                <div
-                  className={`flex-1 py-2 rounded-t-lg text-center ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
-                  onClick={() => setSidebarTab(0)}
-                >
-                  Models
-                </div>
-              </div>
-              {/* Inside tabs */}
-              
-              {sidebarTab === 0 && (
-                <>
-                  {Array.from({ length: myData.metadata.model_count }, (_, i) => {
-                    const modelNum = i + 1;
-                    const hasSelections = modelSelections[modelNum]?.selectedFragments?.length > 0;
-                    return (
-                      <div
-                        key={"model" + modelNum}
-                        className={`mb-4 p-2 bg-white rounded shadow cursor-pointer transition-all ${
-                          selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
-                        } flex items-center justify-between`}
-                        onClick={() => changeModel(modelNum)}
-                      >
-                        <span>Model {modelNum}</span>
-                        {hasSelections && (
-                          <span
-                            className="ml-2 w-3 h-3 rounded-full bg-moley-accentGreen inline-block"
-                            title="Wybrano fragmenty"
-                          ></span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-              {sidebarTab === 1 && (
-                <></>
-              )}
-            </div>
-            {/* Analyze button */}
-            <div className="mt-4 flex justify-center">
-              <button
-                className="bg-moley-darkGreen hover:bg-moley-green text-white font-bold py-2 px-6 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isDisabled}
-                onClick={handleNavigate}
-              >
-                Analyze
-              </button>
+      <TopPanel />
+      {/* Main content */}
+      <div className="text-gray-800 overflow-y-auto min-h-0">
+        {/* Scrollable content */}
+        <div className="mx-16">
+          {/* Job data */}
+          <div className="mt-10 text-gray-500">
+            <p>Input data defined in previous step</p>
+            <div className="mt-2 space-y-0">
+              <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"};</i></p>
+              <p><span>Local analysis {
+              myData.metadata.analyzeNeighborhoods ? 
+              "enabled; Sphere radius (Å): " + myData.metadata.radius + 
+              "; Sampling interval: " + myData.metadata.interval + ";" 
+              : "disabled;"}
+              </span></p>
             </div>
           </div>
-        </div>
-
-        {/* Main content */}
-        <div
-          key={myData.id}
-          className="flex-1 overflow-y-auto overflow-x-hidden"
-        >
-          {myData ? (
-            <div className="flex flex-col min-h-full">
-              <div className="bg-transparent z-10">
-                <div className="overflow-x-auto">
-                  <ResidueTable
-                    data={chainsState}
-                    selectedChain={selectedChain}
-                    selectedResidueIds={selectedResidueIdsForChain}
-                    selectResidue={selectResidue}
-                    selectFragment={selectFragment}
-                    deselectResidue={deselectResidue}
-                    deselectFragment={removeSelectedFragment}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-row bg-transparent z-10">
-                <RangeSelecting
-                  chains={chainsState}
-                  selectedChain={selectedChain}
-                  minId={minId}
-                  maxId={maxId}
-                  inputValueStart={inputValueStart}
-                  inputValueEnd={inputValueEnd}
-                  setMinId={setMinId}
-                  setMaxId={setMaxId}
-                  setInputValueStart={setInputValueStart}
-                  setInputValueEnd={setInputValueEnd}
-                  handleChange={handleChange}
-                  handleInputChangeStart={handleInputChangeStart}
-                  handleInputChangeEnd={handleInputChangeEnd}
-                  selectFragment={selectFragment}
-                />
-                <div className="bg-moley-backgroundGreen h-48 m-2 w-full overflow-y-auto p-2 rounded-md">
-                  {(() => {
-                    const grouped = getAllSelectedFragmentsGrouped();
-                    if (!grouped || grouped.length === 0) {
-                      return <span>No fragments selected</span>;
-                    }
-
-                    return (
-                      <div className="w-full">
-                        {grouped.map(({ model, fragments }) => (
-                          <div key={`model-${model}`} className="mb-2">
-                            <div className="font-semibold">Model {model}</div>
-                            <table className="w-full table-fixed">
-                              <colgroup>
-                                <col style={{ width: '40px' }} />
-                                <col style={{ width: '25%' }} />
-                                <col style={{ width: '15%' }} />
-                                <col style={{ width: '60%' }} />
-                              </colgroup>
-                              <thead>
-                                <tr>
-                                  <th></th>
-                                  <th className="text-left">Name</th>
-                                  <th className="text-left">Chain</th>
-                                  <th className="text-left">Residues</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {fragments.map((fragment, idx) => (
-                                  <tr key={`${model}-${fragment.name}-${fragment.chainName}-${idx}`}>
-                                    <td>
-                                      <div
-                                        className="ml-1 px-1 py-0.5 bg-white text-center text-red-600 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
-                                        onClick={() => removeFragmentFromModel(model, fragment.name)}
-                                      >
-                                        X
-                                      </div>
-                                    </td>
-                                    <td>{fragment.name}</td>
-                                    <td>{fragment.chainName}</td>
-                                    <td>
-                                      {model === selectedModel
-                                        ? formatResidueRanges(fragment.residues)
-                                        : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
-                                      {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
-                                        <span className="ml-2 text-xs text-yellow-200">
-                                          (except: {model === selectedModel
-                                            ? formatResidueRanges(fragment.deselectedResidues)
-                                            : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
-                                        </span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              {/* Forna + Molstar */}
-              <div className="flex flex-row h-[60vh] min-h-[400px]">
-                <div className="w-1/2 h-full p-5 relative">
-                  {/* Gear icon button */}
-                  <button
-                    onClick={() => setShowFornaSettings(!showFornaSettings)}
-                    className="absolute top-5 right-5 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
-                    title="Toggle Forna settings"
+          {/* Analysis setup */}
+          <div className="mt-10">
+            <h1 className="font-semibold">Analysis Setup</h1>
+            {/* Model selection */}
+            <div className="mt-2">
+              <div>
+                <label>Select model(s)</label>
+                <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                  <span
+                    aria-label="What this field does"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
                   >
-                    ⚙️
-                  </button>
-
-                  {/* Floating settings panel */}
-                  {showFornaSettings && (
-                    <div className="absolute inset-0 z-30 p-5 bg-white rounded-lg shadow-lg overflow-auto">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold">Forna settings</h3>
-                        <button
-                          onClick={() => setShowFornaSettings(false)}
-                          className="px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 text-gray-500 hover:text-gray-700 text-lg w-fit"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={numbering}
-                            onChange={e => setNumbering(e.target.checked)}
-                            className="mr-2"
-                          />
-                          <span>Numbering</span>
-                        </label>
-                        {numbering && (
-                          <div className="ml-4 mb-2">
-                            <label className="block text-sm font-medium mb-1">Label interval</label>
-                            <input
-                              type="number"
-                              min={1}
-                              value={labelInterval}
-                              onChange={e => setLabelInterval(Number(e.target.value))}
-                              className="w-full border rounded px-2 py-1"
-                            />
-                          </div>
-                        )}
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={nodeOutline}
-                            onChange={e => setNodeOutline(e.target.checked)}
-                            className="mr-2"
-                          />
-                          <span>Node outline</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={nodeLabel}
-                            onChange={e => setNodeLabel(e.target.checked)}
-                            className="mr-2"
-                          />
-                          <span>Node label</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={links}
-                            onChange={e => setLinks(e.target.checked)}
-                            className="mr-2"
-                          />
-                          <span>Show connectivity</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={animation}
-                            onChange={e => setAnimation(e.target.checked)}
-                            className="mr-2"
-                          />
-                          <span>Animation</span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  <FornaComponent
-                    chains={chainsState}
-                    setChains={setChainsState}
-                    labelInterval={labelInterval}
-                    numbering={numbering}
-                    nodeOutline={nodeOutline}
-                    nodeLabel={nodeLabel}
-                    links={links}
-                    directionArrows={false}
-                    setAnimation={animation}
-                    setIsViewInitialized={setIsViewInitialized}
-                  />
-                </div>
-                <div className="w-1/2 h-full p-5">
-                  <Molstar
-                    useInterface={true}
-                    file={myData.pdb_file_string}
-                    chains={chainsState}
-                    selectResidue={selectResidue}
-                    deselectResidue={deselectResidue}
-                    initialized={initialized}
-                    setInitialized={setInitialized}
-                    setIsViewInitialized={setIsViewInitialized}
-                  />
-                </div>
+                    ?
+                  </span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    Select a model to inspect and define regions for analysis.
+                  </span>
+                </span>
               </div>
-              <div className="mt-auto">
-                <Footer />
+              <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
+                {Array.from({ length: myData.metadata.model_count }, (_, i) => {
+                  const modelNum = i + 1;
+                  return (
+                    <div
+                      key={"model" + modelNum}
+                      className={`p-2 bg-white rounded shadow cursor-pointer transition-all w-12 flex-shrink-0 ${
+                        selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
+                      } flex items-center justify-center`}
+                      onClick={() => changeModel(modelNum)}
+                    >
+                      <span>{modelNum}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* 2D and 3D view */}
+              <div>
+                <button
+                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800"
+                  onClick={() => setShowVisualization(!showVisualization)}
+                >
+                  {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
+                </button>
+                {showVisualization && (
+                <div className="flex flex-row h-[60vh] min-h-[400px]">
+                  <div className="w-1/2 h-full p-5 relative">
+                    {/* Gear icon button */}
+                    <button
+                      onClick={() => setShowFornaSettings(!showFornaSettings)}
+                      className="absolute top-5 right-5 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Toggle Forna settings"
+                    >
+                      ⚙️
+                    </button>
+                    {/* Floating settings panel */}
+                    {showFornaSettings && (
+                      <div className="absolute inset-0 z-30 p-5 bg-white rounded-lg shadow-lg overflow-auto">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="font-bold">Forna settings</h3>
+                          <button
+                            onClick={() => setShowFornaSettings(false)}
+                            className="px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 text-gray-500 hover:text-gray-700 text-lg w-fit"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={numbering}
+                              onChange={e => setNumbering(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Numbering</span>
+                          </label>
+                          {numbering && (
+                            <div className="ml-4 mb-2">
+                              <label className="block text-sm font-medium mb-1">Label interval</label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={labelInterval}
+                                onChange={e => setLabelInterval(Number(e.target.value))}
+                                className="w-full border rounded px-2 py-1"
+                              />
+                            </div>
+                          )}
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={nodeOutline}
+                              onChange={e => setNodeOutline(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Node outline</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={nodeLabel}
+                              onChange={e => setNodeLabel(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Node label</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={links}
+                              onChange={e => setLinks(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Show connectivity</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={animation}
+                              onChange={e => setAnimation(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Animation</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                    <FornaComponent
+                      chains={chainsState}
+                      setChains={setChainsState}
+                      labelInterval={labelInterval}
+                      numbering={numbering}
+                      nodeOutline={nodeOutline}
+                      nodeLabel={nodeLabel}
+                      links={links}
+                      directionArrows={false}
+                      setAnimation={animation}
+                      setIsViewInitialized={setIsViewInitialized}
+                    />
+                  </div>
+                  <div className="w-1/2 h-full p-5">
+                    <Molstar
+                      useInterface={true}
+                      file={myData.pdb_file_string}
+                      chains={chainsState}
+                      selectResidue={selectResidue}
+                      deselectResidue={deselectResidue}
+                      initialized={initialized}
+                      setInitialized={setInitialized}
+                      setIsViewInitialized={setIsViewInitialized}
+                    />
+                  </div>
+                </div>
+                )}
               </div>
             </div>
-          ) : (
-            <Loading />
-          )}
+            {/* Chain selection */}
+            <div>
+              <div>
+                <label className="mt-4">Select chain(s) of model {selectedModel === 0 ? "<X>" : selectedModel}</label>
+                <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                  <span
+                    aria-label="What this field does"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                  >
+                    ?
+                  </span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    Select a chain to analyze. Its sequence and structure will be displayed below for region selection.
+                  </span>
+                </span>
+              </div>
+              <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
+                {chainsState.map((chain) => {
+                  return (
+                    <div
+                      key={"chain" + chain.name}
+                      className={`p-2 bg-white rounded shadow transition-all w-12 flex-shrink-0 flex items-center justify-center
+                        ${selectedModel === 0 ? "border border-transparent bg-gray-200 cursor-not-allowed" :
+                          "cursor-pointer " +(selectedChain === chain.name ? "border-2 border-moley-darkGreen" : "border border-transparent")} 
+                        `}
+                      onClick={() => selectedModel !== 0 && setSelectedChain(chain.name)}
+                    >
+                      <span>{chain.original_name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Region selection */}
+            <div>
+              <div>
+                <label className="mt-4">Select region(s) of model {selectedModel || "<X>"}.chain {selectedChain || "<Y>"}</label>
+                <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                  <span
+                    aria-label="What this field does"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                  >
+                    ?
+                  </span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    Select a region to analyze by specifying a residue range or by selecting it in the sequence view below.
+                  </span>
+                </span>
+              </div>
+              <div className="flex flex-row items-center">
+                <span>Start residue:</span>
+                <input
+                  id="residueRangeStart"
+                  type="number"
+                  value={inputValueStart}
+                  onChange={handleInputChangeStart}
+                  disabled={selectedModel === 0 || !selectedChain}
+                  placeholder={(selectedModel === 0 || !selectedChain) ? minId : undefined}
+                  min={minId}
+                  max={maxId}
+                  className="mx-2 p-1 border rounded w-24 disabled:bg-gray-200"
+                />
+                <span>End residue:</span>
+                <input
+                  id="residueRangeEnd"
+                  type="number"
+                  value={inputValueEnd}
+                  onChange={handleInputChangeEnd}
+                  disabled={selectedModel === 0 || !selectedChain}
+                  placeholder={(selectedModel === 0 || !selectedChain) ? undefined : maxId}
+                  min={minId}
+                  max={maxId}
+                  className="mx-2 p-1 border rounded w-24 disabled:bg-gray-200"
+                />
+                <button
+                  className="ml-4 my-0 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800 disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed"
+                  disabled={inputValueStart === "" || inputValueEnd === "" || selectedModel === 0 || !selectedChain}
+                >
+                  Select
+                </button>
+              </div>
+              <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+                <ResidueTable
+                  data={chainsState}
+                  selectedChain={selectedChain}
+                  selectedResidueIds={selectedResidueIdsForChain}
+                  selectResidue={selectResidue}
+                  selectFragment={selectFragment}
+                  deselectResidue={deselectResidue}
+                  deselectFragment={removeSelectedFragment}
+                />
+              </div>
+            </div>
+          </div>
+          {/* Selection summary */}
+          <div>
+            <div className="flex flex-row mt-10 items-center">
+              <h1 className="font-semibold">Selection summary</h1>
+              <button 
+                className="h-auto w-auto px-2 ml-4 my-0 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800"
+                onClick={() => {
+                  // Reset model selection, chain selection and selected fragments
+                  resetSettings();
+                }}
+              >Clear all
+              </button>
+            </div>
+            <div className="h-48 w-full overflow-y-auto p-2 rounded-md">
+              {(() => {
+                const grouped = getAllSelectedFragmentsGrouped();
+                return (
+                  <div className="w-full">
+                    <table className="w-full table-fixed">
+                      <colgroup>
+                        <col style={{ width: '60px' }} />
+                        <col style={{ width: '5em' }} />
+                        <col style={{ width: '5em' }} />
+                        <col style={{ width: '60%' }} />
+                      </colgroup>
+                      <thead>
+                        <tr className={"border-y border-gray-300"}>
+                          <th></th>
+                          <th className="text-left">Model</th>
+                          <th className="text-left">Chain</th>
+                          <th className="text-left">Residues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {grouped.map(({ model, fragments }) => (
+                          fragments.map((fragment, idx) => (
+                            <tr key={`${model}-${fragment.name}-${fragment.chainName}-${idx}`}
+                              className={"border-b border-gray-200"}>
+                              <td>
+                                <div
+                                  className="ml-1 px-1 py-0.5 bg-white text-center text-gray-800 border border-gray-800 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
+                                  onClick={() => removeFragmentFromModel(model, fragment.name)}
+                                >
+                                  X
+                                </div>
+                              </td>
+                              <td>{model}</td>
+                              <td>{fragment.chainName}</td>
+                              <td>
+                                {model === selectedModel
+                                  ? formatResidueRanges(fragment.residues)
+                                  : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
+                                {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
+                                  <span className="ml-2 text-xs text-yellow-200">
+                                    (except: {model === selectedModel
+                                      ? formatResidueRanges(fragment.deselectedResidues)
+                                      : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+          {/* Run analysis button */}
+          <div className="mb-10">
+            <button
+              className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              disabled={isDisabled}
+              onClick={handleNavigate}
+            >
+              Run analysis
+            </button>
+          </div>
         </div>
+        <Footer />
       </div>
       <SmallScreenPage />
     </div>

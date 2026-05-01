@@ -897,6 +897,7 @@ const SummaryPanel: React.FC = () => {
                 )}
 
                 <FornacSummaryComponent
+                  key={`forna-${selectedModel}-${selectedResultsSource}`}
                   structures={myData.annotation.map((a) => a.dotbracket)}
                   sequences={myData.annotation.map((a) => a.sequnece)}
                   clashMap={getClashesForForna() || []}
@@ -916,6 +917,7 @@ const SummaryPanel: React.FC = () => {
               </div>
               <div className="w-1/2 h-full p-5">
                 <Molstar
+                  key={`molstar-${selectedModel}-${selectedResultsSource}`}
                   useInterface={true}
                   file={myData.pdb_file_string}
                   chains={chainsState}
