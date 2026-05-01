@@ -9,12 +9,10 @@ import { Job, Chain, Nucleotide, SelectedFragment, ChainElement } from "../utils
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import ErrorPage from "../common/ErrorPage";
-import RangeSelecting from "../common/rangeSelecting";
 import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResidueTable from "../visualizations/ResidueTable";
-import { min } from "d3";
 
 type AutoSelectFragmentSpec = {
   model: number;
