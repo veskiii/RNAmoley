@@ -222,6 +222,7 @@ const Panel: React.FC = () => {
   const { jobId } = useParams();
   const jobID = jobId;
   const navigate = useNavigate();
+  const [showVisualization, setShowVisualization] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [sidebarTab, setSidebarTab] = useState(0);
   const [showFornaSettings, setShowFornaSettings] = useState(false);
@@ -817,7 +818,20 @@ const Panel: React.FC = () => {
             <h1 className="font-semibold">Analysis Setup</h1>
             {/* Model selection */}
             <div className="mt-2">
-              <h2>Select model(s)</h2>
+              <div>
+                <label>Select model(s)</label>
+                <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                  <span
+                    aria-label="What this field does"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                  >
+                    ?
+                  </span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    Select a model to inspect and define regions for analysis.
+                  </span>
+                </span>
+              </div>
               <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
                 {Array.from({ length: myData.metadata.model_count }, (_, i) => {
                   const modelNum = i + 1;
@@ -834,10 +848,143 @@ const Panel: React.FC = () => {
                   );
                 })}
               </div>
+              {/* 2D and 3D view */}
+              <div>
+                <button
+                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800"
+                  onClick={() => setShowVisualization(!showVisualization)}
+                >
+                  {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
+                </button>
+                {showVisualization && (
+                <div className="flex flex-row h-[60vh] min-h-[400px]">
+                  <div className="w-1/2 h-full p-5 relative">
+                    {/* Gear icon button */}
+                    <button
+                      onClick={() => setShowFornaSettings(!showFornaSettings)}
+                      className="absolute top-5 right-5 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Toggle Forna settings"
+                    >
+                      ⚙️
+                    </button>
+                    {/* Floating settings panel */}
+                    {showFornaSettings && (
+                      <div className="absolute inset-0 z-30 p-5 bg-white rounded-lg shadow-lg overflow-auto">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="font-bold">Forna settings</h3>
+                          <button
+                            onClick={() => setShowFornaSettings(false)}
+                            className="px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 text-gray-500 hover:text-gray-700 text-lg w-fit"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={numbering}
+                              onChange={e => setNumbering(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Numbering</span>
+                          </label>
+                          {numbering && (
+                            <div className="ml-4 mb-2">
+                              <label className="block text-sm font-medium mb-1">Label interval</label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={labelInterval}
+                                onChange={e => setLabelInterval(Number(e.target.value))}
+                                className="w-full border rounded px-2 py-1"
+                              />
+                            </div>
+                          )}
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={nodeOutline}
+                              onChange={e => setNodeOutline(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Node outline</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={nodeLabel}
+                              onChange={e => setNodeLabel(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Node label</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={links}
+                              onChange={e => setLinks(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Show connectivity</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={animation}
+                              onChange={e => setAnimation(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Animation</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                    <FornaComponent
+                      chains={chainsState}
+                      setChains={setChainsState}
+                      labelInterval={labelInterval}
+                      numbering={numbering}
+                      nodeOutline={nodeOutline}
+                      nodeLabel={nodeLabel}
+                      links={links}
+                      directionArrows={false}
+                      setAnimation={animation}
+                      setIsViewInitialized={setIsViewInitialized}
+                    />
+                  </div>
+                  <div className="w-1/2 h-full p-5">
+                    <Molstar
+                      useInterface={true}
+                      file={myData.pdb_file_string}
+                      chains={chainsState}
+                      selectResidue={selectResidue}
+                      deselectResidue={deselectResidue}
+                      initialized={initialized}
+                      setInitialized={setInitialized}
+                      setIsViewInitialized={setIsViewInitialized}
+                    />
+                  </div>
+                </div>
+                )}
+              </div>
             </div>
             {/* Chain selection */}
             <div>
-              <h2 className="mt-4">Select chain(s) of model {selectedModel === 0 ? "<X>" : selectedModel}</h2>
+              <div>
+                <label className="mt-4">Select chain(s) of model {selectedModel === 0 ? "<X>" : selectedModel}</label>
+                <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                  <span
+                    aria-label="What this field does"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                  >
+                    ?
+                  </span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    Select a chain to analyze. Its sequence and structure will be displayed below for region selection.
+                  </span>
+                </span>
+              </div>
               <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
                 {chainsState.map((chain) => {
                   return (
@@ -857,7 +1004,20 @@ const Panel: React.FC = () => {
             </div>
             {/* Region selection */}
             <div>
-              <h2 className="mt-4">Select region(s) of model {selectedModel || "<X>"}.chain {selectedChain || "<Y>"}</h2>
+              <div>
+                <label className="mt-4">Select region(s) of model {selectedModel || "<X>"}.chain {selectedChain || "<Y>"}</label>
+                <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                  <span
+                    aria-label="What this field does"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                  >
+                    ?
+                  </span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    Select a region to analyze by specifying a residue range or by selecting it in the sequence view below.
+                  </span>
+                </span>
+              </div>
               <div className="flex flex-row items-center">
                 <span>Start residue:</span>
                 <input
@@ -973,6 +1133,7 @@ const Panel: React.FC = () => {
               })()}
             </div>
           </div>
+          {/* Run analysis button */}
           <div className="mb-10">
             <button
               className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
