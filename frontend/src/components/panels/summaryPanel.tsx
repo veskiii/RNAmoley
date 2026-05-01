@@ -378,7 +378,7 @@ const SummaryPanel: React.FC = () => {
   }
 
   if (isLoading) {
-    return <Loading />;
+    return <Loading  message="Preparing data and computing initial analysis..."/>;
   }
 
   if (!myData || !myData.results || !myData.results.data ) {

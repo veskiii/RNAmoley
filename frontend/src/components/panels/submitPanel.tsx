@@ -227,7 +227,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="desktop-content min-h-screen w-full flex flex-col" style={{ color: "black" }}>
+    <div className="min-h-screen w-full flex flex-col" style={{ color: "black" }}>
       <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom z-20">
         <Logo />
         <HomeIcon />
