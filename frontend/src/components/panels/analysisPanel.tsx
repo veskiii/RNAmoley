@@ -188,6 +188,16 @@ function applyConfiguredSelections(
   };
 }
 
+function clearChainSelections(chains: Chain[]): Chain[] {
+  return chains.map((chain) => ({
+    ...chain,
+    nucleotides: chain.nucleotides.map((nucleotide) => ({
+      ...nucleotide,
+      selected: false,
+    })),
+  }));
+}
+
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
@@ -731,6 +741,47 @@ const Panel: React.FC = () => {
     });
   }
 
+  const resetSettings = () => {
+    const clearedCurrentChains = clearChainSelections(chainsState);
+
+    setChainsState(clearedCurrentChains);
+    setSelectedFragments([]);
+    setModelSelections((prev) => {
+      const clearedModels: Record<number, { chainsState: Chain[]; selectedFragments: SelectedFragment[] }> = {};
+
+      Object.entries(prev).forEach(([modelKey, modelSelection]) => {
+        const modelNum = Number(modelKey);
+        clearedModels[modelNum] = {
+          chainsState: clearChainSelections(modelSelection.chainsState),
+          selectedFragments: [],
+        };
+      });
+
+      if (selectedModel !== 0) {
+        clearedModels[selectedModel] = {
+          chainsState: clearedCurrentChains,
+          selectedFragments: [],
+        };
+      }
+
+      return clearedModels;
+    });
+
+    /* Resetting model and chain */
+    // if ( myData && myData.metadata.model_count === 1 ) {
+    //   setSelectedModel(1);
+    //   /* If there is only one chain, select it.*/
+    //   if (chainsState.length < 2) {
+    //     setSelectedChain(chainsState[0]?.name || "");
+    //   } else {
+    //     setSelectedChain("");
+    //   }
+    // } else {
+    //   setSelectedModel(0);
+    //   setSelectedChain("");
+    // }
+  }
+
   useEffect(() => {
     if (!jobID) return;
     loadData(jobID, 1);
@@ -770,22 +821,15 @@ const Panel: React.FC = () => {
               <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
                 {Array.from({ length: myData.metadata.model_count }, (_, i) => {
                   const modelNum = i + 1;
-                  const hasSelections = modelSelections[modelNum]?.selectedFragments?.length > 0;
                   return (
                     <div
                       key={"model" + modelNum}
                       className={`p-2 bg-white rounded shadow cursor-pointer transition-all w-12 flex-shrink-0 ${
                         selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
-                      } flex items-center justify-between`}
+                      } flex items-center justify-center`}
                       onClick={() => changeModel(modelNum)}
                     >
                       <span>{modelNum}</span>
-                      {hasSelections && (
-                        <span
-                          className="ml-2 w-3 h-3 rounded-full bg-moley-accentGreen inline-block"
-                          title="Regions selected in this model"
-                        ></span>
-                      )}
                     </div>
                   );
                 })}
@@ -861,69 +905,85 @@ const Panel: React.FC = () => {
           </div>
           {/* Selection summary */}
           <div>
-            <h1 className="font-semibold mt-10">Selection summary</h1>
+            <div className="flex flex-row mt-10 items-center">
+              <h1 className="font-semibold">Selection summary</h1>
+              <button 
+                className="h-auto w-auto px-2 ml-4 my-0 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800"
+                onClick={() => {
+                  // Reset model selection, chain selection and selected fragments
+                  resetSettings();
+                }}
+              >Clear all
+              </button>
+            </div>
             <div className="h-48 w-full overflow-y-auto p-2 rounded-md">
-                  {(() => {
-                    const grouped = getAllSelectedFragmentsGrouped();
-                    if (!grouped || grouped.length === 0) {
-                      return <span>No fragments selected</span>;
-                    }
-
-                    return (
-                      <div className="w-full">
-                        <table className="w-full table-fixed">
-                          <colgroup>
-                            <col style={{ width: '40px' }} />
-                            <col style={{ width: '25%' }} />
-                            <col style={{ width: '15%' }} />
-                            <col style={{ width: '60%' }} />
-                          </colgroup>
-                          <thead>
-                            <tr className={"border-y border-gray-300"}>
-                              <th></th>
-                              <th className="text-left">Model</th>
-                              <th className="text-left">Chain</th>
-                              <th className="text-left">Residues</th>
+              {(() => {
+                const grouped = getAllSelectedFragmentsGrouped();
+                return (
+                  <div className="w-full">
+                    <table className="w-full table-fixed">
+                      <colgroup>
+                        <col style={{ width: '60px' }} />
+                        <col style={{ width: '5em' }} />
+                        <col style={{ width: '5em' }} />
+                        <col style={{ width: '60%' }} />
+                      </colgroup>
+                      <thead>
+                        <tr className={"border-y border-gray-300"}>
+                          <th></th>
+                          <th className="text-left">Model</th>
+                          <th className="text-left">Chain</th>
+                          <th className="text-left">Residues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {grouped.map(({ model, fragments }) => (
+                          fragments.map((fragment, idx) => (
+                            <tr key={`${model}-${fragment.name}-${fragment.chainName}-${idx}`}
+                              className={"border-b border-gray-200"}>
+                              <td>
+                                <div
+                                  className="ml-1 px-1 py-0.5 bg-white text-center text-gray-800 border border-gray-800 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
+                                  onClick={() => removeFragmentFromModel(model, fragment.name)}
+                                >
+                                  X
+                                </div>
+                              </td>
+                              <td>{model}</td>
+                              <td>{fragment.chainName}</td>
+                              <td>
+                                {model === selectedModel
+                                  ? formatResidueRanges(fragment.residues)
+                                  : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
+                                {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
+                                  <span className="ml-2 text-xs text-yellow-200">
+                                    (except: {model === selectedModel
+                                      ? formatResidueRanges(fragment.deselectedResidues)
+                                      : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
+                                  </span>
+                                )}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {grouped.map(({ model, fragments }) => (
-                              fragments.map((fragment, idx) => (
-                                <tr key={`${model}-${fragment.name}-${fragment.chainName}-${idx}`}
-                                  className={"border-b border-gray-200"}>
-                                  <td>
-                                    <div
-                                      className="ml-1 px-1 py-0.5 bg-white text-center text-red-600 rounded hover:bg-gray-200 w-8 h-6 flex items-center justify-center"
-                                      onClick={() => removeFragmentFromModel(model, fragment.name)}
-                                    >
-                                      X
-                                    </div>
-                                  </td>
-                                  <td>{model}</td>
-                                  <td>{fragment.chainName}</td>
-                                  <td>
-                                    {model === selectedModel
-                                      ? formatResidueRanges(fragment.residues)
-                                      : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
-                                    {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
-                                      <span className="ml-2 text-xs text-yellow-200">
-                                        (except: {model === selectedModel
-                                          ? formatResidueRanges(fragment.deselectedResidues)
-                                          : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
-                                      </span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })()}
-                </div>
+                          ))
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+          <div className="mb-10">
+            <button
+              className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              disabled={isDisabled}
+              onClick={handleNavigate}
+            >
+              Run analysis
+            </button>
           </div>
         </div>
+        <Footer />
       </div>
       <SmallScreenPage />
     </div>
