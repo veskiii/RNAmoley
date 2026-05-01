@@ -795,19 +795,19 @@ const Panel: React.FC = () => {
       {/* Top panel */}
       <TopPanel />
       {/* Main content */}
-      <div className="text-gray-800 overflow-y-auto min-h-0">
+      <div className="text-gray-800 text-sm/6 overflow-y-auto min-h-0">
         {/* Scrollable content */}
         <div className="mx-16">
           {/* Job data */}
           <div className="mt-10 text-gray-500">
             <p>Input data defined in previous step</p>
             <div className="mt-2 space-y-0">
-              <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"};</i></p>
+              <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
               <p><span>Local analysis {
               myData.metadata.analyzeNeighborhoods ? 
               "enabled; Sphere radius (Å): " + myData.metadata.radius + 
-              "; Sampling interval: " + myData.metadata.interval + ";" 
-              : "disabled;"}
+              "; Sampling interval: " + myData.metadata.interval
+              : "disabled"}
               </span></p>
             </div>
           </div>
@@ -849,7 +849,7 @@ const Panel: React.FC = () => {
               {/* 2D and 3D view */}
               <div>
                 <button
-                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800"
+                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
                   onClick={() => setShowVisualization(!showVisualization)}
                 >
                   {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
@@ -1042,7 +1042,7 @@ const Panel: React.FC = () => {
                   className="mx-2 p-1 border rounded w-24 disabled:bg-gray-200"
                 />
                 <button
-                  className="ml-4 my-0 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800 disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed"
+                  className="ml-4 my-0 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800 disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed"
                   disabled={inputValueStart === "" || inputValueEnd === "" || selectedModel === 0 || !selectedChain}
                 >
                   Select
@@ -1066,7 +1066,7 @@ const Panel: React.FC = () => {
             <div className="flex flex-row mt-10 items-center">
               <h1 className="font-semibold">Selection summary</h1>
               <button 
-                className="h-auto w-auto px-2 ml-4 my-0 border text-gray-800 bg-gray-100 text-base rounded hover:bg-gray-200 hover:text-gray-800"
+                className="h-auto w-auto px-2 ml-4 my-0 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
                 onClick={() => {
                   // Reset model selection, chain selection and selected fragments
                   resetSettings();
