@@ -10,6 +10,11 @@ const DownloadLink = () => {
       saveButton.textContent = "✔ Link copied!";
       saveButton.style.color = "#000000";
       saveButton.style.backgroundColor = Colors.beige;
+      setTimeout(() => {
+        saveButton.textContent = "Copy link";
+        saveButton.style.color = "#FFFFFF";
+        saveButton.style.backgroundColor = Colors.moleyDarkGreen;
+      }, 2000);
     } catch (error) {
       console.error("Unable to copy to clipboard:", error);
     }
@@ -19,11 +24,9 @@ const DownloadLink = () => {
     <button
       id="saveButton"
       onClick={handleCopy}
-      className={
-        "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1"
-      }
+      className="rounded-md mt-0 h-auto  px-2 py-2 bg-moley-darkGreen text-sm/6 font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
     >
-      Copy link to workspace
+      Copy link
     </button>
   );
 };

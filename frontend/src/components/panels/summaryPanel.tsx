@@ -32,6 +32,7 @@ const SummaryPanel: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<number>(
     modelNumber ? parseInt(modelNumber) : 1
   );
+  const [selectedChain, setSelectedChain] = useState<string>("");
   const [myData, setMyData] = useState<SummaryJob>();
   const [myError, setMyError] = useState<ErrorPageProps | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
@@ -273,6 +274,7 @@ const SummaryPanel: React.FC = () => {
               setChainsState((prevChains) => 
               JSON.stringify(prevChains) !== JSON.stringify(chains) ? chains : prevChains
               );
+              setSelectedChain(chains[0]?.name || "");
               return data;
             }
             return prevData;
@@ -587,100 +589,298 @@ const SummaryPanel: React.FC = () => {
   }
 
   return (
-    <div className="desktop-content h-screen w-screen overflow-hidden">
-      {/* Top panel */}
-        <TopPanel page="Results Panel"/>
-      {/* Side view + Main content */}
-      <div className="flex overflow-hidden h-[calc(100vh-64px)]">
-        {/* Sidebar */}
-        <div className="w-80">
-          <div
-            className="flex flex-col  bg-moley-backgroundGreen h-full w-80 px-4 pt-10 p-2 rounded-t-lg justify-between"
-          >
-            {/* Scrollowalna zawartość sidebar'a */}
-            <div className="rounded-scrollbar overflow-auto flex-1">
-              <div className="mb-4 rounded-lg bg-white p-3 shadow">
-                <div className="text-xs uppercase tracking-wide text-gray-500">
-                  Job name
-                </div>
-                <div className="truncate text-sm font-semibold text-gray-900" title={myData.name || "Unnamed job"}>
-                  {myData.name || "Unnamed job"}
-                </div>
+    <div className="h-screen w-screen overflow-hidden flex flex-col">
+      {/* Desktop view */}
+      <div className="flex flex-col h-full w-full">
+        {/* Top panel */}
+        <TopPanel />
+        {/* Main content */}
+        <div className="text-gray-800 text-sm/6 overflow-y-auto min-h-0">
+        {/* Scrollable content */}
+          <div className="mx-2 md:mx-16">
+            {/* Job data */}
+            <div className="mt-10 text-gray-500">
+              <p>Input data</p>
+              <div className="mt-2 space-y-0">
+                <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
+                <p><span>Analysed models (chains): </span>
+                {myData.metadata.resultsStatus && Object.keys(myData.metadata.resultsStatus).length > 0 ? (
+                    (() => {
+                      const entries = Object.entries(myData.metadata.resultsStatus);
+                      return entries.map(([modelNum, modelStatus], idx) => (
+                        <span key={modelNum}>
+                          {modelNum} ({modelStatus.chains?.join(", ") || ""}){idx < entries.length - 1 ? ", " : ""}
+                        </span>
+                      ));
+                    })()
+                ) : (
+                  <p>No analysed models available.</p>
+                )}</p>
+                <p><span>Local analysis {
+                myData.metadata.analyzeNeighborhoods ? 
+                "enabled; Sphere radius (Å): " + myData.metadata.radius + 
+                "; Sampling interval: " + myData.metadata.interval
+                : "disabled"}
+                </span></p>
+              </div>
+            </div>
+            {/* Copy link and download buttons */}
+            <div className={"flex flex-row gap-2 mt-6"}>
+              <DownloadLink />
+              <DownloadFile id={jobId} />
+            </div>
+            {/* Analysis results */}
+            <div className="mt-6">
+              <h1 className="font-semibold">Analysis results</h1>
+              {/* Processed models */}
+              <div>
+                {/* Model selector */}
                 <div>
-                  <span className="text-xs uppercase tracking-wide mt-2 text-gray-500">
-                    Sphere radius (Å):
-                  </span>
-                  <span className="truncate text-sm font-semibold ml-2 text-gray-900">
-                    {myData.metadata.radius === undefined || myData.metadata.radius === null || myData.metadata.radius === -1
-                      ? "N/A"
-                      : myData.metadata.radius}
-                  </span>
+                  <div>
+                    <label>Processed model(s)</label>
+                    <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                      <span
+                        aria-label="What this field does"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                      >
+                        ?
+                      </span>
+                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                        Select a model to view its results.
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
+                    {Array.from({ length: myData.metadata.model_count }, (_, i) => {
+                      const modelNum = i + 1;
+                      const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
+                      const modelListStatus = getModelListStatus(modelStatus);
+                      const modelStatusPresentation = getModelStatusPresentation(modelListStatus);
+                      const isModelAccessable = modelStatus && ["running", "completed", "sim_starting", "sim_running", "sim_finished", "sim_analyzing", "sim_completed", "sim_failed"].includes(modelStatus);
+                      return (
+                        modelStatus && 
+                        <div
+                          key={"model" + modelNum}
+                          className={`w-12 p-2 bg-white rounded shadow transition-all flex-shrink-0
+                            ${myData && isModelAccessable ?
+                                "cursor-pointer" : "cursor-not-allowed"}
+                            ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
+                          } flex items-center justify-center`}
+                          onClick={() => isModelAccessable && changeModel(modelNum)}
+                        >
+                          <span>{modelNum}</span>
+                          {/* {myData && myData.metadata.resultsStatus && (
+                            <div className="flex flex-col items-end">
+                              <span
+                                className={`ml-2 p-2 rounded-full inline-block ${modelStatusPresentation.className}`}
+                                title={modelListStatus || ""}
+                              >{modelStatusPresentation.label}
+                              </span>
+                              {["failed"].includes(modelStatus || "") && (
+                                <div className="text-red-500 text-sm mt-1">${myData.metadata.resultsStatus[modelNum].error_message}</div>
+                              )}
+                            </div>
+                          )} */}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs uppercase tracking-wide mt-2 text-gray-500">
-                    Sphere interval:
-                  </span>
-                  <span className="truncate text-sm font-semibold ml-2 text-gray-900">
-                    {myData.metadata.interval === undefined || myData.metadata.interval === null || myData.metadata.interval === -1
-                      ? "N/A"
-                      : myData.metadata.interval}
-                  </span>
+                {/* Global and fragment results */}
+                <div className="overflow-x-auto">
+                  <GlobalResultsTable
+                    selectedModel={selectedModel}
+                    modelMetrics={myData.results.modelMetrics} 
+                    fragmentMetrics={myData.results.fragmentMetrics} />
                 </div>
               </div>
-              {/* Tabs */}
-              <div className="flex mb-4">
-                <div
-                  className={`flex-1 py-2 rounded-t-lg text-center cursor-pointer ${sidebarTab === 0 ? "bg-white font-bold shadow" : "bg-moley-backgroundLightGreen"}`}
-                  onClick={() => setSidebarTab(0)}
-                >
-                  Models
+              {/* Chain selection */}
+              <div className="mt-6">
+                <div>
+                  <label>Processed chain(s) of model {selectedModel || "<x>"}:</label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Select a chain to view its results.
+                    </span>
+                  </span>
                 </div>
-              </div>
-              {/* Inside tabs */}
-              
-              {sidebarTab === 0 && (
-                <>
-                  {Array.from({ length: myData.metadata.model_count }, (_, i) => {
-                    const modelNum = i + 1;
-                    const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
-                    const modelListStatus = getModelListStatus(modelStatus);
-                    const modelStatusPresentation = getModelStatusPresentation(modelListStatus);
-                    const isModelAccessable = modelStatus && ["running", "completed", "sim_starting", "sim_running", "sim_finished", "sim_analyzing", "sim_completed", "sim_failed"].includes(modelStatus);
+                <div>
+                  {chainsState.map((chain) => {
                     return (
                       <div
-                        key={"model" + modelNum}
-                        className={`mb-4 p-2 bg-white rounded shadow transition-all
-                          ${myData && isModelAccessable ?
-                              "cursor-pointer" : "cursor-not-allowed"}
-                          ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
-                        } flex items-center justify-between`}
-                        onClick={() => isModelAccessable && changeModel(modelNum)}
+                        key={"chain" + chain.name}
+                        className={`p-2 bg-white rounded shadow transition-all w-12 flex-shrink-0 flex items-center justify-center
+                          ${selectedModel === 0 ? "border border-transparent bg-gray-200 cursor-not-allowed" :
+                            "cursor-pointer " +(selectedChain === chain.name ? "border-2 border-moley-darkGreen" : "border border-transparent")} 
+                          `}
+                        onClick={() => selectedModel !== 0 && setSelectedChain(chain.name)}
                       >
-                        <span>Model {modelNum}</span>
-                        {myData && myData.metadata.resultsStatus && (
-                          <div className="flex flex-col items-end">
-                            <span
-                              className={`ml-2 p-2 rounded-full inline-block ${modelStatusPresentation.className}`}
-                              title={modelListStatus || ""}
-                            >{modelStatusPresentation.label}
-                            </span>
-                            {["failed"].includes(modelStatus || "") && (
-                              <div className="text-red-500 text-sm mt-1">${myData.metadata.resultsStatus[modelNum].error_message}</div>
-                            )}
-                          </div>
-                        )}
+                        <span>{chain.original_name}</span>
                       </div>
                     );
                   })}
-                </>
-              )}
+                </div>
+              </div>
+              {/* Local quality map */}
+              <div>
+                <label>Local quality map (per residue)</label>
+                <div className="overflow-x-auto">
+                  <ResultsResidueTable
+                  key={`residue-table-${selectedModel}-${selectedResultsSource}`}
+                  data={myData.results.data}
+                  analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
+                  selectedScore={selectedQualityScore}
+                  setSelectedScore={setQualityScore}
+                  modelStatus={selectedModelStatus}
+                  selectedChain={selectedChain}
+                  />
+                </div>
+              </div>
+              {/* Visualizations */}
+              <div className="mt-6">
+                <label>Structure visualization (colored by local quality)</label>
+                <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
+                  <div className="w-full md:w-1/2 h-full relative border border-gray-300">
+                    {/* Gear icon button */}
+                    <button
+                      onClick={() => setShowFornaSettings(!showFornaSettings)}
+                      className="absolute top-5 right-5 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Toggle Forna settings"
+                    >
+                      ⚙️
+                    </button>
 
+                    {/* Floating settings panel */}
+                    {showFornaSettings && (
+                      <div className="absolute inset-0 z-30 p-5 bg-white rounded-lg shadow-lg overflow-auto">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="font-bold">Forna settings</h3>
+                          <button
+                            onClick={() => setShowFornaSettings(false)}
+                            className="px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 text-gray-500 hover:text-gray-700 text-lg w-fit"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={numbering}
+                              onChange={e => setNumbering(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Numbering</span>
+                          </label>
+                          {numbering && (
+                            <div className="ml-4 mb-2">
+                              <label className="block text-sm font-medium mb-1">Label interval</label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={labelInterval}
+                                onChange={e => setLabelInterval(Number(e.target.value))}
+                                className="w-full border rounded px-2 py-1"
+                              />
+                            </div>
+                          )}
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={nodeOutline}
+                              onChange={e => setNodeOutline(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Node outline</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={nodeLabel}
+                              onChange={e => setNodeLabel(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Node label</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={links}
+                              onChange={e => setLinks(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Show connectivity</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={showClashes}
+                              onChange={e => setShowClashes(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Show Clashes</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={animation}
+                              onChange={e => setAnimation(e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span>Animation</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    <FornacSummaryComponent
+                      key={`forna-${selectedModel}-${selectedResultsSource}`}
+                      structures={myData.annotation.map((a) => a.dotbracket)}
+                      sequences={myData.annotation.map((a) => a.sequnece)}
+                      clashMap={getClashesForForna() || []}
+                      chains={chainsState}
+                      setChains={setChainsState}
+                      labelInterval={labelInterval}
+                      numbering={numbering}
+                      nodeOutline={nodeOutline}
+                      nodeLabel={nodeLabel}
+                      links={links}
+                      showClashes={showClashes}
+                      directionArrows={false}
+                      setAnimation={animation}
+                      job={myData}
+                      colorGnodes={colorGnodes}
+                    />
+                  </div>
+                  <div className="w-full md:w-1/2 h-full">
+                    <Molstar
+                      key={`molstar-${selectedModel}-${selectedResultsSource}`}
+                      useInterface={true}
+                      file={myData.pdb_file_string}
+                      chains={chainsState}
+                      setChains={setChainsState}
+                      initialized={initialized}
+                      setInitialized={setInitialized}
+                      resultResidues={myData.results.data}
+                      selectedQualityScore={selectedQualityScore}
+                      radius={myData.metadata.radius}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="mt-3 rounded-lg bg-white p-3 shadow">
-              <div
+            {/* Correct the structure */}
+            <div className="mb-6">
+              <button
                 role="button"
                 tabIndex={canStartSimulation ? 0 : -1}
-                aria-disabled={!canStartSimulation}
+                disabled={!canStartSimulation}
                 onClick={() => {
                   if (!canStartSimulation) return;
                   setSimulationStartError(null);
@@ -696,13 +896,11 @@ const SummaryPanel: React.FC = () => {
                     setIsSimulationModalOpen(true);
                   }
                 }}
-                className={`w-full rounded-lg bg-moley-darkGreen px-4 py-2 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
-                  canStartSimulation ? "hover:opacity-95 cursor-pointer" : "cursor-not-allowed opacity-50"
-                }`}
+                className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                 title={canStartSimulation ? "" : "Structure correction is available after the analysis is completed."}
               >
-                {canStartSimulation ? "Correct the structure" : "Correct the structure (available after completed)"}
-              </div>
+                Correct the structure
+              </button>
               {simulationStartSuccess && (
                 <p className="mt-2 text-sm text-green-700">{simulationStartSuccess}</p>
               )}
@@ -713,9 +911,8 @@ const SummaryPanel: React.FC = () => {
               {hasSimulationStarted && (
                 <div className="mt-3 border-t border-gray-200 pt-3">
                   <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
-                  <div className="flex flex-col gap-2">
-                    <div
-                      role="button"
+                  <div className="flex flex-row gap-2">
+                    <button
                       tabIndex={0}
                       onClick={() => setSelectedResultsSource("original")}
                       onKeyDown={(e) => {
@@ -724,17 +921,16 @@ const SummaryPanel: React.FC = () => {
                           setSelectedResultsSource("original");
                         }
                       }}
-                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                      className={`w-52 mt-2 rounded-md px-3 py-2 text-center text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
                         selectedResultsSource === "original"
                           ? "bg-moley-darkGreen text-white"
                           : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                       }`}
                     >
-                      Original results
-                    </div>
+                      Original
+                    </button>
 
-                    <div
-                      role="button"
+                    <button
                       tabIndex={simulationTabEnabled ? 0 : -1}
                       aria-disabled={!simulationTabEnabled}
                       onClick={() => {
@@ -749,194 +945,32 @@ const SummaryPanel: React.FC = () => {
                           setSelectedResultsSource("simulation");
                         }
                       }}
-                      className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                      className={`w-52 mt-2 rounded-md px-3 py-2 text-center text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
                         selectedResultsSource === "simulation"
                           ? "bg-moley-darkGreen text-white"
                           : "bg-gray-100 text-gray-800"
                       } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-200"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span>Simulation results</span>
+                        <span className="mr-1">Simulation</span>
                         {isSimulationInProgress && (
                           <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                         )}
                       </div>
-                      <div className="mt-1">
+                      <div>
                         <span className={`inline-block rounded-full px-2 py-1 text-xs ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
                           {simulationStatusPresentation.label || "No simulation"}
                         </span>
                       </div>
-                    </div>
+                    </button>
                   </div>
                 </div>
               )}
             </div>
-            {/* Przyciski pobierania*/}
-            <div className="mt-4 flex justify-center">
-            <DownloadLink />
-            <DownloadFile id={jobId} />
-            </div>
           </div>
-        </div>
-        {/* Main content */}
-        <div 
-          key={myData.id}
-          className="flex-1 overflow-y-auto overflow-x-hidden"
-        >
-          <div className="flex flex-col min-h-full">
-            <div className="w-2/3 3xl:w-1/2">
-              <GlobalResultsTable 
-              modelMetrics={myData.results.modelMetrics} 
-              fragmentMetrics={myData.results.fragmentMetrics} />
-            </div>
-            <div className="bg-transparent z-10">
-              <div className="overflow-x-auto">
-                {/* residue table */}
-                <ResultsResidueTable
-                key={`residue-table-${selectedModel}-${selectedResultsSource}`}
-                data={myData.results.data}
-                analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
-                selectedScore={selectedQualityScore}
-                setSelectedScore={setQualityScore}
-                modelStatus={selectedModelStatus}
-                />
-              </div>
-            </div>
-            <div className="flex flex-row h-[60vh] min-h-[400px]">
-              <div className="w-1/2 h-full p-5 relative">
-                {/* Gear icon button */}
-                <button
-                  onClick={() => setShowFornaSettings(!showFornaSettings)}
-                  className="absolute top-5 right-5 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
-                  title="Toggle Forna settings"
-                >
-                  ⚙️
-                </button>
-
-                {/* Floating settings panel */}
-                {showFornaSettings && (
-                  <div className="absolute inset-0 z-30 p-5 bg-white rounded-lg shadow-lg overflow-auto">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold">Forna settings</h3>
-                      <button
-                        onClick={() => setShowFornaSettings(false)}
-                        className="px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 text-gray-500 hover:text-gray-700 text-lg w-fit"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={numbering}
-                          onChange={e => setNumbering(e.target.checked)}
-                          className="mr-2"
-                        />
-                        <span>Numbering</span>
-                      </label>
-                      {numbering && (
-                        <div className="ml-4 mb-2">
-                          <label className="block text-sm font-medium mb-1">Label interval</label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={labelInterval}
-                            onChange={e => setLabelInterval(Number(e.target.value))}
-                            className="w-full border rounded px-2 py-1"
-                          />
-                        </div>
-                      )}
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={nodeOutline}
-                          onChange={e => setNodeOutline(e.target.checked)}
-                          className="mr-2"
-                        />
-                        <span>Node outline</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={nodeLabel}
-                          onChange={e => setNodeLabel(e.target.checked)}
-                          className="mr-2"
-                        />
-                        <span>Node label</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={links}
-                          onChange={e => setLinks(e.target.checked)}
-                          className="mr-2"
-                        />
-                        <span>Show connectivity</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={showClashes}
-                          onChange={e => setShowClashes(e.target.checked)}
-                          className="mr-2"
-                        />
-                        <span>Show Clashes</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={animation}
-                          onChange={e => setAnimation(e.target.checked)}
-                          className="mr-2"
-                        />
-                        <span>Animation</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                <FornacSummaryComponent
-                  key={`forna-${selectedModel}-${selectedResultsSource}`}
-                  structures={myData.annotation.map((a) => a.dotbracket)}
-                  sequences={myData.annotation.map((a) => a.sequnece)}
-                  clashMap={getClashesForForna() || []}
-                  chains={chainsState}
-                  setChains={setChainsState}
-                  labelInterval={labelInterval}
-                  numbering={numbering}
-                  nodeOutline={nodeOutline}
-                  nodeLabel={nodeLabel}
-                  links={links}
-                  showClashes={showClashes}
-                  directionArrows={false}
-                  setAnimation={animation}
-                  job={myData}
-                  colorGnodes={colorGnodes}
-                />
-              </div>
-              <div className="w-1/2 h-full p-5">
-                <Molstar
-                  key={`molstar-${selectedModel}-${selectedResultsSource}`}
-                  useInterface={true}
-                  file={myData.pdb_file_string}
-                  chains={chainsState}
-                  setChains={setChainsState}
-                  initialized={initialized}
-                  setInitialized={setInitialized}
-                  resultResidues={myData.results.data}
-                  selectedQualityScore={selectedQualityScore}
-                  radius={myData.metadata.radius}
-                />
-              </div>
-            </div>
-            <div className="mt-auto">
-              <Footer />
-            </div>
-          </div>
+          <Footer />
         </div>
       </div>
-      <SmallScreenPage />
       <SimulationStartModal
         isOpen={isSimulationModalOpen}
         isSubmitting={isStartingSimulation}

@@ -129,8 +129,18 @@ export async function applyPreCalculatedDemoResult(
 
   const analysisResult = JSON.parse(await fs.readFile(sourceFilePath, "utf-8")) as Analysis_results;
 
+  // Ensure metadata reflects that model 1 has results and is completed
+  if (!metadata.resultsStatus) {
+    metadata.resultsStatus = {};
+  }
+  metadata.resultsStatus["1"] = {
+    modelNumber: "1",
+    status: "completed",
+    error_message: undefined,
+    chains: metadata.resultsStatus["1"]?.chains || [],
+  };
+
   metadata.status = "completed";
-  updateModelMetadata(metadata, "1", "completed");
   await saveMetadata(jobID, metadata);
 
   return analysisResult;

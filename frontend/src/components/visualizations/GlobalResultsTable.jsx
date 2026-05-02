@@ -2,31 +2,31 @@ import React from "react";
 
 const fieldRows = [
     {
-        label: "Residues",
+        label: "Length [nt]",
         key: "residues",
     },
     {
-        label: "Clashscore",
+        label: "Clash score",
         key: "clashscore",
     },
     {
-        label: "Bad Bond Lengths",
+        label: "Bad bonds",
         keys: ["numbadbonds", "numbonds", "pct_badbonds"],
     },
     {
-        label: "Percentage of Residues with Bad Bonds",
+        label: "Residues with bad bonds [%]",
         key: "pct_resbadbonds",
     },
     {
-        label: "Bad Bond Angles",
+        label: "Bad bond angles",
         keys: ["numbadangles", "numangles", "pct_badangles"],
     },
     {
-        label: "Percentage of Residues with Bad Angles",
+        label: "Residues with Bad bond angles [%]",
         key: "pct_resbadangles",
     },
     {
-        label: "Suite Outliers",
+        label: "Suite outliers",
         keys: ["numSuiteOutliers", "numSuites"],
     },
 ];
@@ -55,33 +55,43 @@ const renderCombinedMetricValue = (metrics, keys) => {
     return values.join(" / ");
 };
 
-const GlobalResultsTable = ({ modelMetrics, fragmentMetrics }) => (
-    <table className="min-w-full border border-gray-300 rounded-lg">
-        <thead>
-            <tr>
-                <th className="px-4 py-2 border-b border-gray-300 bg-moley-backgroundGreen text-left font-semibold">Parameter</th>
-                <th className="px-4 py-2 border-b border-gray-300 bg-moley-backgroundGreen text-left font-semibold">Model Value</th>
-                <th className="px-4 py-2 border-b border-gray-300 bg-moley-backgroundGreen text-left font-semibold">Fragment Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            {fieldRows.map((row) => (
-                <tr key={row.label} className="even:bg-gray-50">
-                    <td className="px-4 py-2 border-b border-gray-200">{row.label}</td>
-                    <td className="px-4 py-2 border-b border-gray-200">
-                        {row.keys
-                            ? renderCombinedMetricValue(modelMetrics, row.keys)
-                            : renderMetricValue(modelMetrics, row.key)}
-                    </td>
-                    <td className="px-4 py-2 border-b border-gray-200">
-                        {row.keys
-                            ? renderCombinedMetricValue(fragmentMetrics, row.keys)
-                            : renderMetricValue(fragmentMetrics, row.key)}
-                    </td>
+const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics }) => {
+    const rows = [
+        { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics },
+        { label: "Analysed fragment", metrics: fragmentMetrics },
+    ];
+
+    return (
+        <table className="min-w-full border-t border-gray-300 rounded-lg">
+            <thead>
+                <tr>
+                    <th className="px-4 py-2 border-b border-gray-300 text-left font-semibold"></th>
+                    {fieldRows.map((field) => (
+                        <th
+                            key={field.label}
+                            className="px-4 py-2 border-b border-gray-300 text-left font-semibold"
+                        >
+                            {field.label}
+                        </th>
+                    ))}
                 </tr>
-            ))}
-        </tbody>
-    </table>
-);
+            </thead>
+            <tbody>
+                {rows.map((row) => (
+                    <tr key={row.label}>
+                        <td className="px-4 py-2 border-b border-gray-200 font-semibold">{row.label}</td>
+                        {fieldRows.map((field) => (
+                            <td key={`${row.label}-${field.label}`} className="px-4 py-2 border-b border-gray-200">
+                                {field.keys
+                                    ? renderCombinedMetricValue(row.metrics, field.keys)
+                                    : renderMetricValue(row.metrics, field.key)}
+                            </td>
+                        ))}
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
 
 export default GlobalResultsTable;
