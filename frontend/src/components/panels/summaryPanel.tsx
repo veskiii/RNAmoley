@@ -661,12 +661,13 @@ const SummaryPanel: React.FC = () => {
                         modelStatus && 
                         <div
                           key={"model" + modelNum}
-                          className={`w-12 p-2 bg-white rounded shadow transition-all flex-shrink-0
+                          className={`w-12 p-2 rounded shadow transition-all flex-shrink-0
                             ${myData && isModelAccessable ?
-                                "cursor-pointer" : "cursor-not-allowed"}
+                                "cursor-pointer bg-white" : "cursor-not-allowed bg-gray-200"}
                             ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
                           } flex items-center justify-center`}
                           onClick={() => isModelAccessable && changeModel(modelNum)}
+                          title={isModelAccessable ? "" : "Model is being processed. Results will be available once processing is completed."}
                         >
                           <span>{modelNum}</span>
                           {/* {myData && myData.metadata.resultsStatus && (
