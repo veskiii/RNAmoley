@@ -73,6 +73,7 @@ export interface ModelStatus {
   modelNumber: string;
   status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_finished` | `sim_analyzing` | `sim_completed` | `sim_failed`;
   error_message?: string;
+  chains?: string[];
 }
 
 export interface Metadata {

@@ -9,4 +9,5 @@ export enum Colors {
     backgroundBlue = "#d1e2e2",
     backgroundBeige = "rgb(229 229 229 / var(--tw-bg-opacity, 1))",
     white = "#ffffff",
+    moleyDarkGreen = "rgb(63 124 124 / var(--tw-bg-opacity, 1))",
 }

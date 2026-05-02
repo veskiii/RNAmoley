@@ -136,7 +136,7 @@ export function updateModelMetadata(
   if (!metadata.resultsStatus) {
     metadata.resultsStatus = {};
   }
-  metadata.resultsStatus[modelNumber] = { modelNumber, status, error_message: errorMessage };
+  metadata.resultsStatus[modelNumber] = { modelNumber, status, error_message: errorMessage, chains: metadata.resultsStatus[modelNumber]?.chains || [] };
   return metadata;
 }
 
