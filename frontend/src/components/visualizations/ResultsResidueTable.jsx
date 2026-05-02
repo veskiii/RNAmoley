@@ -3,7 +3,7 @@ import { QualityScore } from "../utils/types";
 import { getColor } from "../utils/ColorUtils";
 import { Colors } from "../common/colors";
 
-const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore, modelStatus }) => {
+const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSelectedScore, modelStatus, selectedChain }) => {
   const selectedBorderColor = Colors.white; // Colors.salmon;
   const neighborhoodScores = [
     QualityScore.CLASH_SCORE,
@@ -27,9 +27,9 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     return Array.from(chainsMap.values());
   }, [data]);
 
-  const [selectedChain, setSelectedChain] = useState(() =>
-    chainOptions.length > 0 ? chainOptions[0].chainID : ""
-  );
+  // const [selectedChain, setSelectedChain] = useState(() =>
+  //   chainOptions.length > 0 ? chainOptions[0].chainID : ""
+  // );
 
   const handleClick = (clickedScore) => {
     setSelectedScore(clickedScore);
@@ -56,14 +56,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     return { backgroundColor: getColor(residue, score) };
   };
 
-  useEffect(() => {
-    if (
-      chainOptions.length > 0 &&
-      !chainOptions.some(option => option.chainID === selectedChain)
-    ) {
-      setSelectedChain(chainOptions[0].chainID);
-    }
-  }, [chainOptions, selectedChain]);
+  // useEffect(() => {
+  //   if (
+  //     chainOptions.length > 0 &&
+  //     !chainOptions.some(option => option.chainID === selectedChain)
+  //   ) {
+  //     setSelectedChain(chainOptions[0].chainID);
+  //   }
+  // }, [chainOptions, selectedChain]);
 
   useEffect(() => {
     // console.log("ResidueTable rerendered");
@@ -81,27 +81,11 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
 
   return (
     <div>
-      <div className="mb-2">
-        <label htmlFor="chain-select" className="mr-2">
-          Select chain:
-        </label>
-        <select
-          id="chain-select"
-          value={selectedChain}
-          className="cursor-pointer"
-          onChange={(e) => setSelectedChain(e.target.value)}
-        >
-          {chainOptions.map((chain) => (
-            <option key={chain.chainID} value={chain.chainID}>
-              {chain.original_chain_id}
-            </option>
-          ))}
-        </select>
-      </div>
       <table className="mt-4 w-max border-separate border-spacing-1">
         <tbody>
           <tr>
-            <td className="w-32 p-2 text-center">Index</td>
+            <td></td>
+            <td className="w-32 p-2 text-left">Index</td>
             {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-id-${index}`}
@@ -114,7 +98,8 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>
           <tr>
-            <td className="w-32 p-2 text-center">Base</td>
+            <td></td>
+            <td className="w-32 p-2 text-left">Residue</td>
             {chainData.map((nucleotide, index) => (
               <td
                 key={`${selectedChain}-name-${index}`}
@@ -127,7 +112,8 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>
           <tr>
-            <td className="w-32 p-2 text-center">
+            <td></td>
+            <td className="w-32 p-2 text-left">
               Secondary Structure
             </td>
             {chainData.map((nucleotide, index) => (
@@ -142,7 +128,8 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>
           <tr>
-            <td className="w-32 p-2 text-center">
+            <td></td>
+            <td className="w-32 p-2 text-left">
               Structural Element
             </td>
             {chainData.map((nucleotide, index) => (
@@ -163,9 +150,18 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           </tr>
           { analyzeNeighborhood && (
           <tr>
+            <td className="w-12 p-2 text-center">
+              <input
+                type="radio"
+                name="metric-selector"
+                checked={effectiveSelectedScore === QualityScore.CLASH_SCORE}
+                onChange={() => handleClick(QualityScore.CLASH_SCORE)}
+                className="cursor-pointer"
+              />
+            </td>
             <td
             id="tableClashscore"
-            className="w-32 p-2 text-center cursor-pointer"
+            className="w-32 p-2 text-left cursor-pointer"
             onClick={(_) => handleClick(QualityScore.CLASH_SCORE)}
             style={{
               borderWidth: "3px",
@@ -197,9 +193,18 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
+            <td className="w-12 p-2 text-center">
+              <input
+                type="radio"
+                name="metric-selector"
+                checked={effectiveSelectedScore === QualityScore.BAD_ANGLES}
+                onChange={() => handleClick(QualityScore.BAD_ANGLES)}
+                className="cursor-pointer"
+              />
+            </td>
             <td 
             id="tableBadAngles"
-            className="w-32 p-2 text-center cursor-pointer"
+            className="w-32 p-2 text-left cursor-pointer"
             onClick={(_) => handleClick(QualityScore.BAD_ANGLES)}
             style={{
               borderWidth: "3px",
@@ -233,9 +238,18 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
+            <td className="w-12 p-2 text-center">
+              <input
+                type="radio"
+                name="metric-selector"
+                checked={effectiveSelectedScore === QualityScore.BAD_BONDS}
+                onChange={() => handleClick(QualityScore.BAD_BONDS)}
+                className="cursor-pointer"
+              />
+            </td>
             <td 
             id="tableBadBonds"
-            className="w-32 p-2 text-center cursor-pointer"
+            className="w-32 p-2 text-left cursor-pointer"
             onClick={(_) => handleClick(QualityScore.BAD_BONDS)}
             style={{
               borderWidth: "3px",
@@ -268,9 +282,18 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>)}
           <tr>
+            <td className="w-12 p-2 text-center">
+              <input
+                type="radio"
+                name="metric-selector"
+                checked={effectiveSelectedScore === QualityScore.SUITENESS}
+                onChange={() => handleClick(QualityScore.SUITENESS)}
+                className="cursor-pointer"
+              />
+            </td>
             <td 
             id="tableSuiteness"
-            className="w-32 p-2 text-center cursor-pointer"
+            className="w-32 p-2 text-left cursor-pointer"
             onClick={(_) => handleClick(QualityScore.SUITENESS)}
             style={{
               borderWidth: "3px",
@@ -296,9 +319,18 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             ))}
           </tr>
           <tr>
+            <td className="w-12 p-2 text-center">
+              <input
+                type="radio"
+                name="metric-selector"
+                checked={effectiveSelectedScore === QualityScore.SUGAR_PUCKER_OUT}
+                onChange={() => handleClick(QualityScore.SUGAR_PUCKER_OUT)}
+                className="cursor-pointer"
+              />
+            </td>
             <td 
             id="tableSugarPuckerOut"
-            className="w-32 p-2 text-center cursor-pointer"
+            className="w-32 p-2 text-left cursor-pointer"
             onClick={(_) => handleClick(QualityScore.SUGAR_PUCKER_OUT)}
             style={{
               borderWidth: "3px",

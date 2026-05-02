@@ -173,6 +173,7 @@ export interface ModelStatus {
     | `sim_completed`
     | `sim_failed`;
   error_message?: string;
+  chains?: string[];
 }
 
 export interface Metadata {

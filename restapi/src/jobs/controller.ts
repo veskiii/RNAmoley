@@ -404,7 +404,26 @@ export async function analyzeStructure(req: Request, res: Response) {
 
     const demoResult = getPreCalculatedDemoResult(result.rows[0].name, Number(radius), Number(interval), models);
     if (demoResult) {
+      // Ensure metadata.resultsStatus["1"] contains chain list from provided models
       try {
+        const chainsForModel1 = Array.from(new Set((models[1] || models["1"] || [])
+          .map((el) => el.chainID)
+          .filter(Boolean)));
+        if (!metadata.resultsStatus) {
+          metadata.resultsStatus = {};
+        }
+        const existingStatus = metadata.resultsStatus["1"] ? metadata.resultsStatus["1"].status : undefined;
+        if (!metadata.resultsStatus["1"]) {
+          metadata.resultsStatus["1"] = {
+            modelNumber: "1",
+            status: existingStatus || "created",
+            error_message: undefined,
+            chains: chainsForModel1,
+          };
+        } else {
+          metadata.resultsStatus["1"].chains = chainsForModel1;
+        }
+
         await applyPreCalculatedDemoResult(id, metadata, demoResult);
       } catch (error) {
         console.error(error);
@@ -429,7 +448,11 @@ export async function analyzeStructure(req: Request, res: Response) {
       metadata.resultsStatus = {};
     }
     for (let modelNumber in models) {
-      metadata.resultsStatus[modelNumber] = {modelNumber: modelNumber, status: "starting"};
+      metadata.resultsStatus[modelNumber] = {
+        modelNumber: modelNumber,
+        status: "starting",
+        chains: Array.from(new Set(models[modelNumber]?.map((el) => el.chainID).filter(Boolean) || [])),
+      };
     }
     await saveMetadata(id, metadata);
 
@@ -587,6 +610,7 @@ export async function startSimulation(req: Request, res: Response) {
     modelNumber,
     status: "sim_starting",
     error_message: undefined,
+    chains: metadata.resultsStatus[modelNumber]?.chains || [],
   };
   if (metadata.simulations === undefined) {
     metadata.simulations = {};

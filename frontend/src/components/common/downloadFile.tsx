@@ -36,6 +36,12 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+
+      setTimeout(() => {
+        downloadButton.textContent = "Download results";
+        downloadButton.style.color = "#ffffff";
+        downloadButton.style.backgroundColor = Colors.moleyDarkGreen;
+      }, 2000);
     } catch (error) {
       console.error("Download failed:", error);
     }
@@ -45,11 +51,9 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
     <button
       id="downloadButton"
       onClick={handleDownload}
-      className={
-        "font-bold rounded-lg p-2 text-lg text-black flex justify-center items-center h-auto w-[90%] my-1"
-      }
+      className="rounded-md mt-0 h-auto px-2 py-2 bg-moley-darkGreen text-sm/6 font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
     >
-      Download result files
+      Download results
     </button>
   );
 };

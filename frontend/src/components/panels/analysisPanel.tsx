@@ -824,7 +824,7 @@ const Panel: React.FC = () => {
         {/* Main content */}
         <div className="text-gray-800 text-sm/6 overflow-y-auto min-h-0">
         {/* Scrollable content */}
-          <div className="mx-16">
+          <div className="mx-2 md:mx-16">
             {/* Job data */}
             <div className="mt-10 text-gray-500">
               <p>Input data defined in previous step</p>
@@ -883,8 +883,8 @@ const Panel: React.FC = () => {
                     {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
                   </button>
                   {showVisualization && (
-                  <div className="flex flex-row h-[60vh] min-h-[400px]">
-                    <div className="w-1/2 h-full relative border border-gray-300">
+                  <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
+                    <div className="w-full md:w-1/2 h-full relative border border-gray-300">
                       {/* Gear icon button */}
                       <button
                         onClick={() => setShowFornaSettings(!showFornaSettings)}
@@ -979,7 +979,7 @@ const Panel: React.FC = () => {
                         setIsViewInitialized={setIsViewInitialized}
                       />
                     </div>
-                    <div className="w-1/2 h-full">
+                    <div className="w-full md:w-1/2 h-full">
                       <Molstar
                         useInterface={true}
                         file={myData.pdb_file_string}
