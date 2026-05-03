@@ -248,8 +248,8 @@ async function analyzeSimulationResults(
 ) {
   const modelsDir = `${modelNumber}_sim`;
   const sourceFormat = "pdb";
-  const radius = 5;
-  const interval = 1;
+  const radius = metadata.radius ?? 5;
+  const interval = metadata.interval ?? 1;
   const analyzeSphereFilesEnabled = Boolean(metadata.analyzeNeighborhoods);
 
   try {
@@ -258,8 +258,38 @@ async function analyzeSimulationResults(
     await saveMetadata(jobID, metadata);
 
     const selectedResiduesPath = `${JOBS_DIR}/${jobID}/models/${modelNumber}_residues.json`;
-    const selectedResiduesRaw = await fs.readFile(selectedResiduesPath, "utf-8");
-    const selectedResidues = JSON.parse(selectedResiduesRaw) as ChainElement[];
+    let selectedResidues: ChainElement[] = [];
+
+    try {
+      const selectedResiduesRaw = await fs.readFile(selectedResiduesPath, "utf-8");
+      selectedResidues = JSON.parse(selectedResiduesRaw) as ChainElement[];
+    } catch (err) {
+      // If the residues file doesn't exist, try to create it from <modelNumber>_results.json
+      const e = err as NodeJS.ErrnoException;
+      if (e && e.code === "ENOENT") {
+        const resultsPath = `${JOBS_DIR}/${jobID}/${modelNumber}_results.json`;
+        try {
+          const resultsRaw = await fs.readFile(resultsPath, "utf-8");
+          const results = JSON.parse(resultsRaw);
+          const data = Array.isArray(results?.data) ? results.data : [];
+          selectedResidues = data
+            .filter((r: any) => r && r.selected)
+            .map((r: any) => ({
+              chainID: r.chainID ?? r.original_chain_id ?? "A",
+              residueID: Number(r.residue_number ?? r.original_index ?? r.index)
+            })) as ChainElement[];
+
+          if (selectedResidues.length > 0) {
+            await fs.mkdir(`${JOBS_DIR}/${jobID}/models`, { recursive: true });
+            await fs.writeFile(selectedResiduesPath, JSON.stringify(selectedResidues, null, 2), "utf-8");
+          }
+        } catch (err2) {
+          // if results file missing or invalid, let outer flow handle the absent selectedResidues
+        }
+      } else {
+        throw err;
+      }
+    }
 
     if (!Array.isArray(selectedResidues) || selectedResidues.length === 0) {
       throw new Error(`Selected residues are missing for model ${modelNumber}`);
