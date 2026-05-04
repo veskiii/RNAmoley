@@ -1169,7 +1169,7 @@ const Panel: React.FC = () => {
             <div className="mb-10">
               <button
                 className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                disabled={isDisabled}
+                disabled={getAllSelectedFragmentsGrouped().length === 0}
                 onClick={handleNavigate}
               >
                 Run analysis
