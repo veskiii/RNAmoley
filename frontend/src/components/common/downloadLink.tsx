@@ -25,6 +25,7 @@ const DownloadLink = () => {
       id="saveButton"
       onClick={handleCopy}
       className="rounded-md mt-0 h-auto  px-2 py-2 bg-moley-darkGreen text-sm/6 font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+      title="Copy a link to the current results page (valid for 14 days)."
     >
       Copy link
     </button>

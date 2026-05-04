@@ -300,7 +300,7 @@ const Panel: React.FC = () => {
       setChainsState(configuredSelection.chains);
       setSelectedFragments(configuredSelection.selectedFragments);
       /* If user selected model or there is only one model, select this model */
-      if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
+      // if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
         setSelectedModel(model);
         /* If there is only one chain, select it. Otherwise, select preselected or none */
         if (configuredSelection.chains.length < 2) {
@@ -308,7 +308,7 @@ const Panel: React.FC = () => {
         } else {
           setSelectedChain(configuredSelection.selectedChain);
         }
-      }
+      // }
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -832,8 +832,8 @@ const Panel: React.FC = () => {
                 <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
                 <p><span>Local analysis {
                 myData.metadata.analyzeNeighborhoods ? 
-                "enabled; Sphere radius (Å): " + myData.metadata.radius + 
-                "; Sampling interval: " + myData.metadata.interval
+                "enabled; sphere radius (Å): " + myData.metadata.radius + 
+                "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
               </div>
@@ -1169,7 +1169,7 @@ const Panel: React.FC = () => {
             <div className="mb-10">
               <button
                 className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                disabled={isDisabled}
+                disabled={getAllSelectedFragmentsGrouped().length === 0}
                 onClick={handleNavigate}
               >
                 Run analysis

@@ -421,19 +421,21 @@ def parse_step_residues(step_value: str) -> Tuple[int, int]:
     numbers = [int(x) for x in re.findall(r"\d+", step_value)]
     if len(numbers) < 2:
         raise ValueError(f"Could not parse residues from Step value: {step_value!r}")
-    return numbers[0], numbers[1]
+    return numbers[-2], numbers[-1]
 
 
 def parse_chain_id(chain_value: str, step_value: str) -> str:
-    chain = chain_value.strip()
-    if chain:
-        return chain[0]
-
+    # First, try to extract from Step field (most reliable, format: custom_<chainID>_...)
     step_match = re.search(r"custom_([^_]+)_", step_value)
     if step_match:
         parsed = step_match.group(1).strip()
         if parsed:
             return parsed[0]
+
+    # Fall back to Chain column if Step extraction fails
+    chain = chain_value.strip()
+    if chain:
+        return chain[0]
 
     return "_"
 

@@ -68,6 +68,10 @@ services:
     depends_on:
       - db
       - redis
+      - tools
+      - molprobity
+      - sim
+      - dnatco
     scale: 1
 
   frontend:

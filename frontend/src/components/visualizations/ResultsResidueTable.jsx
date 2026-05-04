@@ -46,7 +46,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
 
   const chainData = useMemo(() => {
     if (!data) return [];
-    return data.filter((nucleotide) => nucleotide.chainID === selectedChain);
+    return data.filter((nucleotide) => nucleotide.chainID === selectedChain && nucleotide.selected);
   }, [data, selectedChain]);
 
   const activeCellStyle = (residue, score) => {

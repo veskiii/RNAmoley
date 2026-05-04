@@ -206,3 +206,12 @@ input[type="radio"]:checked + .button-label {
   background-color: #9ca3af;
   color: black;
 }
+
+/* Hide Forna direction arrows globally (force off everywhere) */
+.fornac-directionArrow,
+path.fornac-directionArrow,
+.fornac-directionArrow * {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

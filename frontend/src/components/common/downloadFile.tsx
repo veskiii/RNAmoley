@@ -4,9 +4,10 @@ import { API_URL } from "../../App";
 
 type DownloadButtonProps = {
   id?: string; // Definiujemy, że id musi być stringiem
+  disabled: boolean;
 };
 
-const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
+const DownloadButton: React.FC<DownloadButtonProps> = ({ id, disabled }) => {
   const handleDownload = async () => {
     try {
       const response = await fetch(`${API_URL}/jobs/${id}/download`, {
@@ -51,7 +52,9 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
     <button
       id="downloadButton"
       onClick={handleDownload}
+      disabled={disabled}
       className="rounded-md mt-0 h-auto px-2 py-2 bg-moley-darkGreen text-sm/6 font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+      title="Download all analysis results for the structure as a ZIP file."
     >
       Download results
     </button>

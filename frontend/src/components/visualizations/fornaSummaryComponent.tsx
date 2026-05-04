@@ -65,7 +65,7 @@ const FornacSummaryComponent = ({
         nodeOutline: nodeOutline,
         nodeLabel: nodeLabel,
         links: links,
-        directionArrows: directionArrows,
+        directionArrows: false,
       });
     };
 
@@ -295,7 +295,7 @@ const FornacSummaryComponent = ({
         links ? "visible" : "hidden"
       );
       // @ts-ignore
-      container.displayDirectionArrows(directionArrows);
+      container.displayDirectionArrows(false);
       d3.selectAll('line.link[link_type="external"]').style(
         "visibility",
         showClashes ? "visible" : "hidden"
