@@ -627,11 +627,24 @@ const SummaryPanel: React.FC = () => {
             {/* Copy link and download buttons */}
             <div className={"flex flex-row gap-2 mt-6"}>
               <DownloadLink />
-              <DownloadFile id={jobId} />
+              <DownloadFile id={jobId} disabled={!canStartSimulation}/>
             </div>
             {/* Analysis results */}
             <div className="mt-6">
-              <h1 className="font-semibold">Analysis results</h1>
+              <h1>
+                <span className="font-semibold">Analysis results</span>
+                <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                  <span
+                    aria-label="What this field does"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                  >
+                    ?
+                  </span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    By default, results for the first chain of the first model are displayed.
+                  </span>
+                </span>
+              </h1>
               {/* Processed models */}
               <div>
                 {/* Model selector */}
@@ -646,7 +659,7 @@ const SummaryPanel: React.FC = () => {
                         ?
                       </span>
                       <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                        Select a model to view its results.
+                        Select a model to view its processed chains and analysis results.
                       </span>
                     </span>
                   </div>
@@ -707,7 +720,7 @@ const SummaryPanel: React.FC = () => {
                       ?
                     </span>
                     <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                      Select a chain to view its results.
+                      Select a chain to view analysis results for the selected regions.
                     </span>
                   </span>
                 </div>
@@ -730,7 +743,20 @@ const SummaryPanel: React.FC = () => {
               </div>
               {/* Local quality map */}
               <div>
-                <label>Local quality map (per residue)</label>
+                <div>
+                  <label>Local quality map (per residue)</label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Displays local quality score for each residue's neighborhood. Select a metric to color the structure visualization accordingly.
+                    </span>
+                  </span>
+                </div>
                 <div className="overflow-x-auto">
                   <ResultsResidueTable
                   key={`residue-table-${selectedModel}-${selectedResultsSource}`}
@@ -745,7 +771,20 @@ const SummaryPanel: React.FC = () => {
               </div>
               {/* Visualizations */}
               <div className="mt-6">
-                <label>Structure visualization (colored by local quality)</label>
+                <div>
+                  <label>Structure visualization (colored by local quality)</label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                      <span
+                        aria-label="What this field does"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                      >
+                        ?
+                      </span>
+                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                        Displays the 2D and 3D structure colored according to the selected quality score.
+                      </span>
+                    </span>
+                </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
                   <div className="w-full md:w-1/2 h-full relative border border-gray-300">
                     {/* Gear icon button */}
@@ -898,16 +937,10 @@ const SummaryPanel: React.FC = () => {
                   }
                 }}
                 className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                title={canStartSimulation ? "" : "Structure correction is available after the analysis is completed."}
+                title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
               >
                 Correct the structure
               </button>
-              {simulationStartSuccess && (
-                <p className="mt-2 text-sm text-green-700">{simulationStartSuccess}</p>
-              )}
-              {simulationStartError && (
-                <p className="mt-2 text-sm text-red-700">{simulationStartError}</p>
-              )}
 
               {hasSimulationStarted && (
                 <div className="mt-3 border-t border-gray-200 pt-3">
