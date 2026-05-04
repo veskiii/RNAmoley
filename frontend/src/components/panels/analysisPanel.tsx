@@ -300,7 +300,7 @@ const Panel: React.FC = () => {
       setChainsState(configuredSelection.chains);
       setSelectedFragments(configuredSelection.selectedFragments);
       /* If user selected model or there is only one model, select this model */
-      if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
+      // if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
         setSelectedModel(model);
         /* If there is only one chain, select it. Otherwise, select preselected or none */
         if (configuredSelection.chains.length < 2) {
@@ -308,7 +308,7 @@ const Panel: React.FC = () => {
         } else {
           setSelectedChain(configuredSelection.selectedChain);
         }
-      }
+      // }
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
