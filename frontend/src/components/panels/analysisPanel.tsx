@@ -832,8 +832,8 @@ const Panel: React.FC = () => {
                 <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
                 <p><span>Local analysis {
                 myData.metadata.analyzeNeighborhoods ? 
-                "enabled; Sphere radius (Å): " + myData.metadata.radius + 
-                "; Sampling interval: " + myData.metadata.interval
+                "enabled; sphere radius (Å): " + myData.metadata.radius + 
+                "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
               </div>
