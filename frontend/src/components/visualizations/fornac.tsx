@@ -50,7 +50,7 @@ const FornaComponent = ({
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
       links: links,
-      directionArrows: directionArrows,
+      directionArrows: false,
     });
 
     const normalizeDotBracket = (structure: string): string => {
@@ -233,7 +233,8 @@ const FornaComponent = ({
 
     container.displayLinks(links);
 
-    container.displayDirectionArrows(directionArrows);
+    // Force direction arrows off globally
+    container.displayDirectionArrows(false);
 
     setAnimation ? container.startAnimation() : container.stopAnimation();
 
