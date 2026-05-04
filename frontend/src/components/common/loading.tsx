@@ -10,7 +10,7 @@ export default function Loading({ page = "Loading", message = "Loading..." }) {
         <Logo />
         <HomeIcon />
       </div>
-      <div className="flex flex-1 flex-col items-center text-4xl font-bold">
+      <div className="flex flex-1 flex-col items-center text-4xl">
         <h1 className="my-36">{message}</h1>
         <ReactLoading
           type="spinningBubbles"

@@ -15,6 +15,27 @@ type SimulationStartModalProps = {
   onSubmit: (values: SimulationFormValues) => Promise<void>;
 };
 
+const formatNumberForDisplay = (value: string) => {
+  if (value === "") {
+    return "";
+  }
+
+  const normalizedValue = value.replace(/,/g, "");
+  const parsedValue = Number(normalizedValue);
+
+  if (Number.isNaN(parsedValue)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 20,
+  }).format(parsedValue);
+};
+
+const normalizeNumberInput = (value: string) => value.replace(/,/g, "");
+
+const parseSubmittedNumber = (value: string) => Number(normalizeNumberInput(value));
+
 const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
   isOpen,
   isSubmitting,
@@ -22,10 +43,16 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [restraintBackboneForce, setRestraintBackboneForce] = useState("500");
-  const [restraintGlobalForce, setRestraintGlobalForce] = useState("100000");
-  const [restraintBasePairsForce, setRestraintBasePairsForce] = useState("500");
-  const [rmsdCutoff, setRmsdCutoff] = useState("0.4");
+  const [restraintBackboneForce, setRestraintBackboneForce] = useState(
+    formatNumberForDisplay("500")
+  );
+  const [restraintGlobalForce, setRestraintGlobalForce] = useState(
+    formatNumberForDisplay("100000")
+  );
+  const [restraintBasePairsForce, setRestraintBasePairsForce] = useState(
+    formatNumberForDisplay("500")
+  );
+  const [rmsdCutoff, setRmsdCutoff] = useState(formatNumberForDisplay("0.4"));
   const [validationError, setValidationError] = useState<string | null>(null);
 
   if (!isOpen) {
@@ -36,10 +63,10 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
     event.preventDefault();
 
     const parsedValues: SimulationFormValues = {
-      restraintBackboneForce: Number(restraintBackboneForce),
-      restraintGlobalForce: Number(restraintGlobalForce),
-      restraintBasePairsForce: Number(restraintBasePairsForce),
-      rmsdCutoff: Number(rmsdCutoff),
+      restraintBackboneForce: parseSubmittedNumber(restraintBackboneForce),
+      restraintGlobalForce: parseSubmittedNumber(restraintGlobalForce),
+      restraintBasePairsForce: parseSubmittedNumber(restraintBasePairsForce),
+      rmsdCutoff: parseSubmittedNumber(rmsdCutoff),
     };
 
     const hasInvalidValue = Object.values(parsedValues).some(
@@ -68,11 +95,20 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               Backbone restraint force
             </span>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min="0"
               step="100"
               value={restraintBackboneForce}
-              onChange={(e) => setRestraintBackboneForce(e.target.value)}
+              onChange={(e) =>
+                setRestraintBackboneForce(normalizeNumberInput(e.target.value))
+              }
+              onBlur={(e) =>
+                setRestraintBackboneForce(formatNumberForDisplay(e.target.value))
+              }
+              onFocus={(e) =>
+                setRestraintBackboneForce(normalizeNumberInput(e.target.value))
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
               disabled={isSubmitting}
             />
@@ -83,11 +119,20 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               Global restraint force
             </span>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min="0"
               step="100"
               value={restraintGlobalForce}
-              onChange={(e) => setRestraintGlobalForce(e.target.value)}
+              onChange={(e) =>
+                setRestraintGlobalForce(normalizeNumberInput(e.target.value))
+              }
+              onBlur={(e) =>
+                setRestraintGlobalForce(formatNumberForDisplay(e.target.value))
+              }
+              onFocus={(e) =>
+                setRestraintGlobalForce(normalizeNumberInput(e.target.value))
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
               disabled={isSubmitting}
             />
@@ -98,11 +143,20 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               Base pairs restraint force
             </span>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min="0"
               step="100"
               value={restraintBasePairsForce}
-              onChange={(e) => setRestraintBasePairsForce(e.target.value)}
+              onChange={(e) =>
+                setRestraintBasePairsForce(normalizeNumberInput(e.target.value))
+              }
+              onBlur={(e) =>
+                setRestraintBasePairsForce(formatNumberForDisplay(e.target.value))
+              }
+              onFocus={(e) =>
+                setRestraintBasePairsForce(normalizeNumberInput(e.target.value))
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
               disabled={isSubmitting}
             />
@@ -113,11 +167,14 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               RMSD cutoff
             </span>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               min="0"
               step="0.1"
               value={rmsdCutoff}
-              onChange={(e) => setRmsdCutoff(e.target.value)}
+              onChange={(e) => setRmsdCutoff(normalizeNumberInput(e.target.value))}
+              onBlur={(e) => setRmsdCutoff(formatNumberForDisplay(e.target.value))}
+              onFocus={(e) => setRmsdCutoff(normalizeNumberInput(e.target.value))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
               disabled={isSubmitting}
             />
