@@ -93,7 +93,7 @@ def run_command(cmd: list[str], cwd: Path, log_path: Path | None = None) -> None
         subprocess.run(cmd, cwd=cwd, check=True)
         return
 
-    with log_path.open("w") as log_handle:
+    with log_path.open("a") as log_handle:
         subprocess.run(
             cmd,
             cwd=cwd,
@@ -245,6 +245,7 @@ def main() -> None:
         if args.log_file
         else workdir / f"single_{outputname}.log"
     )
+    generator_log_path = workdir / f"generate_{outputname}.log"
 
     namd_bin_path = args.namd_bin
     if not Path(namd_bin_path).is_absolute():
@@ -267,6 +268,7 @@ def main() -> None:
     print(f"Output name: {outputname}")
     print(f"Run script: {run_namd_script.name}")
     print(f"Log file: {log_path.name}")
+    print(f"Generator log: {generator_log_path.name}")
     print(f"Base-pair templates dir: {args.base_pair_templates_dir}")
     print(f"NAMD processes: {num_processes}")
 
@@ -319,11 +321,17 @@ def main() -> None:
         if args.zero_psf_charges:
             print("DRY-RUN normalize PSF: " + shlex.quote(str((workdir / args.psf).resolve())))
         print("DRY-RUN run: " + " ".join(shlex.quote(x) for x in namd_cmd))
+        print("DRY-RUN generator log: " + shlex.quote(str(generator_log_path)))
         print("DRY-RUN log: " + shlex.quote(str(log_path)))
         return
 
+    if log_path.exists():
+        log_path.unlink()
+    if generator_log_path.exists():
+        generator_log_path.unlink()
+
     run_namd_script.write_text(replace_outputname(namd_script.read_text(), outputname))
-    run_command(generator_cmd, cwd=workdir)
+    run_command(generator_cmd, cwd=workdir, log_path=generator_log_path)
 
     psf_path = (workdir / args.psf).resolve()
     if not psf_path.exists():
