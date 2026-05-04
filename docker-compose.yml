@@ -28,9 +28,7 @@ services:
       - redis_data:/data
 
   molprobity:
-    image: molprobity
-    build:
-      context: ./molprobity
+    image: ghcr.io/veskiii/molprobity:v1.0.0
     restart: always
     #ports:
     #  - 3015:3001
