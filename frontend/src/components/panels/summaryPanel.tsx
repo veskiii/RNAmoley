@@ -664,8 +664,7 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
-                    {Array.from({ length: myData.metadata.model_count }, (_, i) => {
-                      const modelNum = i + 1;
+                    {myData.metadata.models.map((modelNum) => {
                       const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
                       const modelListStatus = getModelListStatus(modelStatus);
                       const modelStatusPresentation = getModelStatusPresentation(modelListStatus);

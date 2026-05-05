@@ -2,6 +2,7 @@
 
 import sys
 import os
+import json
 from pathlib import Path
 
 def read_pdb_content(file_handle):
@@ -102,6 +103,7 @@ def count_models_cif(file_handle):
 def separate_pdb_models(file_handle, output_folder, model_count):
     """Separate PDB models into individual files"""
     lines = read_pdb_content(file_handle)
+    model_numbers = []
     
     if model_count == 1:
         # Single model file
@@ -114,32 +116,46 @@ def separate_pdb_models(file_handle, output_folder, model_count):
                     continue
                 f.write(line)
             f.write("END\n")
+        model_numbers.append(1)
     else:
-        # Multiple models
-        current_model = 1
-        output_path = os.path.join(output_folder, f"{current_model}.pdb")
-        f = open(output_path, "w")
+        # Multiple models - extract model number from MODEL line
+        current_model = None
+        f = None
         
         for line in lines:
             if line.startswith('MODEL'):
-                continue
-            if line.startswith('ENDMDL'):
-                f.write("END\n")
-                f.close()
-                current_model += 1
-                # if current_model <= model_count:
-                #     output_path = os.path.join(output_folder, f"{current_model}.pdb")
-                #     f = open(output_path, "w")
+                # Extract model number from MODEL line
+                try:
+                    model_num = int(line.split()[1])
+                except (IndexError, ValueError):
+                    model_num = 1
+                
+                # Close previous file if open
+                if f is not None and not f.closed:
+                    f.write("END\n")
+                    f.close()
+                
+                # Open new file with the extracted model number
+                current_model = model_num
+                model_numbers.append(current_model)
+                output_path = os.path.join(output_folder, f"{current_model}.pdb")
+                f = open(output_path, "w")
+                
+            elif line.startswith('ENDMDL'):
+                if f is not None and not f.closed:
+                    f.write("END\n")
+                    f.close()
+                f = None
             elif line.strip():  # Skip empty lines
-                if f.closed:
-                    output_path = os.path.join(output_folder, f"{current_model}.pdb")
-                    f = open(output_path, "w")
-                f.write(line)
+                if f is not None and not f.closed:
+                    f.write(line)
         
         # Close the last file if it's still open
-        if not f.closed:
+        if f is not None and not f.closed:
             f.write("END\n")
             f.close()
+    
+    return model_numbers
 
 def separate_cif_models(file_handle, output_folder, model_count):
     """Separate CIF models into individual files"""
@@ -149,12 +165,14 @@ def separate_cif_models(file_handle, output_folder, model_count):
     file_handle.seek(0)
     content = file_handle.read()
     lines = content.split('\n')
+    model_numbers = []
     
     if model_count == 1:
         # Single model file
         output_path = os.path.join(output_folder, "1.cif")
         with open(output_path, "w") as f:
             f.write(content)
+        model_numbers.append(1)
     else:
         # Multiple models - need to parse and separate
         models = {}
@@ -227,6 +245,10 @@ def separate_cif_models(file_handle, output_folder, model_count):
                     f.write(atom_line + '\n')
                 
                 f.write('#\n')  # End of data block
+            
+            model_numbers.append(model_num)
+    
+    return model_numbers
 
 def main():
     if len(sys.argv) != 3:
@@ -250,15 +272,18 @@ def main():
         path_to_folder.mkdir(parents=True)
     
     # Open file and process
+    model_numbers = []
     with open(input_file, 'r') as file:
         if file_format == 'pdb':
             model_count = count_models_pdb(file)
-            separate_pdb_models(file, output_folder, model_count)
+            model_numbers = separate_pdb_models(file, output_folder, model_count)
         else:  # CIF format
             model_count = count_models_cif(file)
-            separate_cif_models(file, output_folder, model_count)
+            model_numbers = separate_cif_models(file, output_folder, model_count)
     
-    print(model_count)
+    # Output JSON with model numbers
+    output = json.dumps({"models": model_numbers})
+    print(output)
     sys.stdout.flush()
 
 if __name__ == "__main__":

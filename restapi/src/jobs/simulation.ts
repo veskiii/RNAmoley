@@ -300,9 +300,13 @@ async function analyzeSimulationResults(
     await fs.copyFile(simulatedPdbPath, analysisPdbPath);
 
     const annotateResponse = await fetch(
-      `${TOOLS_URL}/annotate?id=${jobID}&numberOfModels=1&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
+      `${TOOLS_URL}/annotate?id=${jobID}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
       {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ modelNumbers: [modelNumber] }),
       }
     );
 
@@ -311,9 +315,13 @@ async function analyzeSimulationResults(
     }
 
     const motifsResponse = await fetch(
-      `${TOOLS_URL}/extractMotifs?id=${jobID}&numberOfModels=1&modelsDir=${modelsDir}`,
+      `${TOOLS_URL}/extractMotifs?id=${jobID}&modelsDir=${modelsDir}`,
       {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ modelNumbers: [modelNumber] }),
       }
     );
 

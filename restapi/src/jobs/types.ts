@@ -48,6 +48,7 @@ export interface PDBFile {
 
 export interface splitModelsResponse {
   numberOfModels: number;
+  modelNumbers: number[];
 }
 
 export interface Annotation {
@@ -80,7 +81,7 @@ export interface Metadata {
   status: `creating` | `created` | `starting` | `running` | `completed` | `failed` | `simulation_starting` | `simulation_running` | `simulation_completed` | `simulation_failed`;
   resultsStatus?: Record<string, ModelStatus>;
   simulations?: Record<string, SimulationInfo>;
-  model_count: number;
+  models: number[];
   radius?: number;
   interval?: number;
   error_message?: string;
