@@ -659,7 +659,7 @@ const SummaryPanel: React.FC = () => {
                         ?
                       </span>
                       <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                        Select a model to view its processed chains and analysis results.
+                        Select a model to view its processed chains and analysis results. The first model is selected by default and analyzed automatically. Other models become available as previous analyses are completed.
                       </span>
                     </span>
                   </div>
