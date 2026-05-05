@@ -38,11 +38,6 @@ interface Numeration {
   [annotator_residue_number: number]: NumerationItem;
 }
 
-export interface Metadata {
-  status: string;
-  model_count: number;
-}
-
 export interface SelectedFragment {
   name: string;
   chainName: string;
@@ -179,7 +174,7 @@ export interface ModelStatus {
 export interface Metadata {
   status: string;
   resultsStatus?: Record<string, ModelStatus>;
-  model_count: number;
+  models: number[];
   error_message?: string;
   analyzeNeighborhoods?: boolean;
   radius?: number;

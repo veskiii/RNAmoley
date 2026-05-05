@@ -115,7 +115,7 @@ export async function getJobById(req: Request, res: Response) {
   }
 
   if (
-    parseInt(modelNumber) > metadata.model_count ||
+    !metadata.models.includes(parseInt(modelNumber)) ||
     parseInt(modelNumber) < 1
   ) {
     res.status(404).send({ error: "Model not found." });
@@ -315,7 +315,7 @@ export async function createJob(req: Request, res: Response) {
 
   const metadata: Metadata = {
     status: "creating",
-    model_count: 1,
+    models: [],
     analyzeNeighborhoods: req.body.useWalkingSphere === "true" ? true : false,
     radius: req.body.useWalkingSphere === "true" ? Number(req.body.sphereRadius) : undefined,
     interval: req.body.useWalkingSphere === "true" ? Number(req.body.sphereInterval) : undefined,

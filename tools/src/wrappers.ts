@@ -93,18 +93,27 @@ export async function splitModels(
     console.error("Error running split: ", split.error);
     return { error: split.error };
   }
-  const rawResult = await formatOutput(split.stdout.toString());
-  const result = rawResult.substring(2, rawResult.length - 4);
-  console.log("Split models - number of models:", result);
-
-  const numberOfModels = parseInt(result);
-  if (isNaN(numberOfModels) || numberOfModels < 1) {
-    console.error("Invalid number of models returned:", result);
-    throw new Error(`Invalid number of models: ${result}`);
+  
+  const rawResult = split.stdout.toString().trim();
+  let result;
+  
+  try {
+    result = JSON.parse(rawResult);
+  } catch (e) {
+    console.error("Failed to parse JSON output:", rawResult);
+    throw new Error(`Invalid JSON output from Separate.py: ${rawResult}`);
   }
 
+  if (!result.models || !Array.isArray(result.models)) {
+    console.error("Invalid models structure returned:", result);
+    throw new Error(`Invalid models structure: ${JSON.stringify(result)}`);
+  }
+
+  console.log("Split models - model numbers:", result.models);
+
   const response = {
-    numberOfModels: numberOfModels,
+    modelNumbers: result.models,
+    numberOfModels: result.models.length,
   };
 
   return response;
@@ -112,17 +121,21 @@ export async function splitModels(
 
 export async function correctModels(
   id: string,
-  numberOfModels: number,
+  numberOfModels: (string | number)[],
   sourceFormat: string,
   modelsDir = "models"
 ) {
   console.log(`Correcting ${id} models...`);
 
-  for (let i = 1; i <= numberOfModels; i++) {
-    console.log(`Correcting model ${i}...`);
+  const modelNumbers = Array.isArray(numberOfModels) 
+    ? numberOfModels 
+    : Array.from({ length: numberOfModels }, (_, i) => i + 1);
+
+  for (const modelNum of modelNumbers) {
+    console.log(`Correcting model ${modelNum}...`);
     const correct = spawnSync(`${SCRIPTS_DIR}/Correction.py`, [
-      `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
-      `${JOBS_DIR}/${id}/${modelsDir}/${i}.${sourceFormat}`,
+      `${JOBS_DIR}/${id}/${modelsDir}/${modelNum}.${sourceFormat}`,
+      `${JOBS_DIR}/${id}/${modelsDir}/${modelNum}.${sourceFormat}`,
     ]);
     if (correct.error) {
       console.error("Error running correct: ", correct.error);
@@ -135,14 +148,18 @@ export async function correctModels(
 
 export async function runAnnotator(
   id: string,
-  numberOfModels: number,
+  numberOfModels: (string | number)[],
   sourceFormat: string,
   modelsDir = "models"
 ) {
   console.log(`Running annotator on ${id}...`);
   const results = [];
 
-  for (let i = 1; i <= numberOfModels; i++) {
+  const modelNumbers = Array.isArray(numberOfModels) 
+    ? numberOfModels 
+    : Array.from({ length: numberOfModels }, (_, i) => i + 1);
+
+  for (const i of modelNumbers) {
     const annotator = spawnSync(
       "annotator",
       [
@@ -415,13 +432,17 @@ const retrieveBasePairsFromJson = async (
 
 export async function runMotifExtractor(
   id: string,
-  numberOfModels: number,
+  numberOfModels: (string | number)[],
   modelsDir = "models"
 ) {
   console.log(`Running motif extractor on ${id}...`);
   const results = [];
 
-  for (let i = 1; i <= numberOfModels; i++) {
+  const modelNumbers = Array.isArray(numberOfModels) 
+    ? numberOfModels 
+    : Array.from({ length: numberOfModels }, (_, i) => i + 1);
+
+  for (const i of modelNumbers) {
     const output = await retrieveMotifsFromJson(
       `${JOBS_DIR}/${id}/${modelsDir}/${i}.json`
     );

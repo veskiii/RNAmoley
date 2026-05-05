@@ -12,28 +12,30 @@ import {
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3002;
 
+app.use(express.json());
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
 app.post("/annotate", (req, res) => {
   const id = req.query.id as string;
-  const numberOfModels = req.query.numberOfModels as string;
   const sourceFormat = req.query.sourceFormat as string;
   const modelsDir = (req.query.modelsDir as string) || "models";
+  const modelNumbers = req.body.modelNumbers as (number | string)[];
 
   if (!id) {
     res.status(400).send("Annotator error: id is required");
     return;
   }
 
-  if (!numberOfModels) {
-    res.status(400).send("Annotator error: filename is required");
+  if (!modelNumbers || !Array.isArray(modelNumbers)) {
+    res.status(400).send("Annotator error: modelNumbers array is required");
     return;
   }
-  console.log("Annotating", id, numberOfModels);
+  console.log("Annotating", id, modelNumbers);
 
-  runAnnotator(id, parseInt(numberOfModels), sourceFormat, modelsDir)
+  runAnnotator(id, modelNumbers, sourceFormat, modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -45,21 +47,21 @@ app.post("/annotate", (req, res) => {
 
 app.post("/extractMotifs", (req, res) => {
   const id = req.query.id as string;
-  const numberOfModels = req.query.numberOfModels as string;
   const modelsDir = (req.query.modelsDir as string) || "models";
+  const modelNumbers = req.body.modelNumbers as (number | string)[];
 
   if (!id) {
     res.status(400).send("Motif-extractor error: id is required");
     return;
   }
 
-  if (!numberOfModels) {
-    res.status(400).send("Motif-extractor error: filename is required");
+  if (!modelNumbers || !Array.isArray(modelNumbers)) {
+    res.status(400).send("Motif-extractor error: modelNumbers array is required");
     return;
   }
-  console.log("Extracting motifs ", id, numberOfModels);
+  console.log("Extracting motifs ", id, modelNumbers);
 
-  runMotifExtractor(id, parseInt(numberOfModels), modelsDir)
+  runMotifExtractor(id, modelNumbers, modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })
@@ -116,23 +118,23 @@ app.post("/split", (req, res) => {
 
 app.post("/correct", (req, res) => {
   const id = req.query.id as string;
-  const numberOfModels = req.query.numberOfModels as string;
   const sourceFormat = req.query.sourceFormat as string;
   const modelsDir = (req.query.modelsDir as string) || "models";
+  const modelNumbers = req.body.modelNumbers as (number | string)[];
 
   if (!id) {
     res.status(400).send({ error: "Correct error: id is required" });
     return;
   }
 
-  if (!numberOfModels) {
+  if (!modelNumbers || !Array.isArray(modelNumbers)) {
     res
       .status(400)
-      .send({ error: "Correct error: numberOfModels is required" });
+      .send({ error: "Correct error: modelNumbers array is required" });
     return;
   }
 
-  correctModels(id, parseInt(numberOfModels), sourceFormat, modelsDir)
+  correctModels(id, modelNumbers, sourceFormat, modelsDir)
     .then((output) => {
       res.status(200).send(output);
     })

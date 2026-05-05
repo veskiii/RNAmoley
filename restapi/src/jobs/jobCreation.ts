@@ -95,13 +95,13 @@ export const performJobCreation = async (job:NewJob & { modelsDir?: string }) =>
     }
 
     // Split file into models
-    const numberOfModels = await splitFileIntoModels(job.id, job.original_extension, modelsDir);
-    console.log(`Number of models: ${numberOfModels} in job ${job.id}`);
+    const modelNumbers = await splitFileIntoModels(job.id, job.original_extension, modelsDir);
+    console.log(`Number of models: ${modelNumbers} in job ${job.id}`);
 
-    job.metadata.model_count = numberOfModels;
+    job.metadata.models = modelNumbers;
     await saveMetadata(job.id, job.metadata);
 
-    var annotations = await annotateModels(job.id, job.metadata, numberOfModels, job.original_extension, modelsDir);
+    var annotations = await annotateModels(job.id, job.metadata, modelNumbers, job.original_extension, modelsDir);
     if (!annotations) {
         handleAnalysisError(job.id, job.metadata, "Failed to annotate models.");
         return;
@@ -113,8 +113,8 @@ export const performJobCreation = async (job:NewJob & { modelsDir?: string }) =>
 
     if (job.original_extension !== "pdb") {
       // convert models to PDB
-      for (let i = 0; i < numberOfModels; i++) {
-        const modelPath = `${modelsDir}/${i + 1}.${job.original_extension}`;
+      for (const modelNumber of modelNumbers) {
+        const modelPath = `${modelsDir}/${modelNumber}.${job.original_extension}`;
         await convertToPDB(job.id, job.metadata, modelPath);
       }
     }
@@ -125,7 +125,7 @@ export const performJobCreation = async (job:NewJob & { modelsDir?: string }) =>
     //     return;
     // }
 
-    var structuralElements = await extractStructuralElements(job.id, job.metadata, numberOfModels, modelsDir);
+    var structuralElements = await extractStructuralElements(job.id, job.metadata, modelNumbers, modelsDir);
     if (!structuralElements) {
         handleAnalysisError(job.id, job.metadata, "Failed to extract structural elements.");
         return;
@@ -151,21 +151,24 @@ const convertToPDB = async (jobId: UUID, metadata: Metadata, newFilename: string
     }
 }
 
-const splitFileIntoModels = async (jobId : UUID, sourceFormat: string, modelsDir = "models") : Promise<number> => {
-    var numberOfModels = 1;
-      const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`, {
-        method: "POST",
-      });
-      numberOfModels = ((await splitResponse.json()) as splitModelsResponse)
-        .numberOfModels;
-    return numberOfModels;
+const splitFileIntoModels = async (jobId : UUID, sourceFormat: string, modelsDir = "models") : Promise<number[]> => {
+  const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`, {
+    method: "POST",
+  });
+  const splitResponseJson = ((await splitResponse.json()) as splitModelsResponse);
+  const modelNumbers = splitResponseJson.modelNumbers;
+  return modelNumbers;
 }
 
-const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string, modelsDir = "models") => {
+const correctModels = async (jobId: UUID, metadata: Metadata, modelNumbers: (number | string)[], sourceFormat: string, modelsDir = "models") => {
     const correctResponse = await fetch(
-        `${TOOLS_URL}/correct?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
+        `${TOOLS_URL}/correct?id=${jobId}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
         {
             method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ modelNumbers }),
         }
     );
     if (!correctResponse.ok) {
@@ -174,11 +177,15 @@ const correctModels = async (jobId: UUID, metadata: Metadata, numberOfModels: nu
     }
 }
 
-const annotateModels = async (jobId: UUID, metadata: Metadata, numberOfModels: number, sourceFormat: string, modelsDir = "models"): Promise<Annotation[][] | undefined> => {
+const annotateModels = async (jobId: UUID, metadata: Metadata, modelNumbers: (number | string)[], sourceFormat: string, modelsDir = "models"): Promise<Annotation[][] | undefined> => {
     const annotateResponse = await fetch(
-        `${TOOLS_URL}/annotate?id=${jobId}&numberOfModels=${numberOfModels}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
+        `${TOOLS_URL}/annotate?id=${jobId}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ modelNumbers }),
         }
       );
     
@@ -193,11 +200,15 @@ const annotateModels = async (jobId: UUID, metadata: Metadata, numberOfModels: n
       return annotateResult;
 }
 
-const extractStructuralElements = async (jobId: UUID, metadata: Metadata, numberOfModels: number, modelsDir = "models") : Promise<StructuralElement[][] | undefined> => {
+const extractStructuralElements = async (jobId: UUID, metadata: Metadata, modelNumbers: (number | string)[], modelsDir = "models") : Promise<StructuralElement[][] | undefined> => {
     const extractMotifsResponse = await fetch(
-        `${TOOLS_URL}/extractMotifs?id=${jobId}&numberOfModels=${numberOfModels}&modelsDir=${modelsDir}`,
+        `${TOOLS_URL}/extractMotifs?id=${jobId}&modelsDir=${modelsDir}`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ modelNumbers }),
         }
       );
     
