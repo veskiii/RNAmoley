@@ -104,27 +104,27 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "sim_starting") {
-      return { label: "Simulation starting", className: "bg-cyan-300 text-cyan-950" };
+      return { label: "Refinement starting", className: "bg-cyan-300 text-cyan-950" };
     }
 
     if (status === "sim_running") {
-      return { label: "Simulation running", className: "bg-cyan-500 text-white" };
+      return { label: "Refinement running", className: "bg-cyan-500 text-white" };
     }
 
     if (status === "sim_finished") {
-      return { label: "Simulation done", className: "bg-sky-600 text-white" };
+      return { label: "Refinement done", className: "bg-sky-600 text-white" };
     }
 
     if (status === "sim_analyzing") {
-      return { label: "Analyzing simulation", className: "bg-indigo-600 text-white" };
+      return { label: "Analyzing results", className: "bg-indigo-600 text-white" };
     }
 
     if (status === "sim_completed") {
-      return { label: "Simulation completed", className: "bg-cyan-700 text-white" };
+      return { label: "Refinement completed", className: "bg-cyan-700 text-white" };
     }
 
     if (status === "sim_failed") {
-      return { label: "Simulation failed", className: "bg-rose-600 text-white" };
+      return { label: "Refinement failed", className: "bg-rose-600 text-white" };
     }
 
     return { label: status, className: "bg-gray-300 text-black" };
