@@ -483,6 +483,7 @@ const Dashboard: React.FC = () => {
                 <input
                   type="number"
                   min={1}
+                  max={25}
                   value={sphereRadius}
                   disabled={!useWalkingSphere}
                   onChange={e => setSphereRadius(parseInt(e.target.value))}
