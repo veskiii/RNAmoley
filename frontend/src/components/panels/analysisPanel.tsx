@@ -942,7 +942,7 @@ const Panel: React.FC = () => {
                   <button
                     className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
                     onClick={() => setShowVisualization(!showVisualization)}
-                    title={"Displays/hides 2D and 3D views of the selected RNA model."}
+                    title={"Show or hide the structure visualization. The selected region is highlighted in green for easy identification."}
                   >
                     {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
                   </button>
