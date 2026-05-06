@@ -41,11 +41,9 @@ export const rangeMap: Map<String, Range> = new Map([
     "Bad Angles",
     {
       ranges: [
-        [0, 1],
-        [1, 10],
-        [10, 30],
-        [30, 50],
-        [50, 100],
+        [0, 0.01],
+        [0.01, 2],
+        [2, 100],
       ],
     },
   ],
@@ -53,11 +51,9 @@ export const rangeMap: Map<String, Range> = new Map([
     "Bad Bonds",
     {
       ranges: [
-        [0, 1],
-        [1, 10],
-        [10, 30],
-        [30, 50],
-        [50, 100],
+        [0, 0.01],
+        [0.01, 2],
+        [2, 100],
       ],
     },
   ],
@@ -74,13 +70,8 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
       return 1;
       // @ts-ignore
     } else if (qualityScore >= ranges[1][0] && qualityScore < ranges[1][1]) {
-      return 2;
-      // @ts-ignore
-    } else if (qualityScore >= ranges[2][0] && qualityScore < ranges[2][1]) {
       return 3;
       // @ts-ignore
-    } else if (qualityScore >= ranges[3][0] && qualityScore < ranges[3][1]) {
-      return 4;
     } else {
       return 5;
     }
@@ -94,13 +85,8 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
       return 1;
       // @ts-ignore
     } else if (qualityScore >= ranges[1][0] && qualityScore < ranges[1][1]) {
-      return 2;
-      // @ts-ignore
-    } else if (qualityScore >= ranges[2][0] && qualityScore < ranges[2][1]) {
       return 3;
       // @ts-ignore
-    } else if (qualityScore >= ranges[3][0] && qualityScore < ranges[3][1]) {
-      return 4;
     } else {
       return 5;
     }

@@ -71,6 +71,8 @@ export async function getDemoFiles(name: string) {
     filename = "bad.pdb";
   } else if (name == "Example 5") {
     filename = "bad.pdb";
+  } else if (name == "Example 6") {
+    filename = "R1117TS235-12345.pdb";
   }
   console.log(`Fetching demo file ${name} -  ${filename} from ${DEMO_FILES_DIR}`);
   const data = await fs.readFile(`${DEMO_FILES_DIR}/${filename}`);

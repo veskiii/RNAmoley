@@ -46,6 +46,7 @@ const AUTO_SELECT_FRAGMENTS_BY_JOB: Record<string, AutoSelectFragmentConfig[]> =
   "Example 3": [{ fragment: "(1:A:8-12),(1:A:44-49)", label: "Range" }],
   "Example 4": [{ fragment: "(1:A:42-83)", label: "Range 42-83" }],
   "Example 5": [{ fragment: "(1:A:1-39),(1:A:83-90)", label: "Range" }],
+  "Example 6": [{ fragment: "(1:0:1-30),(3:0:1-30),(5:0:1-30)", label: "Range" }]
 };
 
 function parseAutoSelectFragmentSpec(
@@ -196,6 +197,58 @@ function clearChainSelections(chains: Chain[]): Chain[] {
   }));
 }
 
+async function preloadConfiguredModelSelections(
+  jobID: string | undefined,
+  jobName: string | undefined,
+  availableModels: number[],
+  excludedModel: number
+): Promise<Record<number, { chainsState: Chain[]; selectedFragments: SelectedFragment[] }>> {
+  const configuredSpecs = jobName ? AUTO_SELECT_FRAGMENTS_BY_JOB[jobName] ?? [] : [];
+  if (!jobID || configuredSpecs.length === 0) {
+    return {};
+  }
+
+  const configuredModels = Array.from(
+    new Set(
+      configuredSpecs
+        .flatMap(parseAutoSelectFragmentSpec)
+        .map((spec) => spec.model)
+    )
+  ).filter((model) => model !== excludedModel && availableModels.includes(model));
+
+  if (configuredModels.length === 0) {
+    return {};
+  }
+
+  const loadedSelections = await Promise.allSettled(
+    configuredModels.map(async (model) => {
+      const modelData = await fetchJobData(jobID, model);
+      const chains = transformJobToChains(modelData);
+      const configuredSelection = applyConfiguredSelections(jobName, model, chains);
+
+      return [
+        model,
+        {
+          chainsState: configuredSelection.chains,
+          selectedFragments: configuredSelection.selectedFragments,
+        },
+      ] as const;
+    })
+  );
+
+  return loadedSelections.reduce<Record<number, { chainsState: Chain[]; selectedFragments: SelectedFragment[] }>>(
+    (accumulator, result) => {
+      if (result.status === "fulfilled") {
+        const [model, selection] = result.value;
+        accumulator[model] = selection;
+      }
+
+      return accumulator;
+    },
+    {}
+  );
+}
+
 const Panel: React.FC = () => {
   const [myData, setMyData] = useState<Job>();
   const [error, setError] = useState<string | null>(null);
@@ -299,6 +352,18 @@ const Panel: React.FC = () => {
       const configuredSelection = applyConfiguredSelections(data.name, model, chains);
       setChainsState(configuredSelection.chains);
       setSelectedFragments(configuredSelection.selectedFragments);
+      void preloadConfiguredModelSelections(jobID, data.name, data.metadata.models, model).then(
+        (preloadedSelections) => {
+          if (Object.keys(preloadedSelections).length === 0) {
+            return;
+          }
+
+          setModelSelections((prev) => ({
+            ...prev,
+            ...preloadedSelections,
+          }));
+        }
+      );
       /* If user selected model or there is only one model, select this model */
       // if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
         setSelectedModel(model);
@@ -877,7 +942,7 @@ const Panel: React.FC = () => {
                   <button
                     className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
                     onClick={() => setShowVisualization(!showVisualization)}
-                    title={"Displays/hides 2D and 3D views of the selected RNA model."}
+                    title={"Show or hide the structure visualization. The selected region is highlighted in green for easy identification."}
                   >
                     {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
                   </button>

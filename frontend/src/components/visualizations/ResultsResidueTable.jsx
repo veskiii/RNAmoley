@@ -171,7 +171,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                   : "#ffffff",
             }}
             >
-              Neighborhood ClashScore
+              Clashscore
             </td>
             {chainData.map((nucleotide, index) => (
               <td
@@ -183,51 +183,6 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 style={activeCellStyle(nucleotide, QualityScore.CLASH_SCORE)}
               >
                 {nucleotide.metrics ? nucleotide.metrics.clashscore : 
-                  !shouldHideSpinners && nucleotide.selected ? (
-                    <span className="inline-block align-middle">
-                      <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
-                    </span>
-                  ) : ""}
-              </td>
-            ))}
-          </tr>)}
-          {analyzeNeighborhood && (
-          <tr>
-            <td className="w-12 p-2 text-center">
-              <input
-                type="radio"
-                name="metric-selector"
-                checked={effectiveSelectedScore === QualityScore.BAD_ANGLES}
-                onChange={() => handleClick(QualityScore.BAD_ANGLES)}
-                className="cursor-pointer"
-              />
-            </td>
-            <td 
-            id="tableBadAngles"
-            className="w-32 p-2 text-left cursor-pointer"
-            onClick={(_) => handleClick(QualityScore.BAD_ANGLES)}
-            style={{
-              borderWidth: "3px",
-              borderColor:
-                effectiveSelectedScore === QualityScore.BAD_ANGLES
-                  ? selectedBorderColor
-                  : "#ffffff",
-            }}
-            >
-              Neighborhood Bad Angles
-            </td>
-            {chainData.map((nucleotide, index) => (
-              <td
-                key={`${selectedChain}-struct-${index}`}
-                data-residue-number={nucleotide.residue_number}
-                className={
-                  "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
-                }
-                style={activeCellStyle(nucleotide, QualityScore.BAD_ANGLES)}
-              >
-                {nucleotide.metrics 
-                ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
-                : 
                   !shouldHideSpinners && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
@@ -259,7 +214,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                   : "#ffffff",
             }}
             >
-              Neighborhood Bad Bond Lengths
+              Bad Bonds
             </td>
             {chainData.map((nucleotide, index) => (
               <td
@@ -272,6 +227,51 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
               >
                 {nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
+                : 
+                  !shouldHideSpinners && nucleotide.selected ? (
+                    <span className="inline-block align-middle">
+                      <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
+                    </span>
+                  ) : ""}
+              </td>
+            ))}
+          </tr>)}
+          {analyzeNeighborhood && (
+          <tr>
+            <td className="w-12 p-2 text-center">
+              <input
+                type="radio"
+                name="metric-selector"
+                checked={effectiveSelectedScore === QualityScore.BAD_ANGLES}
+                onChange={() => handleClick(QualityScore.BAD_ANGLES)}
+                className="cursor-pointer"
+              />
+            </td>
+            <td 
+            id="tableBadAngles"
+            className="w-32 p-2 text-left cursor-pointer"
+            onClick={(_) => handleClick(QualityScore.BAD_ANGLES)}
+            style={{
+              borderWidth: "3px",
+              borderColor:
+                effectiveSelectedScore === QualityScore.BAD_ANGLES
+                  ? selectedBorderColor
+                  : "#ffffff",
+            }}
+            >
+              Bad Angles
+            </td>
+            {chainData.map((nucleotide, index) => (
+              <td
+                key={`${selectedChain}-struct-${index}`}
+                data-residue-number={nucleotide.residue_number}
+                className={
+                  "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
+                }
+                style={activeCellStyle(nucleotide, QualityScore.BAD_ANGLES)}
+              >
+                {nucleotide.metrics 
+                ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
                 : 
                   !shouldHideSpinners && nucleotide.selected ? (
                     <span className="inline-block align-middle">
@@ -340,7 +340,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                   : "#ffffff",
             }}
             >
-              Sugar Pucker Outlier Type
+              Sugar Pucker Outlier
             </td>
             {chainData.map((nucleotide, index) => (
               <td

@@ -18,11 +18,11 @@ const fieldRows = [
         key: "pct_resbadbonds",
     },
     {
-        label: "Bad bond angles",
+        label: "Bad angles",
         keys: ["numbadangles", "numangles", "pct_badangles"],
     },
     {
-        label: "Residues with bad bond angles [%]",
+        label: "Residues with bad angles [%]",
         key: "pct_resbadangles",
     },
     {

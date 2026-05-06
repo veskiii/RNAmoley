@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
       file: "Xiao model 04 submitted to PZ39",
       useWalkingSphere: true,
       sphereRadius: 15,
-      sphereInterval: 5,
+      sphereInterval: 1,
     },
     {
       id: "medium",
@@ -80,8 +80,17 @@ const Dashboard: React.FC = () => {
       file: "Dfold model 01 submitted to PZ39",
       useWalkingSphere: true,
       sphereRadius: 8,
-      sphereInterval: 2,
+      sphereInterval: 1,
     },
+    {
+      id: "multi-model",
+      value: "Example 6",
+      label: "6",
+      file: "SoutheRNA models submitted to R1117",
+      useWalkingSphere: true,
+      sphereRadius: 5,
+      sphereInterval: 1,
+    }
   ];
 
   const getSelectedJobName = () => {
@@ -340,7 +349,7 @@ const Dashboard: React.FC = () => {
                       ?
                     </span>
                     <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                      Select one of five preloaded example structures from RNA-Puzzles submissions.
+                      Select one of six preloaded example structures from RNA-Puzzles and CASP15 submissions.
                     </span>
                   </span>
                 </div>
@@ -410,6 +419,18 @@ const Dashboard: React.FC = () => {
                   >
                     {samples[4].label}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => customSetState("example", samples[5].value)}
+                    title={samples[5].file}
+                    className={`w-12 mx-1 px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
+                      radiobutton == samples[5].value
+                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
+                        : "text-gray-900 ring-0 z-0"
+                    }`}
+                  >
+                    {samples[5].label}
+                  </button>
                 </div>
               </div>
               
@@ -418,37 +439,36 @@ const Dashboard: React.FC = () => {
 
           <div className="mt-6 text-base/7"><strong>Local analysis settings</strong></div>
           <div>
-          <div className="flex items-center gap-2 py-4">
-            <div className="flex items-center gap-2">
-              <label htmlFor="sequential-toggle" className="font-semibold text-sm/6">
-                Enable local analysis
-              </label>
-              <span className="group relative inline-flex cursor-help items-center justify-center">
-                    <span
-                      aria-label="What this field does"
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
-                    >
-                      ?
+            <div className="flex items-center gap-2 py-4">
+              <div className="flex items-center gap-2">
+                <label htmlFor="sequential-toggle" className="font-semibold text-sm/6">
+                  Enable local analysis
+                </label>
+                <span className="group relative inline-flex cursor-help items-center justify-center">
+                      <span
+                        aria-label="What this field does"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                      >
+                        ?
+                      </span>
+                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                        Apply spatial neighborhood analysis to identify local structural irregularities.
+                      </span>
                     </span>
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                      Apply spatial neighborhood analysis to identify local structural irregularities.
-                    </span>
-                  </span>
-                </div>
-            <input
-              id="sequential-toggle"
-              type="checkbox"
-              checked={useWalkingSphere}
-              onChange={e => setUseWalkingSphere(e.target.checked)}
-              className="w-5 h-5 accent-moley-accentGreen"
-            />
+                  </div>
+              <input
+                id="sequential-toggle"
+                type="checkbox"
+                checked={useWalkingSphere}
+                onChange={e => setUseWalkingSphere(e.target.checked)}
+                className="w-5 h-5 accent-moley-accentGreen"
+              />
             </div>
-            {(
-              <div className="mb-4 py-2 bg-white rounded text-sm/6">
-                <div className="mb-2 flex flex-row items-center">
-                  <div className="flex items-center gap-2">
-                    <label className="block text-sm font-medium">Sphere radius (Å):</label>
-                    <span className="group relative inline-flex cursor-help items-center justify-center">
+            <div className="mb-4 py-2 bg-white rounded text-sm/6">
+              <div className="mb-2 flex flex-row items-center">
+                <div className="flex items-center gap-2">
+                  <label className="block text-sm font-medium">Sphere radius (Å):</label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center">
                     <span
                       aria-label="What this field does"
                       className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
@@ -460,17 +480,18 @@ const Dashboard: React.FC = () => {
                     </span>
                   </span>
                 </div>
-                  <input
-                    type="number"
-                    min={1}
-                    value={sphereRadius}
-                    disabled={!useWalkingSphere}
-                    onChange={e => setSphereRadius(parseInt(e.target.value))}
-                    className="border rounded px-2 py-1 mx-2"
-                  />
-                </div>
-                <div className="flex flex-row items-center">
-                  <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={25}
+                  value={sphereRadius}
+                  disabled={!useWalkingSphere}
+                  onChange={e => setSphereRadius(parseInt(e.target.value))}
+                  className="border rounded px-2 py-1 mx-2"
+                />
+              </div>
+              {/* <div className="flex flex-row items-center">
+                <div className="flex items-center gap-2">
                   <label className="block text-sm font-medium">Sampling interval:</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center">
                     <span
@@ -484,17 +505,17 @@ const Dashboard: React.FC = () => {
                     </span>
                   </span>
                 </div>
-                  <input
-                    type="number"
-                    min={1}
-                    value={sphereInterval}
-                    disabled={!useWalkingSphere}
-                    onChange={e => setSphereInterval(parseInt(e.target.value))}
-                    className="border rounded px-2 py-1 mx-2"
-                  />
-                </div>
-              </div>
-              )}</div>
+                <input
+                  type="number"
+                  min={1}
+                  value={sphereInterval}
+                  disabled={!useWalkingSphere}
+                  onChange={e => setSphereInterval(parseInt(e.target.value))}
+                  className="border rounded px-2 py-1 mx-2"
+                />
+              </div> */}
+            </div>
+          </div>
 
           <div className="my-6 flex items-center justify-start gap-x-6">
             <button
