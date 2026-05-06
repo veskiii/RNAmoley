@@ -30,6 +30,7 @@ const PRE_CALCULATED_RESULTS: Record<string, { filename: string; radius: number;
   "Example 3": {"filename" : "example_3.json", "radius": 5, "interval": 1, "selection": "(1:A:8-12),(1:A:44-49)"},
   "Example 4": {"filename" : "example_4.json", "radius": 5, "interval": 1, "selection": "(1:A:42-83)"},
   "Example 5": {"filename" : "example_5.json", "radius": 8, "interval": 2, "selection": "(1:A:1-39),(1:A:83-90)"},
+  "Example 6": {"filename" : "example_6_<model_number>.json", "radius": 5, "interval": 1, "selection": "(1:0:1-30),(3:0:1-30),(5:0:1-30)"},
 }
 
 function normalizeSelection(selection: string) {
@@ -37,55 +38,69 @@ function normalizeSelection(selection: string) {
 }
 
 function buildSelectionSignature(models: Record<number, ChainElement[]>) {
-  const modelEntries = Object.values(models);
-  if (modelEntries.length !== 1) {
+  const modelKeys = Object.keys(models)
+    .map((modelKey) => Number(modelKey))
+    .filter((modelKey) => Number.isFinite(modelKey))
+    .sort((left, right) => left - right);
+
+  if (modelKeys.length === 0) {
+    console.info("[PreCalculatedDemo] buildSelectionSignature skipped: no model keys provided");
     return null;
   }
 
-  const residues = modelEntries[0] || [];
-  if (residues.length === 0) {
-    return null;
-  }
-
-  const chainIds = [...new Set(residues.map((residue) => residue.chainID).filter(Boolean))].sort();
   const selectionParts: string[] = [];
 
-  chainIds.forEach((chainID, chainIndex) => {
-    const residueIds = residues
-      .filter((residue) => residue.chainID === chainID)
-      .map((residue) => residue.residueID)
-      .filter((residueID): residueID is number => Number.isInteger(residueID))
-      .sort((left, right) => left - right);
-
-    if (residueIds.length === 0) {
+  modelKeys.forEach((modelKey) => {
+    const residues = models[modelKey] || [];
+    if (residues.length === 0) {
       return;
     }
 
-    const firstResidueID = residueIds[0];
-    if (firstResidueID === undefined) {
-      return;
-    }
+    const chainIds = [...new Set(residues.map((residue) => residue.chainID).filter(Boolean))].sort();
 
-    let rangeStart = firstResidueID;
-    let previousResidueID = firstResidueID;
+    chainIds.forEach((chainID) => {
+      const residueIds = residues
+        .filter((residue) => residue.chainID === chainID)
+        .map((residue) => residue.residueID)
+        .filter((residueID): residueID is number => Number.isInteger(residueID))
+        .sort((left, right) => left - right);
 
-    for (let index = 1; index < residueIds.length; index++) {
-      const residueID = residueIds[index];
-      if (residueID === undefined) {
+      if (residueIds.length === 0) {
         return;
       }
-      if (residueID === previousResidueID + 1) {
-        previousResidueID = residueID;
-        continue;
+
+      const uniqueResidueIds = Array.from(new Set(residueIds));
+      const firstResidueID = uniqueResidueIds[0];
+      if (firstResidueID === undefined) {
+        return;
       }
 
-      selectionParts.push(`(${chainIndex + 1}:${chainID}:${rangeStart}-${previousResidueID})`);
-      rangeStart = residueID;
-      previousResidueID = residueID;
-    }
+      let rangeStart = firstResidueID;
+      let previousResidueID = firstResidueID;
 
-    selectionParts.push(`(${chainIndex + 1}:${chainID}:${rangeStart}-${previousResidueID})`);
+      for (let index = 1; index < uniqueResidueIds.length; index++) {
+        const residueID = uniqueResidueIds[index];
+        if (residueID === undefined) {
+          return;
+        }
+        if (residueID === previousResidueID + 1) {
+          previousResidueID = residueID;
+          continue;
+        }
+
+        selectionParts.push(`(${modelKey}:${chainID}:${rangeStart}-${previousResidueID})`);
+        rangeStart = residueID;
+        previousResidueID = residueID;
+      }
+
+      selectionParts.push(`(${modelKey}:${chainID}:${rangeStart}-${previousResidueID})`);
+    });
   });
+
+  if (selectionParts.length === 0) {
+    console.info("[PreCalculatedDemo] buildSelectionSignature produced no selection parts");
+    return null;
+  }
 
   return selectionParts.join(",");
 }
@@ -96,24 +111,51 @@ export function getPreCalculatedDemoResult(
   interval: number,
   models: Record<number, ChainElement[]>
 ) {
+  console.info(
+    `[PreCalculatedDemo] Checking job="${jobName}" radius=${Number(radius)} interval=${Number(interval)} modelKeys=${Object.keys(models).join(",")}`
+  );
+
   const demoResult = PRE_CALCULATED_RESULTS[jobName];
   if (!demoResult) {
+    console.info(`[PreCalculatedDemo] No configured demo result for job="${jobName}"`);
     return null;
   }
 
   const selectedResiduesSelection = buildSelectionSignature(models);
   if (!selectedResiduesSelection) {
+    console.info(
+      `[PreCalculatedDemo] Selection signature could not be built for job="${jobName}". This usually means model count is not supported by current matcher.`
+    );
     return null;
+  }
+
+  const normalizedSelected = normalizeSelection(selectedResiduesSelection);
+  const normalizedExpected = normalizeSelection(demoResult.selection);
+  const radiusMatches = Number(radius) === demoResult.radius;
+  const intervalMatches = Number(interval) === demoResult.interval;
+  const selectionMatches = normalizedSelected === normalizedExpected;
+
+  console.info(
+    `[PreCalculatedDemo] Match details for job="${jobName}": radiusMatches=${radiusMatches}, intervalMatches=${intervalMatches}, selectionMatches=${selectionMatches}`
+  );
+  if (!selectionMatches) {
+    console.info(
+      `[PreCalculatedDemo] Selection mismatch: expected="${demoResult.selection}" got="${selectedResiduesSelection}"`
+    );
   }
 
   if (
-    Number(radius) !== demoResult.radius ||
-    Number(interval) !== demoResult.interval ||
-    normalizeSelection(selectedResiduesSelection) !== normalizeSelection(demoResult.selection)
+    !radiusMatches ||
+    !intervalMatches ||
+    !selectionMatches
   ) {
+    console.info(`[PreCalculatedDemo] Demo result rejected for job="${jobName}"`);
     return null;
   }
 
+  console.info(
+    `[PreCalculatedDemo] Demo result accepted for job="${jobName}" using file pattern "${demoResult.filename}"`
+  );
   return demoResult;
 }
 
@@ -122,28 +164,75 @@ export async function applyPreCalculatedDemoResult(
   metadata: Metadata,
   demoResult: { filename: string; radius: number; interval: number; selection: string }
 ): Promise<Analysis_results> {
-  const sourceFilePath = join(DEMO_FILES_DIR, demoResult.filename);
-  const destinationFilePath = join(JOBS_DIR, jobID, "1_results.json");
+  const placeholder = "<model_number>";
+  const hasModelPlaceholder = demoResult.filename.includes(placeholder);
+  const demoFiles = await fs.readdir(DEMO_FILES_DIR);
+  const analysisResults: Analysis_results[] = [];
 
-  await fs.copyFile(sourceFilePath, destinationFilePath);
+  console.info(
+    `[PreCalculatedDemo] Applying demo results for job=${jobID}. filenamePattern="${demoResult.filename}" hasModelPlaceholder=${hasModelPlaceholder}`
+  );
 
-  const analysisResult = JSON.parse(await fs.readFile(sourceFilePath, "utf-8")) as Analysis_results;
+  const filesToCopy = hasModelPlaceholder
+    ? demoFiles.filter((fileName) => {
+        const prefix = demoResult.filename.split(placeholder)[0] ?? "";
+        const suffix = demoResult.filename.split(placeholder)[1] ?? "";
+        return fileName.startsWith(prefix) && fileName.endsWith(suffix);
+      })
+    : [demoResult.filename];
 
-  // Ensure metadata reflects that model 1 has results and is completed
+  if (filesToCopy.length === 0) {
+    throw new Error(`No demo files found for ${demoResult.filename}`);
+  }
+
+  console.info(
+    `[PreCalculatedDemo] Files selected for copy: ${filesToCopy.join(", ")}`
+  );
+
+  for (const fileName of filesToCopy) {
+    const sourceFilePath = join(DEMO_FILES_DIR, fileName);
+    const modelNumber = hasModelPlaceholder
+      ? fileName.slice(
+          demoResult.filename.split(placeholder)[0]?.length ?? 0,
+          fileName.length - (demoResult.filename.split(placeholder)[1]?.length ?? 0)
+        )
+      : "1";
+
+    const destinationFilePath = join(JOBS_DIR, jobID, `${modelNumber}_results.json`);
+    await fs.copyFile(sourceFilePath, destinationFilePath);
+    console.info(
+      `[PreCalculatedDemo] Copied ${fileName} -> ${modelNumber}_results.json for job=${jobID}`
+    );
+
+    const analysisResult = JSON.parse(await fs.readFile(sourceFilePath, "utf-8")) as Analysis_results;
+    analysisResults.push(analysisResult);
+
+    if (!metadata.resultsStatus) {
+      metadata.resultsStatus = {};
+    }
+    metadata.resultsStatus[modelNumber] = {
+      modelNumber,
+      status: "completed",
+      error_message: undefined,
+      chains: metadata.resultsStatus[modelNumber]?.chains || [],
+    };
+  }
+
+  // Ensure metadata reflects that the demo results are completed
   if (!metadata.resultsStatus) {
     metadata.resultsStatus = {};
   }
-  metadata.resultsStatus["1"] = {
-    modelNumber: "1",
-    status: "completed",
-    error_message: undefined,
-    chains: metadata.resultsStatus["1"]?.chains || [],
-  };
 
   metadata.status = "completed";
   await saveMetadata(jobID, metadata);
+  console.info(`[PreCalculatedDemo] Metadata marked as completed for job=${jobID}`);
 
-  return analysisResult;
+  const firstAnalysisResult = analysisResults[0];
+  if (!firstAnalysisResult) {
+    throw new Error(`No analysis result could be loaded for ${demoResult.filename}`);
+  }
+
+  return firstAnalysisResult;
 }
 
 export const analysisQueue = new Queue("analysis", {

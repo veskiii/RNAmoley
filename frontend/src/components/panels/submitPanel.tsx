@@ -82,6 +82,15 @@ const Dashboard: React.FC = () => {
       sphereRadius: 8,
       sphereInterval: 2,
     },
+    {
+      id: "multi-model",
+      value: "Example 6",
+      label: "6",
+      file: "SoutheRNA models submitted to R1117",
+      useWalkingSphere: true,
+      sphereRadius: 5,
+      sphereInterval: 1,
+    }
   ];
 
   const getSelectedJobName = () => {
@@ -409,6 +418,18 @@ const Dashboard: React.FC = () => {
                     }`}
                   >
                     {samples[4].label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => customSetState("example", samples[5].value)}
+                    title={samples[5].file}
+                    className={`w-12 mx-1 px-4 py-2 mt-0 text-sm font-medium  bg-white border border-gray-200 rounded-s-lg hover:bg-gray-100 hover:text-moley-blue ${
+                      radiobutton == samples[5].value
+                        ? "z-10 ring-2 ring-moley-blue text-moley-blue"
+                        : "text-gray-900 ring-0 z-0"
+                    }`}
+                  >
+                    {samples[5].label}
                   </button>
                 </div>
               </div>
