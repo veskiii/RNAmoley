@@ -17,6 +17,24 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
     setSelectedScore(clickedScore);
   };
 
+  const replaceGreekLetterNames = (text) => {
+    if (text === null || text === undefined) {
+      return "";
+    }
+
+    const greekLetterMap = {
+      delta: "δ",
+      epsilon: "ε",
+      zeta: "ζ",
+      chi: "χ",
+    };
+
+    return String(text).replace(
+      /\b(delta|epsilon|zeta|chi)\b/gi,
+      (match) => greekLetterMap[match.toLowerCase()] || match,
+    );
+  };
+
   const getEffectiveSelectedScore = () => {
     if (!analyzeNeighborhood && neighborhoodScores.includes(selectedScore)) {
       return QualityScore.SUITENESS;
@@ -402,8 +420,9 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                   "w-12 p-2 text-center  column-SUGAR_PUCKER_OUT even:bg-gray-50"
                 }
                 style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT)}
+                title={nucleotide && nucleotide.residueMetrics && nucleotide.residueMetrics.pucker_outlier_type}
               >
-                {nucleotide && nucleotide.residueMetrics?.pucker_outlier_type ? nucleotide.residueMetrics.pucker_outlier_type : ""}
+                {replaceGreekLetterNames(nucleotide?.residueMetrics?.pucker_outlier_type)}
               </td>
             )})}
           </tr>
