@@ -31,6 +31,25 @@ const FornaComponent = ({
   const [width, setWidth] = useState(window.innerWidth);
   const [height, setHeight] = useState(window.innerHeight);
 
+  const fitSvgToContent = () => {
+    const svg = document.querySelector("#rna_ss svg") as SVGSVGElement | null;
+    const plot = svg?.querySelector("g.fornac-plot") as SVGGElement | null;
+    if (!svg || !plot) return;
+
+    const bbox = plot.getBBox();
+    const padding = 12;
+    console.log("Fitting SVG to content with bbox:", bbox, "and padding:", padding);
+    // const viewBox = `${bbox.x - padding} ${bbox.y - padding} ${
+    const viewBox = `${3.5*bbox.x} 0 ${
+      bbox.width + padding * 2
+    } ${bbox.height + padding * 2}`;
+
+    svg.setAttribute("viewBox", viewBox);
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
+  };
+
   useEffect(() => {
     const handleResize = () => {
       setWidth(window.innerWidth);
@@ -45,7 +64,7 @@ const FornaComponent = ({
       animation: setAnimation,
       zoomable: true,
       labelInterval: labelInterval,
-      initialSize: [100, 40],
+      initialSize: [1000, 400],
       numbering: numbering,
       nodeOutline: nodeOutline,
       nodeLabel: nodeLabel,
@@ -238,6 +257,8 @@ const FornaComponent = ({
 
     setAnimation ? container.startAnimation() : container.stopAnimation();
 
+    requestAnimationFrame(() => fitSvgToContent());
+
     return () => {};
   }, [
     labelInterval,
@@ -248,6 +269,10 @@ const FornaComponent = ({
     directionArrows,
     setAnimation,
   ]);
+
+  useEffect(() => {
+    fitSvgToContent();
+  }, [width, height]);
 
   return (
     <div className="h-full">

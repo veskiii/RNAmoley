@@ -55,24 +55,24 @@ const FornacSummaryComponent = ({
   const [container, setContainer] = useState(null);
 
   useEffect(() => {
-    const initializeContainer = () => {
-      return new fornac.FornaContainer("#rna_ss", {
-        animation: setAnimation,
-        zoomable: true,
-        labelInterval: labelInterval,
-        initialSize: [100, 40],
-        numbering: numbering,
-        nodeOutline: nodeOutline,
-        nodeLabel: nodeLabel,
-        links: links,
-        directionArrows: false,
-      });
-    };
-
     d3.select("#rna_ss").selectAll("*").remove();
 
-    // Initialize and store the container
-    const container = initializeContainer();
+    const containerEl = document.getElementById("rna_ss");
+    const rect = containerEl ? containerEl.getBoundingClientRect() : null;
+    const initW = rect && rect.width > 0 ? Math.max(400, Math.floor(rect.width)) : 800;
+    const initH = rect && rect.height > 0 ? Math.max(300, Math.floor(rect.height)) : 400;
+
+    const container = new fornac.FornaContainer("#rna_ss", {
+      animation: setAnimation,
+      zoomable: true,
+      labelInterval: labelInterval,
+      initialSize: [initW, initH],
+      numbering: numbering,
+      nodeOutline: nodeOutline,
+      nodeLabel: nodeLabel,
+      links: links,
+      directionArrows: false,
+    });
     try {
       const hybridizedChains = handleHybridChains(chains);
 
@@ -101,98 +101,117 @@ const FornacSummaryComponent = ({
     }
     setContainer(container);
 
-    colorGnodes();
+    try {
+      if (typeof colorGnodes === "function") colorGnodes();
+    } catch (e) {
+      console.warn("colorGnodes() failed:", e);
+    }
   }, [chains, labelInterval, showClashes]); // Emp
 
   const addRNAtoContainer = (container: any, chain: Chain) => {
-    const normalizedStructure = normalizeDotBracket(chain.dotBracket);
+    try {
+      const normalizedStructure = normalizeDotBracket(chain.dotBracket);
 
-    if (normalizedStructure !== chain.dotBracket) {
-      console.warn(
-        `Chain ${chain.name} had invalid/unbalanced dot-bracket structure; sanitized before rendering`,
-        chain.dotBracket
-      );
-    }
-
-    const options = {
-      structure: normalizedStructure,
-      sequence: chain.sequence,
-      extraLinks: showClashes ? clashMap : [],
-    };
-
-    container.addRNA(options.structure, options);
-
-    const createZigzagPath = (x1: number, y1: number, x2: number, y2: number) => {
-      const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-      const segments = Math.max(4, Math.floor(length / 8));
-      const amplitude = 1;
-      
-      let path = `M${x1},${y1}`;
-      
-      for (let i = 1; i < segments; i++) {
-        const t = i / segments;
-        const x = x1 + t * (x2 - x1);
-        const y = y1 + t * (y2 - y1);
-        
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const lineLength = Math.sqrt(dx * dx + dy * dy);
-        const perpX = (-dy / lineLength) * amplitude;
-        const perpY = (dx / lineLength) * amplitude;
-        
-        const offset = (i % 2 === 0) ? 1 : -1;
-        path += ` L${x + offset * perpX},${y + offset * perpY}`;
+      if (normalizedStructure !== chain.dotBracket) {
+        console.warn(
+          `Chain ${chain.name} had invalid/unbalanced dot-bracket structure; sanitized before rendering`,
+          chain.dotBracket
+        );
       }
-      
-      path += ` L${x2},${y2}`;
-      return path;
-    };
 
-    d3.selectAll('line.link[link_type="external"]')
-      .each(function() {
-        const line = d3.select(this);
-        const x1 = parseFloat(line.attr("x1"));
-        const y1 = parseFloat(line.attr("y1"));
-        const x2 = parseFloat(line.attr("x2"));
-        const y2 = parseFloat(line.attr("y2"));
-        
-        if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-          const zigzagPath = createZigzagPath(x1, y1, x2, y2);
-          
-          const parentElement = (this as Element).parentNode as Element;
-          if (parentElement) {
-            d3.select(parentElement)
-              .append("path")
-              .attr("d", zigzagPath)
-              .attr("class", "clash-zigzag")
-              .style("stroke", "purple")
-              .style("stroke-width", "1.5px")
-              .style("fill", "none")
-              .style("stroke-linecap", "round");
+      const options = {
+        structure: normalizedStructure,
+        sequence: chain.sequence,
+        extraLinks: showClashes ? clashMap : [],
+      };
+
+      container.addRNA(options.structure, options);
+
+      const createZigzagPath = (x1: number, y1: number, x2: number, y2: number) => {
+        const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        const segments = Math.max(4, Math.floor(length / 8));
+        const amplitude = 1;
+
+        let path = `M${x1},${y1}`;
+
+        for (let i = 1; i < segments; i++) {
+          const t = i / segments;
+          const x = x1 + t * (x2 - x1);
+          const y = y1 + t * (y2 - y1);
+
+          const dx = x2 - x1;
+          const dy = y2 - y1;
+          const lineLength = Math.sqrt(dx * dx + dy * dy);
+          const perpX = (-dy / lineLength) * amplitude;
+          const perpY = (dx / lineLength) * amplitude;
+
+          const offset = i % 2 === 0 ? 1 : -1;
+          path += ` L${x + offset * perpX},${y + offset * perpY}`;
+        }
+
+        path += ` L${x2},${y2}`;
+        return path;
+      };
+
+      d3.selectAll('line.link[link_type="external"]').each(function () {
+        try {
+          const line = d3.select(this);
+          const x1 = parseFloat(line.attr("x1"));
+          const y1 = parseFloat(line.attr("y1"));
+          const x2 = parseFloat(line.attr("x2"));
+          const y2 = parseFloat(line.attr("y2"));
+
+          if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
+            const zigzagPath = createZigzagPath(x1, y1, x2, y2);
+
+            const parentElement = (this as Element).parentNode as Element;
+            if (parentElement) {
+              d3.select(parentElement)
+                .append("path")
+                .attr("d", zigzagPath)
+                .attr("class", "clash-zigzag")
+                .style("stroke", "purple")
+                .style("stroke-width", "1.5px")
+                .style("fill", "none")
+                .style("stroke-linecap", "round");
+            }
+
+            line.remove();
           }
-          
-          line.remove();
+        } catch (e) {
+          console.warn("Error processing external link element:", e);
         }
       });
 
-    var nodes = d3.selectAll("circle.fornac-node");
-    nodes.select("title").text("No data");
-    // Aktualizacja węzłów D3 na podstawie `nucleotide` w `chain`
-    chain.nucleotides.forEach((nucleotide, index) => {
-      if (index <= job.results.data.length - 1) {
-        d3.select(`circle.fornac-node[node_num="${index + 1}"]`)
-          .select("title")
-          .text(
-            `Residue number: ${nucleotide.index}\n${ job.results.data[index].metrics ? (`Clash score: ${job.results.data[index].metrics.clashscore}\nBad angles: ${job.results.data[index].metrics.pct_badangles}\nBad bonds: ${job.results.data[index].metrics.pct_badbonds}`) : '' }`
-          );
+      var nodes = d3.selectAll("circle.fornac-node");
+      nodes.select("title").text("No data");
 
-        d3.selectAll("text.fornac-nodeLabel")
-          .filter(function () {
-            return d3.select(this).text() === `${index + 1}`;
-          })
-          .text(`${nucleotide.original_index}`);
-      }
-    });
+      chain.nucleotides.forEach((nucleotide, index) => {
+        try {
+          if (job && job.results && index <= job.results.data.length - 1) {
+            d3.select(`circle.fornac-node[node_num="${index + 1}"]`)
+              .select("title")
+              .text(
+                `Residue number: ${nucleotide.index}\n${
+                  job.results.data[index].metrics
+                    ? `Clash score: ${job.results.data[index].metrics.clashscore}\nBad angles: ${job.results.data[index].metrics.pct_badangles}\nBad bonds: ${job.results.data[index].metrics.pct_badbonds}`
+                    : ""
+                }`
+              );
+
+            d3.selectAll("text.fornac-nodeLabel")
+              .filter(function () {
+                return d3.select(this).text() === `${index + 1}`;
+              })
+              .text(`${nucleotide.original_index}`);
+          }
+        } catch (e) {
+          console.warn("Error updating node title/label:", e);
+        }
+      });
+    } catch (e) {
+      console.error("addRNAtoContainer error:", e);
+    }
   };
 
   /**
@@ -307,9 +326,66 @@ const FornacSummaryComponent = ({
       // @ts-ignore
       setAnimation ? container.startAnimation() : container.stopAnimation();
 
-      colorGnodes();
+      // Spróbuj dopasować skalę/zoom podobnie jak w głównym komponencie Forna
+      setTimeout(() => {
+        try {
+          const currentContainer = container as any;
+          const applyScale = (scale: number) => {
+            if (currentContainer && typeof currentContainer.zoomTo === "function") {
+              currentContainer.zoomTo(scale);
+            } else if (currentContainer && typeof currentContainer.zoom === "function") {
+              currentContainer.zoom(scale);
+            } else if (currentContainer && typeof currentContainer.setScale === "function") {
+              currentContainer.setScale(scale);
+            } else {
+              const svg = document.querySelector("#rna_ss svg") as SVGSVGElement | null;
+              const g = svg ? (svg.querySelector("g") as SVGGElement | null) : null;
+              if (svg && g) {
+                const svgRect = svg.getBoundingClientRect();
+                const bbox = g.getBBox();
+                const dx = (svgRect.width - bbox.width * scale) / 2 - bbox.x * scale;
+                const dy = (svgRect.height - bbox.height * scale) / 2 - bbox.y * scale;
+                g.setAttribute("transform", `translate(${dx},${dy}) scale(${scale})`);
+              } else if (svg) {
+                svg.style.transformOrigin = "center center";
+                svg.style.transform = `scale(${scale})`;
+              }
+            }
+          };
+
+          const svgEl = document.querySelector("#rna_ss svg") as SVGSVGElement | null;
+          if (svgEl) {
+            const g = svgEl.querySelector("g") as SVGGElement | null;
+            if (g) {
+              const svgRect = svgEl.getBoundingClientRect();
+              const bbox = g.getBBox();
+              const scaleW = svgRect.width / (bbox.width || svgRect.width);
+              const scaleH = svgRect.height / (bbox.height || svgRect.height);
+              const scale = Math.min(scaleW, scaleH, 1.4);
+              if (scale > 1) {
+                const dx = (svgRect.width - bbox.width * scale) / 2 - bbox.x * scale;
+                const dy = (svgRect.height - bbox.height * scale) / 2 - bbox.y * scale;
+                g.setAttribute("transform", `translate(${dx},${dy}) scale(${scale})`);
+              }
+            } else {
+              applyScale(1.4);
+            }
+          } else {
+            applyScale(1.4);
+          }
+        } catch (e) {
+          console.warn("Scaling Forna summary failed:", e);
+        }
+
+        try {
+          if (typeof colorGnodes === "function") colorGnodes();
+        } catch (e) {
+          console.warn("colorGnodes() failed:", e);
+        }
+      }, 50);
     }
   }, [
+    container,
     labelInterval,
     numbering,
     nodeOutline,
@@ -318,6 +394,7 @@ const FornacSummaryComponent = ({
     showClashes,
     directionArrows,
     setAnimation,
+    colorGnodes,
   ]);
 
   return <div className="w-full h-full" id="rna_ss"></div>;
