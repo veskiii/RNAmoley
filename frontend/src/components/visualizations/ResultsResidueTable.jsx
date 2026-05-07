@@ -244,12 +244,12 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 }
                 style={activeCellStyle(column, QualityScore.CLASH_SCORE)}
               >
-                {nucleotide && nucleotide.metrics ? nucleotide.metrics.clashscore : 
+                {nucleotide && nucleotide.selected ? (nucleotide.metrics ? nucleotide.metrics.clashscore : 
                   !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
-                  ) : ""}
+                  ) : "") : "N/A"}
               </td>
             )})}
           </tr>)}
@@ -289,14 +289,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 }
                 style={activeCellStyle(column, QualityScore.BAD_BONDS)}
               >
-                {nucleotide && nucleotide.metrics 
+                {nucleotide && nucleotide.selected ? (nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
                 : 
                   !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
-                  ) : ""}
+                  ) : "") : "N/A"}
               </td>
             )})}
           </tr>)}
@@ -336,14 +336,14 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 }
                 style={activeCellStyle(column, QualityScore.BAD_ANGLES)}
               >
-                {nucleotide && nucleotide.metrics 
+                {nucleotide && nucleotide.selected ? (nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
                 : 
                   !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
-                  ) : ""}
+                  ) : "") : "N/A"}
               </td>
             )})}
           </tr>)}
@@ -382,7 +382,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 }
                 style={activeCellStyle(column, QualityScore.SUITENESS)}
               >
-                {nucleotide && nucleotide.residueMetrics ? nucleotide.residueMetrics.suiteness : ""}
+                {nucleotide && nucleotide.selected ? (nucleotide.residueMetrics ? nucleotide.residueMetrics.suiteness : "") : "N/A"}
               </td>
             )})}
           </tr>
@@ -422,7 +422,7 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
                 style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT)}
                 title={nucleotide && nucleotide.residueMetrics && nucleotide.residueMetrics.pucker_outlier_type}
               >
-                {replaceGreekLetterNames(nucleotide?.residueMetrics?.pucker_outlier_type)}
+                {nucleotide &&nucleotide.selected ? replaceGreekLetterNames(nucleotide?.residueMetrics?.pucker_outlier_type) || "-" : "N/A"}
               </td>
             )})}
           </tr>
