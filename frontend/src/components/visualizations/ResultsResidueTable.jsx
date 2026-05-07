@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { QualityScore } from "../utils/types";
 import { getColor } from "../utils/ColorUtils";
 import { Colors } from "../common/colors";
@@ -13,26 +13,26 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
 
   const shouldHideSpinners = modelStatus === "completed" || (modelStatus && modelStatus.startsWith("sim_"));
 
-  const chainOptions = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    const chainsMap = new Map();
-    data.forEach((nucleotide) => {
-      if (nucleotide.chainID && !chainsMap.has(nucleotide.chainID)) {
-      chainsMap.set(nucleotide.chainID, {
-        chainID: nucleotide.chainID,
-        original_chain_id: nucleotide.original_chain_id,
-      });
-      }
-    });
-    return Array.from(chainsMap.values());
-  }, [data]);
-
-  // const [selectedChain, setSelectedChain] = useState(() =>
-  //   chainOptions.length > 0 ? chainOptions[0].chainID : ""
-  // );
-
   const handleClick = (clickedScore) => {
     setSelectedScore(clickedScore);
+  };
+
+  const replaceGreekLetterNames = (text) => {
+    if (text === null || text === undefined) {
+      return "";
+    }
+
+    const greekLetterMap = {
+      delta: "δ",
+      epsilon: "ε",
+      zeta: "ζ",
+      chi: "χ",
+    };
+
+    return String(text).replace(
+      /\b(delta|epsilon|zeta|chi)\b/gi,
+      (match) => greekLetterMap[match.toLowerCase()] || match,
+    );
   };
 
   const getEffectiveSelectedScore = () => {
@@ -44,12 +44,64 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
 
   const effectiveSelectedScore = getEffectiveSelectedScore();
 
-  const chainData = useMemo(() => {
+  const tableColumns = useMemo(() => {
     if (!data) return [];
-    return data.filter((nucleotide) => nucleotide.chainID === selectedChain && nucleotide.selected);
+
+    const chainData = data.filter((nucleotide) => nucleotide.chainID === selectedChain);
+    const columns = [];
+
+    const isConsecutive = (left, right) => {
+      const leftIndex = Number(left?.original_index);
+      const rightIndex = Number(right?.original_index);
+
+      if (Number.isFinite(leftIndex) && Number.isFinite(rightIndex)) {
+        return rightIndex === leftIndex + 1;
+      }
+
+      return true;
+    };
+
+    for (let i = 0; i < chainData.length; i += 1) {
+      const nucleotide = chainData[i];
+
+      if (nucleotide.selected) {
+        columns.push({ type: "nucleotide", nucleotide });
+        continue;
+      }
+
+      let end = i;
+      while (
+        end + 1 < chainData.length &&
+        !chainData[end + 1].selected &&
+        isConsecutive(chainData[end], chainData[end + 1])
+      ) {
+        end += 1;
+      }
+
+      const startIndex = chainData[i].original_index;
+      const endIndex = chainData[end].original_index;
+      const label = startIndex === endIndex ? `${startIndex}` : `${startIndex}-${endIndex}`;
+
+      columns.push({
+        type: "not-selected-range",
+        startIndex,
+        endIndex,
+        label,
+      });
+
+      i = end;
+    }
+
+    return columns;
   }, [data, selectedChain]);
 
-  const activeCellStyle = (residue, score) => {
+  const getColumnNucleotide = (column) => (column.type === "nucleotide" ? column.nucleotide : null);
+
+  const activeCellStyle = (column, score) => {
+    const residue = getColumnNucleotide(column);
+    if (!residue) {
+      return undefined;
+    }
     if (effectiveSelectedScore !== score) {
       return undefined;
     }
@@ -86,67 +138,75 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
           <tr>
             <td></td>
             <td className="w-32 p-2 text-left">Index</td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-id-${index}`}
                 className={
                   "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
-                {nucleotide.original_index}
+                {nucleotide ? nucleotide.original_index : column.label}
               </td>
-            ))}
+            )})}
           </tr>
           <tr>
             <td></td>
             <td className="w-32 p-2 text-left">Residue</td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-name-${index}`}
                 className={
                   "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
-                {nucleotide.base}
+                {nucleotide ? nucleotide.base : ""}
               </td>
-            ))}
+            )})}
           </tr>
           <tr>
             <td></td>
             <td className="w-32 p-2 text-left">
               Secondary Structure
             </td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-index-${index}`}
                 className={
                   "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
-                {nucleotide.structure}
+                {nucleotide ? nucleotide.structure : ""}
               </td>
-            ))}
+            )})}
           </tr>
           <tr>
             <td></td>
             <td className="w-32 p-2 text-left">
               Structural Element
             </td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
                   "w-12 p-2 text-center even:bg-gray-50"
                 }
               >
-                {nucleotide.structuralElements && nucleotide.structuralElements.length > 0
+                {nucleotide && nucleotide.structuralElements && nucleotide.structuralElements.length > 0
                   ? nucleotide.structuralElements
                       .map((el) => el.name)
                       .filter(Boolean)
                       .join(", ")
                   : ""}
               </td>
-            ))}
+            )})}
           </tr>
           { analyzeNeighborhood && (
           <tr>
@@ -173,23 +233,25 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             >
               Clashscore
             </td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-struct-${index}`}
-                data-residue-number={nucleotide.residue_number}
+                data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
                   "w-12 p-2 text-center column-CLASH_SCORE even:bg-gray-50"
                 }
-                style={activeCellStyle(nucleotide, QualityScore.CLASH_SCORE)}
+                style={activeCellStyle(column, QualityScore.CLASH_SCORE)}
               >
-                {nucleotide.metrics ? nucleotide.metrics.clashscore : 
-                  !shouldHideSpinners && nucleotide.selected ? (
+                {nucleotide && nucleotide.metrics ? nucleotide.metrics.clashscore : 
+                  !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
                   ) : ""}
               </td>
-            ))}
+            )})}
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
@@ -216,25 +278,27 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             >
               Bad Bonds
             </td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-struct-${index}`}
-                data-residue-number={nucleotide.residue_number}
+                data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
                   "w-12 p-2 text-center column-BAD_BONDS even:bg-gray-50"
                 }
-                style={activeCellStyle(nucleotide, QualityScore.BAD_BONDS)}
+                style={activeCellStyle(column, QualityScore.BAD_BONDS)}
               >
-                {nucleotide.metrics 
+                {nucleotide && nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
                 : 
-                  !shouldHideSpinners && nucleotide.selected ? (
+                  !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
                   ) : ""}
               </td>
-            ))}
+            )})}
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
@@ -261,25 +325,27 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             >
               Bad Angles
             </td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-struct-${index}`}
-                data-residue-number={nucleotide.residue_number}
+                data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
                   "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
                 }
-                style={activeCellStyle(nucleotide, QualityScore.BAD_ANGLES)}
+                style={activeCellStyle(column, QualityScore.BAD_ANGLES)}
               >
-                {nucleotide.metrics 
+                {nucleotide && nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
                 : 
-                  !shouldHideSpinners && nucleotide.selected ? (
+                  !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
                     </span>
                   ) : ""}
               </td>
-            ))}
+            )})}
           </tr>)}
           <tr>
             <td className="w-12 p-2 text-center">
@@ -305,18 +371,20 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             >
               Suiteness
             </td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-struct-${index}`}
-                data-residue-number={nucleotide.residue_number}
+                data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
                   "w-12 p-2 text-center column-SUITENESS even:bg-gray-50"
                 }
-                style={activeCellStyle(nucleotide, QualityScore.SUITENESS)}
+                style={activeCellStyle(column, QualityScore.SUITENESS)}
               >
-                {nucleotide.residueMetrics ? nucleotide.residueMetrics.suiteness : ""}
+                {nucleotide && nucleotide.residueMetrics ? nucleotide.residueMetrics.suiteness : ""}
               </td>
-            ))}
+            )})}
           </tr>
           <tr>
             <td className="w-12 p-2 text-center">
@@ -342,18 +410,21 @@ const ResultsResidueTable = ({ data, analyzeNeighborhood, selectedScore, setSele
             >
               Sugar Pucker Outlier
             </td>
-            {chainData.map((nucleotide, index) => (
+            {tableColumns.map((column, index) => {
+              const nucleotide = getColumnNucleotide(column);
+              return (
               <td
                 key={`${selectedChain}-struct-${index}`}
-                data-residue-number={nucleotide.residue_number}
+                data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
                   "w-12 p-2 text-center  column-SUGAR_PUCKER_OUT even:bg-gray-50"
                 }
-                style={activeCellStyle(nucleotide, QualityScore.SUGAR_PUCKER_OUT)}
+                style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT)}
+                title={nucleotide && nucleotide.residueMetrics && nucleotide.residueMetrics.pucker_outlier_type}
               >
-                {nucleotide.residueMetrics?.pucker_outlier_type ? nucleotide.residueMetrics.pucker_outlier_type : "-"}
+                {replaceGreekLetterNames(nucleotide?.residueMetrics?.pucker_outlier_type)}
               </td>
-            ))}
+            )})}
           </tr>
         </tbody>
       </table>

@@ -331,7 +331,7 @@ const Panel: React.FC = () => {
 
     chainsState.forEach((chain) => {
       if (chain.name === selectedChain) {
-        const indices = chain.nucleotides.map((nucleotide) => nucleotide.index);
+        const indices = chain.nucleotides.map((nucleotide) => nucleotide.original_index);
         const min = Math.min(...indices);
         const max = Math.max(...indices);
 
@@ -368,11 +368,11 @@ const Panel: React.FC = () => {
       // if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
         setSelectedModel(model);
         /* If there is only one chain, select it. Otherwise, select preselected or none */
-        if (configuredSelection.chains.length < 2) {
+        // if (configuredSelection.chains.length < 2) {
           setSelectedChain(configuredSelection.chains[0]?.name || "");
-        } else {
-          setSelectedChain(configuredSelection.selectedChain);
-        }
+        // } else {
+          // setSelectedChain(configuredSelection.selectedChain);
+        // }
       // }
     } catch (error) {
       if (error instanceof Error) {
@@ -820,7 +820,7 @@ const Panel: React.FC = () => {
         const selectedNucleotides = chainsState
             .find(chain => chain.name === selectedChain)
             ?.nucleotides
-            .filter(nucleotide => nucleotide.index >= start && nucleotide.index <= end)
+            .filter(nucleotide => nucleotide.original_index >= start && nucleotide.original_index <= end)
             .map(nucleotide => nucleotide.index) || [];
         
         selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
@@ -897,8 +897,8 @@ const Panel: React.FC = () => {
                 <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
                 <p><span>Local analysis {
                 myData.metadata.analyzeNeighborhoods ? 
-                "enabled; sphere radius (Å): " + myData.metadata.radius + 
-                "; sampling interval: " + myData.metadata.interval
+                "enabled; sphere radius (Å): " + myData.metadata.radius 
+                // + "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
               </div>
@@ -1212,7 +1212,7 @@ const Panel: React.FC = () => {
                                     ? formatResidueRanges(fragment.residues)
                                     : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
                                   {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
-                                    <span className="ml-2 text-xs text-yellow-200">
+                                    <span className="ml-2 text-xs text-orange-600">
                                       (except: {model === selectedModel
                                         ? formatResidueRanges(fragment.deselectedResidues)
                                         : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
