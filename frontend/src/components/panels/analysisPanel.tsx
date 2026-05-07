@@ -897,8 +897,8 @@ const Panel: React.FC = () => {
                 <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
                 <p><span>Local analysis {
                 myData.metadata.analyzeNeighborhoods ? 
-                "enabled; sphere radius (Å): " + myData.metadata.radius + 
-                "; sampling interval: " + myData.metadata.interval
+                "enabled; sphere radius (Å): " + myData.metadata.radius 
+                // + "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
               </div>
@@ -1212,7 +1212,7 @@ const Panel: React.FC = () => {
                                     ? formatResidueRanges(fragment.residues)
                                     : formatResidueRangesForChains(fragment.residues, modelSelections[model]?.chainsState ?? chainsState)}
                                   {fragment.deselectedResidues && fragment.deselectedResidues.length > 0 && (
-                                    <span className="ml-2 text-xs text-yellow-200">
+                                    <span className="ml-2 text-xs text-orange-600">
                                       (except: {model === selectedModel
                                         ? formatResidueRanges(fragment.deselectedResidues)
                                         : formatResidueRangesForChains(fragment.deselectedResidues, modelSelections[model]?.chainsState ?? chainsState)})
