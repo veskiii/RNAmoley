@@ -938,7 +938,7 @@ const SummaryPanel: React.FC = () => {
                 className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                 title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
               >
-                Correct the structure
+                Run refinement
               </button>
 
               {hasSimulationStarted && (
