@@ -368,11 +368,11 @@ const Panel: React.FC = () => {
       // if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
         setSelectedModel(model);
         /* If there is only one chain, select it. Otherwise, select preselected or none */
-        if (configuredSelection.chains.length < 2) {
+        // if (configuredSelection.chains.length < 2) {
           setSelectedChain(configuredSelection.chains[0]?.name || "");
-        } else {
-          setSelectedChain(configuredSelection.selectedChain);
-        }
+        // } else {
+          // setSelectedChain(configuredSelection.selectedChain);
+        // }
       // }
     } catch (error) {
       if (error instanceof Error) {
