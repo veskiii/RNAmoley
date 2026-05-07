@@ -331,7 +331,7 @@ const Panel: React.FC = () => {
 
     chainsState.forEach((chain) => {
       if (chain.name === selectedChain) {
-        const indices = chain.nucleotides.map((nucleotide) => nucleotide.index);
+        const indices = chain.nucleotides.map((nucleotide) => nucleotide.original_index);
         const min = Math.min(...indices);
         const max = Math.max(...indices);
 
@@ -820,7 +820,7 @@ const Panel: React.FC = () => {
         const selectedNucleotides = chainsState
             .find(chain => chain.name === selectedChain)
             ?.nucleotides
-            .filter(nucleotide => nucleotide.index >= start && nucleotide.index <= end)
+            .filter(nucleotide => nucleotide.original_index >= start && nucleotide.original_index <= end)
             .map(nucleotide => nucleotide.index) || [];
         
         selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
