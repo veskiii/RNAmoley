@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "../common/loading";
 import Molstar from "../visualizations/molStarSummaryComponent";
+import html2canvas from "html2canvas";
 import FornacSummaryComponent from "../visualizations/fornaSummaryComponent";
 import {
   badAnglesColorMap,
@@ -59,6 +60,7 @@ const SummaryPanel: React.FC = () => {
   const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
+  const fornaContainerRef = useRef<HTMLDivElement>(null);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
   const selectedModelStatus = myData?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
@@ -502,6 +504,28 @@ const SummaryPanel: React.FC = () => {
     setLabelInterval(parseInt(e.target.value, 10));
   };
 
+  const handleDownloadFornaView = async () => {
+    if (!fornaContainerRef.current) {
+      console.error("Forna container not found");
+      return;
+    }
+
+    try {
+      const canvas = await html2canvas(fornaContainerRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+      });
+
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `forna-structure-${selectedModel}-${new Date().toISOString().split('T')[0]}.png`;
+      link.click();
+    } catch (error) {
+      console.error("Failed to download Forna view:", error);
+    }
+  };
+
   const handleCheckboxChange =
     (setter: (checked: boolean) => void) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -785,7 +809,7 @@ const SummaryPanel: React.FC = () => {
                     </span>
                 </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
-                  <div className="w-full md:w-1/2 h-full relative border border-gray-300">
+                  <div className="w-full md:w-1/2 h-full relative border border-gray-300" ref={fornaContainerRef}>
                     {/* Gear icon button */}
                     <button
                       onClick={() => setShowFornaSettings(!showFornaSettings)}
@@ -793,6 +817,15 @@ const SummaryPanel: React.FC = () => {
                       title="Toggle Forna settings"
                     >
                       ⚙️
+                    </button>
+
+                    {/* Download button */}
+                    <button
+                      onClick={handleDownloadFornaView}
+                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Download Forna view as image"
+                    >
+                      ⬇️
                     </button>
 
                     {/* Floating settings panel */}
