@@ -22,6 +22,7 @@ import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
+import ChainMetricLineChart from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 
 const SummaryPanel: React.FC = () => {
@@ -566,6 +567,45 @@ const SummaryPanel: React.FC = () => {
                   })}
                 </div>
               </div>
+              {/* Line plots of chain quality */}
+              <div className="mt-6">
+                <div>
+                  <label>Local quality line charts (per residue)</label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Display line charts of Clash score, bad bonds, bad angles and suiteness for each residue's neighborhood. Hover a mouse on a point to see the exact value for selected residue.
+                    </span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <ChainMetricLineChart
+                    data={myData.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.CLASH_SCORE}
+                  />
+                  <ChainMetricLineChart
+                    data={myData.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.BAD_BONDS}
+                  />
+                  <ChainMetricLineChart
+                    data={myData.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.BAD_ANGLES}
+                  />
+                  <ChainMetricLineChart
+                    data={myData.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.SUITENESS}
+                  />
+                </div>
+              </div>
               {/* Local quality map */}
               <div>
                 <div>
@@ -582,7 +622,7 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </span>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                   <ResultsResidueTable
                   key={`residue-table-${selectedModel}-${selectedResultsSource}`}
                   data={myData.results.data}
