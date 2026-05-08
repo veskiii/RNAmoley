@@ -36,7 +36,7 @@ type ChartSlot =
 const chartHeight = 280;
 const chartPadding = {
   top: 10,
-  right: 0,
+  right: 10,
   bottom: 72,
   left: 40,
 };
@@ -246,7 +246,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
     const innerWidth = Math.max(1, width - chartPadding.left - chartPadding.right);
     const innerHeight = Math.max(1, chartHeight - chartPadding.top - chartPadding.bottom);
 
-    const xForIndex = (index: number) => chartPadding.left + index * itemWidth + itemWidth / 2;
+    const xForIndex = (index: number) => index * itemWidth + itemWidth / 2;
 
     const yForValue = (value: number) => {
       if (yMax === yMin) {
@@ -289,7 +289,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       hasNumericValues,
       yMin,
       yMax,
-      width,
+      contentWidth: width - chartPadding.left,
       innerWidth,
       innerHeight,
       xForIndex,
@@ -325,6 +325,8 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       })
     : [];
 
+  const plotHeight = chartHeight;
+
   return (
     <div className={className}>
       {/* <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"> */}
@@ -332,24 +334,14 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
           {getMetricLabel(selectedScore)}
         </div>
 
-        <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+        <div className="flex items-stretch">
           <svg
-            width={chartData.width}
-            height={chartHeight}
-            viewBox={`0 0 ${chartData.width} ${chartHeight}`}
-            role="img"
-            aria-label={`Line chart for ${getMetricLabel(selectedScore)} in chain ${selectedChain}`}
-            className="block"
+            width={chartPadding.left}
+            height={plotHeight}
+            viewBox={`0 0 ${chartPadding.left} ${plotHeight}`}
+            aria-hidden="true"
+            className="block shrink-0 overflow-hidden"
           >
-            <rect
-              x={chartPadding.left}
-              y={chartPadding.top}
-              width={chartData.innerWidth}
-              height={chartData.innerHeight}
-              rx={12}
-              className="fill-slate-50"
-            />
-
             {chartData.hasNumericValues && (
               <>
                 {yTicks.map((tickValue, index) => {
@@ -357,14 +349,6 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
 
                   return (
                     <g key={`y-tick-${index}`}>
-                      <line
-                        x1={chartPadding.left}
-                        x2={chartData.width - chartPadding.right}
-                        y1={y}
-                        y2={y}
-                        stroke="#e5e7eb"
-                        strokeDasharray="4 4"
-                      />
                       <text
                         x={chartPadding.left - 10}
                         y={y + 4}
@@ -379,105 +363,146 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                 })}
 
                 <line
-                  x1={chartPadding.left}
-                  x2={chartPadding.left}
+                  x1={chartPadding.left - 1}
+                  x2={chartPadding.left - 1}
                   y1={chartPadding.top}
-                  y2={chartPadding.top + chartData.innerHeight}
-                  stroke="#9ca3af"
-                />
-                <line
-                  x1={chartPadding.left}
-                  x2={chartPadding.left + chartData.innerWidth}
-                  y1={chartPadding.top + chartData.innerHeight}
                   y2={chartPadding.top + chartData.innerHeight}
                   stroke="#9ca3af"
                 />
               </>
             )}
+          </svg>
 
-            {chartData.segments.map((segment, index) => (
-              <path
-                key={`segment-${index}`}
-                d={segment}
-                fill="none"
-                stroke="#0f766e"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          <div className="min-w-0 flex-1 overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+            <svg
+              width={chartData.contentWidth}
+              height={chartHeight}
+              viewBox={`0 0 ${chartData.contentWidth} ${chartHeight}`}
+              role="img"
+              aria-label={`Line chart for ${getMetricLabel(selectedScore)} in chain ${selectedChain}`}
+              className="block"
+            >
+              <rect
+                x={0}
+                y={chartPadding.top}
+                width={chartData.contentWidth}
+                height={chartData.innerHeight}
+                rx={12}
+                className="fill-slate-50"
               />
-            ))}
 
-            {chartData.points.map((point, index) => {
-              if (point.kind !== "residue" || point.y === null || point.value === null) {
-                return null;
-              }
+              {chartData.hasNumericValues && (
+                <>
+                  {yTicks.map((tickValue, index) => {
+                    const y = chartData.yForValue(tickValue);
 
-              return (
-                <g key={`${point.residue.original_index}-${index}`}>
+                    return (
+                      <line
+                        key={`y-grid-${index}`}
+                        x1={0}
+                        x2={chartData.contentWidth}
+                        y1={y}
+                        y2={y}
+                        stroke="#e5e7eb"
+                        strokeDasharray="4 4"
+                      />
+                    );
+                  })}
+
                   <line
-                    x1={point.x}
-                    x2={point.x}
+                    x1={0}
+                    x2={chartData.contentWidth}
                     y1={chartPadding.top + chartData.innerHeight}
-                    y2={chartPadding.top + chartData.innerHeight + 8}
+                    y2={chartPadding.top + chartData.innerHeight}
                     stroke="#9ca3af"
                   />
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={point.value === 0 ? 3.5 : 4.5}
-                    fill="#0f766e"
-                    stroke="#ffffff"
-                    strokeWidth={1.5}
-                  >
-                    <title>
-                      {`Residue ${point.residue.original_index} | ${point.residue.base} | ${point.residue.structure || "-"} | ${point.displayValue}`}
-                    </title>
-                  </circle>
-                </g>
-              );
-            })}
+                </>
+              )}
 
-            {chartData.points.map((item, index) => {
-              const labelX = item.x;
-              const firstLineY = chartPadding.top + chartData.innerHeight + 24;
+              {chartData.segments.map((segment, index) => (
+                <path
+                  key={`segment-${index}`}
+                  d={segment}
+                  fill="none"
+                  stroke="#0f766e"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
 
-              return (
-                <g key={`label-${item.label}-${index}`}>
-                  <text
-                    x={labelX}
-                    y={firstLineY}
-                    textAnchor="middle"
-                    className="fill-gray-900"
-                    style={{ fontSize: 11, fontWeight: 600 }}
-                  >
-                    {item.label}
-                  </text>
-                  {item.kind === "residue" && (
-                    <>
-                      <text
-                        x={labelX}
-                        y={firstLineY + 18}
-                        textAnchor="middle"
-                        className="fill-gray-600"
-                        style={{ fontSize: 11 }}
-                      >
-                        {item.residue.structure || "-"}
-                      </text>
-                      <text
-                        x={labelX}
-                        y={firstLineY + 36}
-                        textAnchor="middle"
-                        className="fill-gray-700"
-                        style={{ fontSize: 11, fontWeight: 600 }}
-                      >
-                        {item.residue.base || "-"}
-                      </text>
-                    </>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
+              {chartData.points.map((point, index) => {
+                if (point.kind !== "residue" || point.y === null || point.value === null) {
+                  return null;
+                }
+
+                return (
+                  <g key={`${point.residue.original_index}-${index}`}>
+                    <line
+                      x1={point.x}
+                      x2={point.x}
+                      y1={chartPadding.top + chartData.innerHeight}
+                      y2={chartPadding.top + chartData.innerHeight + 8}
+                      stroke="#9ca3af"
+                    />
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={point.value === 0 ? 3.5 : 4.5}
+                      fill="#0f766e"
+                      stroke="#ffffff"
+                      strokeWidth={1.5}
+                    >
+                      <title>
+                        {`Residue ${point.residue.original_index} | ${point.residue.base} | ${point.residue.structure || "-"} | ${point.displayValue}`}
+                      </title>
+                    </circle>
+                  </g>
+                );
+              })}
+
+              {chartData.points.map((item, index) => {
+                const labelX = item.x;
+                const firstLineY = chartPadding.top + chartData.innerHeight + 24;
+
+                return (
+                  <g key={`label-${item.label}-${index}`}>
+                    <text
+                      x={labelX}
+                      y={firstLineY}
+                      textAnchor="middle"
+                      className="fill-gray-900"
+                      style={{ fontSize: 11, fontWeight: 600 }}
+                    >
+                      {item.label}
+                    </text>
+                    {item.kind === "residue" && (
+                      <>
+                        <text
+                          x={labelX}
+                          y={firstLineY + 18}
+                          textAnchor="middle"
+                          className="fill-gray-600"
+                          style={{ fontSize: 11 }}
+                        >
+                          {item.residue.structure || "-"}
+                        </text>
+                        <text
+                          x={labelX}
+                          y={firstLineY + 36}
+                          textAnchor="middle"
+                          className="fill-gray-700"
+                          style={{ fontSize: 11, fontWeight: 600 }}
+                        >
+                          {item.residue.base || "-"}
+                        </text>
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
         </div>
         {!chartData.hasNumericValues && (
           <div className="mt-2 text-xs text-gray-500">
