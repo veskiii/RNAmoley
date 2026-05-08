@@ -179,11 +179,12 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
 
     const residuePoints = chainResidues.map((residue) => {
       const metric = getMetricValue(residue, selectedScore);
+      const isSelected = residue.selected !== false;
 
       return {
         residue,
-        value: metric.value,
-        displayValue: metric.displayValue,
+        value: isSelected ? metric.value : null,
+        displayValue: isSelected ? metric.displayValue : "-",
         label: `${residue.original_index}\n${residue.structure || "-"}\n${residue.base || "-"}`,
       };
     });
