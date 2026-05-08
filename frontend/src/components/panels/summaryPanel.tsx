@@ -12,14 +12,12 @@ import {
   QualityScore,
   SummaryJob,
 } from "../utils/types";
-import { Colors } from "../common/colors";
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
 import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
-import { colorMapByRange, getColor } from "../utils/ColorUtils";
+import { getColor } from "../utils/ColorUtils";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { fetchMyData, startSimulation } from "../utils/api";
-import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
@@ -43,8 +41,6 @@ const SummaryPanel: React.FC = () => {
   const [links, setLinks] = useState(true);
   const [showClashes, setShowClashes] = useState(true);
   const [animation, setAnimation] = useState(false);
-  const [showRangeDetails, setshowRangeDetails] = useState(false);
-  const [showDisplayOptions, setshowDisplayOptions] = useState(false);
   const [showFornaSettings, setShowFornaSettings] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -52,11 +48,9 @@ const SummaryPanel: React.FC = () => {
     QualityScore.CLASH_SCORE
   );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
-  const [sidebarTab, setSidebarTab] = useState(0);
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isStartingSimulation, setIsStartingSimulation] = useState(false);
   const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
-  const [simulationStartSuccess, setSimulationStartSuccess] = useState<string | null>(null);
   const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
@@ -240,14 +234,6 @@ const SummaryPanel: React.FC = () => {
   }, [myData]);
 
 
-  const toggleRangeMenuVisibility = () => {
-    setshowRangeDetails((prevShowMenu) => !prevShowMenu);
-  };
-
-  const toggleDisplayOptionsVisibility = () => {
-    setshowDisplayOptions((prevShowOptions) => !prevShowOptions);
-  };
-
   useEffect(() => {
     let interval: NodeJS.Timeout; // Declare interval variable
     async function fetchData() {
@@ -348,7 +334,6 @@ const SummaryPanel: React.FC = () => {
 
     setIsStartingSimulation(true);
     setSimulationStartError(null);
-    setSimulationStartSuccess(null);
 
     try {
       await startSimulation({
@@ -360,7 +345,6 @@ const SummaryPanel: React.FC = () => {
         rmsdCutoff: values.rmsdCutoff,
       });
 
-      setSimulationStartSuccess("Simulation started.");
       setIsSimulationModalOpen(false);
       setSelectedResultsSource("original");
       setRefreshToken((prev) => prev + 1);
@@ -390,120 +374,6 @@ const SummaryPanel: React.FC = () => {
   }
 
 
-  function createRangeMenu() {
-    return (
-      <div>
-        <div>
-          <h2>
-            <b>Clashscore</b>
-          </h2>
-          <div className="ml-4">
-            <div className="mb-1">
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(1) }}
-              >
-                &nbsp;Clashscore &lt; 10 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(2) }}
-              >
-                &nbsp; 10 &le;Clashscore &lt; 40 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(3) }}
-              >
-                &nbsp; 40 &le;Clashscore &lt; 70 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(4) }}
-              >
-                &nbsp; 70 &le;Clashscore &lt; 100 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(5) }}
-              >
-                &nbsp;Clashscore &gt; 100 &nbsp;
-                <br />
-              </span>
-            </div>
-          </div>
-          <h2>
-            <b> Bad bonds </b>
-          </h2>
-          <div className="ml-4">
-            <div className="mb-1">
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(1) }}
-              >
-                &nbsp; Bad bonds &lt; 0,01% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(3) }}
-              >
-                &nbsp; 0,01% &le; Bad bonds &lt; 0,2% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(5) }}
-              >
-                &nbsp; Bad bonds &ge; 0,2% &nbsp;
-                <br />{" "}
-              </span>
-            </div>
-          </div>
-          <h2>
-            <b> Bad angles </b>
-          </h2>
-          <div className="ml-4">
-            &nbsp;
-            <div className="mb-1">
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(1) }}
-              >
-                &nbsp; Bad angles &lt; 0,1% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(3) }}
-              >
-                &nbsp; 0,1% &le; Bad angles &lt; 0,5% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(5) }}
-              >
-                &nbsp; Bad angles &ge; 0,5% &nbsp;
-                <br />{" "}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleLabelIntervalChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setLabelInterval(parseInt(e.target.value, 10));
-  };
-
   const handleDownloadFornaView = async () => {
     if (!fornaContainerRef.current) {
       console.error("Forna container not found");
@@ -526,12 +396,6 @@ const SummaryPanel: React.FC = () => {
     }
   };
 
-  const handleCheckboxChange =
-    (setter: (checked: boolean) => void) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setter(e.target.checked);
-    };
-
     const changeModel = (modelNum: number) => {
       if (
         myData &&
@@ -549,68 +413,6 @@ const SummaryPanel: React.FC = () => {
 
       setSelectedModel(modelNum);
     }
-
-  function createFornacDisplayDetails() {
-    return (
-      <div>
-        <div className="flex flex-col">
-          {numbering && (
-            <label>
-              Label interval:
-              <br />
-              <input
-                type="number"
-                value={labelInterval}
-                onChange={handleLabelIntervalChange}
-                placeholder="Label Interval"
-                className="rounded-lg w-24 mb-2 border-gray-300 border-2 pl-2 p-1"
-              />
-            </label>
-          )}
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={numbering}
-              onChange={handleCheckboxChange(setNumbering)}
-            />{" "}
-            Numbering
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={nodeOutline}
-              onChange={handleCheckboxChange(setNodeOutline)}
-            />{" "}
-            Node Outline
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={nodeLabel}
-              onChange={handleCheckboxChange(setNodeLabel)}
-            />{" "}
-            Node Label
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={links}
-              onChange={handleCheckboxChange(setLinks)}
-            />{" "}
-            Links
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={showClashes}
-              onChange={handleCheckboxChange(setShowClashes)}
-            />{" "}
-            Clashes
-          </label>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
@@ -956,7 +758,6 @@ const SummaryPanel: React.FC = () => {
                 onClick={() => {
                   if (!canStartSimulation) return;
                   setSimulationStartError(null);
-                  setSimulationStartSuccess(null);
                   setIsSimulationModalOpen(true);
                 }}
                 onKeyDown={(e) => {
@@ -964,7 +765,6 @@ const SummaryPanel: React.FC = () => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     setSimulationStartError(null);
-                    setSimulationStartSuccess(null);
                     setIsSimulationModalOpen(true);
                   }
                 }}
