@@ -405,7 +405,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-600"></div>
-                <span className="text-gray-700">Refinement</span>
+                <span className="text-gray-700">Refined</span>
               </div>
             </div>
           )}

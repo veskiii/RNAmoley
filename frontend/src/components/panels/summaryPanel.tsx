@@ -548,8 +548,11 @@ const SummaryPanel: React.FC = () => {
                 <div className="overflow-x-auto">
                   <GlobalResultsTable
                     selectedModel={selectedModel}
-                    modelMetrics={displayedResults?.results.modelMetrics || originalResults.results.modelMetrics} 
-                    fragmentMetrics={displayedResults?.results.fragmentMetrics || originalResults.results.fragmentMetrics} />
+                    modelMetrics={originalResults.results.modelMetrics} 
+                    fragmentMetrics={originalResults.results.fragmentMetrics} 
+                    simModelMetrics={simulationResults?.results.modelMetrics}
+                    simFragmentMetrics={simulationResults?.results.fragmentMetrics}
+                  />
                 </div>
               </div>
               {/* Chain selection */}
