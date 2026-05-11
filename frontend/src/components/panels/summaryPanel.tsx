@@ -58,6 +58,9 @@ const SummaryPanel: React.FC = () => {
   const [selectedQualityScore, setQualityScore] = useState<QualityScore>(
     QualityScore.CLASH_SCORE
   );
+  const [selectedQualityScoreInResidueTable, setQualityScoreInResidueTable] = useState<QualityScore>(
+    QualityScore.CLASH_SCORE
+  );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isStartingSimulation, setIsStartingSimulation] = useState(false);
@@ -65,6 +68,7 @@ const SummaryPanel: React.FC = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
+  const [showResidueTable, setShowResidueTable] = useState(false);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
   const canStartSimulation =
@@ -633,32 +637,43 @@ const SummaryPanel: React.FC = () => {
               </div>
               {/* Local quality map */}
               <div className="mt-6">
-                <div>
-                  <label>Local quality map (per residue)</label>
-                  <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
-                    <span
-                      aria-label="What this field does"
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
-                    >
-                      ?
-                    </span>
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                      Displays local quality score for each residue's neighborhood. Select a metric to color the structure visualization accordingly.
-                    </span>
-                  </span>
-                </div>
-                <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
-                  <ResultsResidueTable
-                  key={`residue-table-${selectedModel}-${selectedResultsSource}`}
-                  data={originalResults.results.data}
-                  simData={simulationResults?.results.data}
-                  analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
-                  selectedScore={selectedQualityScore}
-                  setSelectedScore={setQualityScore}
-                  modelStatus={selectedModelStatus}
-                  selectedChain={selectedChain}
-                  />
-                </div>
+                <button
+                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
+                  onClick={() => setShowResidueTable(!showResidueTable)}
+                  title={"Show or hide local quality map."}
+                >
+                  {showResidueTable ? "Hide local quality map ▲" : "Show local quality map ▼"}
+                </button>
+                {showResidueTable && (
+                  <div>
+                    <div>
+                      <label>Local quality map (per residue)</label>
+                      <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                        <span
+                          aria-label="What this field does"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                        >
+                          ?
+                        </span>
+                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                          Displays local quality score for each residue's neighborhood. Select a metric to color the data accordingly.
+                        </span>
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+                      <ResultsResidueTable
+                      key={`residue-table-${selectedModel}`}
+                      data={originalResults.results.data}
+                      simData={simulationResults?.results.data}
+                      analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
+                      selectedScore={selectedQualityScoreInResidueTable}
+                      setSelectedScore={setQualityScoreInResidueTable}
+                      modelStatus={selectedModelStatus}
+                      selectedChain={selectedChain}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               {/* Visualizations */}
               <div className="mt-6">
@@ -675,6 +690,115 @@ const SummaryPanel: React.FC = () => {
                         Displays the 2D and 3D structure colored according to the selected quality score.
                       </span>
                     </span>
+                </div>
+                {hasSimulationStarted && (
+                  <div className="my-3">
+                    <div className="flex flex-row gap-2">
+                      <button
+                        tabIndex={0}
+                        onClick={() => setSelectedResultsSource("original")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedResultsSource("original");
+                          }
+                        }}
+                        className={`h-auto w-24 px-2 mt-0 rounded-md text-center text-sm transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                          selectedResultsSource === "original"
+                            ? "bg-moley-darkGreen text-white"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        }`}
+                      >
+                        Original
+                      </button>
+
+                      <button
+                        tabIndex={simulationTabEnabled ? 0 : -1}
+                        aria-disabled={!simulationTabEnabled}
+                        onClick={() => {
+                          if (simulationTabEnabled) {
+                            setSelectedResultsSource("simulation");
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (!simulationTabEnabled) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedResultsSource("simulation");
+                          }
+                        }}
+                        className={`w-24 h-auto mt-0 rounded-md px-2 py-1 text-center text-sm transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                          selectedResultsSource === "simulation"
+                            ? "bg-moley-darkGreen text-white"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : ""}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="mr-1">Refined</span>
+                          {isSimulationInProgress && (
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-row gap-4 my-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.CLASH_SCORE}
+                      checked={selectedQualityScore === QualityScore.CLASH_SCORE}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Clash Score</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.BAD_BONDS}
+                      checked={selectedQualityScore === QualityScore.BAD_BONDS}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Bad Bonds</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.BAD_ANGLES}
+                      checked={selectedQualityScore === QualityScore.BAD_ANGLES}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Bad Angles</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.SUITENESS}
+                      checked={selectedQualityScore === QualityScore.SUITENESS}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Suiteness</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.SUGAR_PUCKER_OUT}
+                      checked={selectedQualityScore === QualityScore.SUGAR_PUCKER_OUT}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Sugar Pucker Outlier</span>
+                  </label>
                 </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
                   <div className="w-full md:w-1/2 h-full relative border border-gray-300" ref={fornaContainerRef}>
@@ -781,8 +905,8 @@ const SummaryPanel: React.FC = () => {
 
                     <FornacSummaryComponent
                       key={`forna-${selectedModel}-${selectedResultsSource}`}
-                      structures={originalResults.annotation.map((a) => a.dotbracket)}
-                      sequences={originalResults.annotation.map((a) => a.sequnece)}
+                      structures={displayedResults?.annotation.map((a) => a.dotbracket) || originalResults.annotation.map((a) => a.dotbracket)}
+                      sequences={displayedResults?.annotation.map((a) => a.sequnece) || originalResults.annotation.map((a) => a.sequnece)}
                       clashMap={getClashesForForna() || []}
                       chains={chainsState}
                       setChains={setChainsState}
@@ -794,7 +918,7 @@ const SummaryPanel: React.FC = () => {
                       showClashes={showClashes}
                       directionArrows={false}
                       setAnimation={animation}
-                      job={originalResults}
+                      job={displayedResults || originalResults}
                       colorGnodes={colorGnodes}
                     />
                   </div>
@@ -802,12 +926,12 @@ const SummaryPanel: React.FC = () => {
                     <Molstar
                       key={`molstar-${selectedModel}-${selectedResultsSource}`}
                       useInterface={true}
-                      file={originalResults.pdb_file_string}
+                      file={displayedResults?.pdb_file_string || originalResults.pdb_file_string}
                       chains={chainsState}
                       setChains={setChainsState}
                       initialized={initialized}
                       setInitialized={setInitialized}
-                      resultResidues={originalResults.results.data}
+                      resultResidues={displayedResults?.results.data || originalResults.results.data}
                       selectedQualityScore={selectedQualityScore}
                       radius={originalResults.metadata.radius}
                     />
@@ -816,88 +940,40 @@ const SummaryPanel: React.FC = () => {
               </div>
             </div>
             {/* Correct the structure */}
-            <div className="mb-6">
-              <button
-                role="button"
-                tabIndex={canStartSimulation ? 0 : -1}
-                disabled={!canStartSimulation}
-                onClick={() => {
-                  if (!canStartSimulation) return;
-                  setSimulationStartError(null);
-                  setIsSimulationModalOpen(true);
-                }}
-                onKeyDown={(e) => {
-                  if (!canStartSimulation) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
+            <div className="my-6">
+              <div className="flex flex-row items-center gap-x-4">
+                <button
+                  role="button"
+                  tabIndex={canStartSimulation ? 0 : -1}
+                  disabled={!canStartSimulation}
+                  onClick={() => {
+                    if (!canStartSimulation) return;
                     setSimulationStartError(null);
                     setIsSimulationModalOpen(true);
-                  }
-                }}
-                className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
-              >
-                Run refinement
-              </button>
-
-              {hasSimulationStarted && (
-                <div className="mt-3 border-t border-gray-200 pt-3">
-                  <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
-                  <div className="flex flex-row gap-2">
-                    <button
-                      tabIndex={0}
-                      onClick={() => setSelectedResultsSource("original")}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setSelectedResultsSource("original");
-                        }
-                      }}
-                      className={`w-52 mt-2 rounded-md px-3 py-2 text-center text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
-                        selectedResultsSource === "original"
-                          ? "bg-moley-darkGreen text-white"
-                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                      }`}
-                    >
-                      Original
-                    </button>
-
-                    <button
-                      tabIndex={simulationTabEnabled ? 0 : -1}
-                      aria-disabled={!simulationTabEnabled}
-                      onClick={() => {
-                        if (simulationTabEnabled) {
-                          setSelectedResultsSource("simulation");
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (!simulationTabEnabled) return;
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setSelectedResultsSource("simulation");
-                        }
-                      }}
-                      className={`w-52 mt-2 rounded-md px-3 py-2 text-center text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
-                        selectedResultsSource === "simulation"
-                          ? "bg-moley-darkGreen text-white"
-                          : "bg-gray-100 text-gray-800"
-                      } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-200"}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="mr-1">Simulation</span>
-                        {isSimulationInProgress && (
-                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                        )}
-                      </div>
-                      <div>
-                        <span className={`inline-block rounded-full px-2 py-1 text-xs ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
-                          {simulationStatusPresentation.label || "No simulation"}
-                        </span>
-                      </div>
-                    </button>
+                  }}
+                  onKeyDown={(e) => {
+                    if (!canStartSimulation) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSimulationStartError(null);
+                      setIsSimulationModalOpen(true);
+                    }
+                  }}
+                  className="rounded-md mt-0 px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
+                >
+                  Run refinement
+                </button>
+                {hasSimulationStarted &&
+                  <div>
+                    <span className={`w-48 inline-block rounded-full px-2 py-2 text-xs text-center ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                      {simulationStatusPresentation.label || "No simulation"}
+                    </span>
                   </div>
-                </div>
-              )}
+                }
+              </div>
+
+              
             </div>
           </div>
           <Footer />
