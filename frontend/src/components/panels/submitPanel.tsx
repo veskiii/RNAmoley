@@ -487,6 +487,8 @@ const Dashboard: React.FC = () => {
                   value={sphereRadius}
                   disabled={!useWalkingSphere}
                   onChange={e => setSphereRadius(parseInt(e.target.value))}
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity("Value must be between 1 and 25")}
+                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
                   className="border rounded px-2 py-1 mx-2"
                 />
               </div>

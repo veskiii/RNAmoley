@@ -607,7 +607,7 @@ const SummaryPanel: React.FC = () => {
                 </div>
               </div>
               {/* Local quality map */}
-              <div>
+              <div className="mt-6">
                 <div>
                   <label>Local quality map (per residue)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
