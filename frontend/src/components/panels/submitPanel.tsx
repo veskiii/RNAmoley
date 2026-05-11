@@ -3,6 +3,7 @@ import React, {
   useRef,
   ChangeEvent,
   FormEvent,
+  useEffect,
   useContext,
 } from "react";
 import "../../App.css";
@@ -22,9 +23,14 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const sphereRadiusInputRef = useRef<HTMLInputElement | null>(null);
   const [useWalkingSphere, setUseWalkingSphere] = useState(true);
   const [sphereRadius, setSphereRadius] = useState<number>(5);
   const [sphereInterval, setSphereInterval] = useState<number>(1);
+
+  useEffect(() => {
+    sphereRadiusInputRef.current?.setCustomValidity("");
+  }, [sphereRadius, useWalkingSphere]);
 
   type SamplePreset = {
     id: string;
@@ -481,6 +487,7 @@ const Dashboard: React.FC = () => {
                   </span>
                 </div>
                 <input
+                  ref={sphereRadiusInputRef}
                   type="number"
                   min={1}
                   max={25}
@@ -488,7 +495,6 @@ const Dashboard: React.FC = () => {
                   disabled={!useWalkingSphere}
                   onChange={e => setSphereRadius(parseInt(e.target.value))}
                   onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity("Value must be between 1 and 25")}
-                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
                   className="border rounded px-2 py-1 mx-2"
                 />
               </div>
