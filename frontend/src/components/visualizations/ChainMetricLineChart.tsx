@@ -3,6 +3,7 @@ import { QualityScore, Residue } from "../utils/types";
 
 type ChainMetricLineChartProps = {
   data: Residue[];
+  data2?: Residue[];
   selectedChain: string;
   selectedScore: QualityScore;
   className?: string;
@@ -18,18 +19,24 @@ type ChartSlot =
   | {
       kind: "residue";
       residue: Residue;
+      residue2?: Residue;
       value: number | null;
+      value2: number | null;
       displayValue: string;
+      displayValue2: string;
       label: string;
       x: number;
       y: number | null;
+      y2: number | null;
     }
   | {
       kind: "missing-range";
       label: string;
       x: number;
       y: null;
+      y2: null;
       value: null;
+      value2: null;
     };
 
 
@@ -136,37 +143,57 @@ const getMetricValue = (residue: Residue, selectedScore: QualityScore): MetricVa
 };
 
 const buildSegmentPaths = (
-  points: Array<{ x: number; y: number | null; value: number | null }>
+  points: Array<{ x: number; y: number | null; y2: number | null; value: number | null; value2: number | null }>
 ) => {
-  const segments: string[] = [];
-  let currentPath = "";
+  const segments1: string[] = [];
+  const segments2: string[] = [];
+  let currentPath1 = "";
+  let currentPath2 = "";
 
   points.forEach((point) => {
     if (point.value === null) {
-      if (currentPath) {
-        segments.push(currentPath);
-        currentPath = "";
+      if (currentPath1) {
+        segments1.push(currentPath1);
+        currentPath1 = "";
       }
-      return;
+    } else {
+      if (!currentPath1) {
+        currentPath1 = `M ${point.x} ${point.y}`;
+      } else {
+        currentPath1 += ` L ${point.x} ${point.y}`;
+      }
     }
-
-    if (!currentPath) {
-      currentPath = `M ${point.x} ${point.y}`;
-      return;
-    }
-
-    currentPath += ` L ${point.x} ${point.y}`;
   });
 
-  if (currentPath) {
-    segments.push(currentPath);
+  if (currentPath1) {
+    segments1.push(currentPath1);
   }
 
-  return segments;
+  points.forEach((point) => {
+    if (point.value2 === null) {
+      if (currentPath2) {
+        segments2.push(currentPath2);
+        currentPath2 = "";
+      }
+    } else {
+      if (!currentPath2) {
+        currentPath2 = `M ${point.x} ${point.y2}`;
+      } else {
+        currentPath2 += ` L ${point.x} ${point.y2}`;
+      }
+    }
+  });
+
+  if (currentPath2) {
+    segments2.push(currentPath2);
+  }
+
+  return { segments1, segments2 };
 };
 
 const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
   data,
+  data2,
   selectedChain,
   selectedScore,
   className,
@@ -177,14 +204,31 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       .slice()
       .sort((left, right) => left.original_index - right.original_index);
 
+    const chainResidues2 = data2
+      ? data2
+          .filter((residue) => residue.chainID === selectedChain)
+          .slice()
+          .sort((left, right) => left.original_index - right.original_index)
+      : [];
+
+    // Create a map of index -> residue for second data series for quick lookup
+    const residue2Map = new Map(chainResidues2.map((r) => [r.original_index, r]));
+
     const residuePoints = chainResidues.map((residue) => {
       const metric = getMetricValue(residue, selectedScore);
       const isSelected = residue.selected !== false;
 
+      const residue2 = residue2Map.get(residue.original_index);
+      const metric2 = residue2 ? getMetricValue(residue2, selectedScore) : { value: null, displayValue: "-" };
+      const isSelected2 = residue2?.selected !== false;
+
       return {
         residue,
+        residue2,
         value: isSelected ? metric.value : null,
+        value2: data2 && isSelected2 ? metric2.value : null,
         displayValue: isSelected ? metric.displayValue : "-",
+        displayValue2: data2 && isSelected2 ? metric2.displayValue : "-",
         label: `${residue.original_index}\n${residue.structure || "-"}\n${residue.base || "-"}`,
       };
     });
@@ -193,8 +237,13 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       .map((point) => point.value)
       .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
 
-    const hasNumericValues = numericValues.length > 0;
-    const maxValue = hasNumericValues ? Math.max(...numericValues) : 1;
+    const numericValues2 = residuePoints
+      .map((point) => point.value2)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+    const allNumericValues = [...numericValues, ...numericValues2];
+    const hasNumericValues = allNumericValues.length > 0;
+    const maxValue = hasNumericValues ? Math.max(...allNumericValues) : 1;
     const tickStep = getNiceTickStep(maxValue);
     const tickCount = Math.max(1, Math.ceil(maxValue / tickStep));
     const yMin = 0;
@@ -203,8 +252,11 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
     const slots: Array<{
       kind: "residue" | "missing-range";
       residue?: Residue;
+      residue2?: Residue;
       value: number | null;
+      value2: number | null;
       displayValue?: string;
+      displayValue2?: string;
       label: string;
     }> = [];
 
@@ -212,12 +264,15 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
     while (cursor < residuePoints.length) {
       const point = residuePoints[cursor];
 
-      if (point.value !== null) {
+      if (point.value !== null || point.value2 !== null) {
         slots.push({
           kind: "residue",
           residue: point.residue,
+          residue2: point.residue2,
           value: point.value,
+          value2: point.value2,
           displayValue: point.displayValue,
+          displayValue2: point.displayValue2,
           label: `${point.residue.original_index}`,
         });
         cursor += 1;
@@ -225,7 +280,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       }
 
       const start = cursor;
-      while (cursor + 1 < residuePoints.length && residuePoints[cursor + 1].value === null) {
+      while (cursor + 1 < residuePoints.length && residuePoints[cursor + 1].value === null && residuePoints[cursor + 1].value2 === null) {
         cursor += 1;
       }
 
@@ -236,6 +291,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       slots.push({
         kind: "missing-range",
         value: null,
+        value2: null,
         label: startIndex === endIndex ? `${startIndex}` : `${startIndex}-${endIndex}`,
       });
 
@@ -268,18 +324,24 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
           label: slot.label,
           x,
           y: null,
+          y2: null,
           value: null,
+          value2: null,
         };
       }
 
       return {
         kind: "residue",
         residue: slot.residue as Residue,
+        residue2: slot.residue2,
         value: slot.value,
+        value2: slot.value2,
         displayValue: slot.displayValue || "-",
+        displayValue2: slot.displayValue2 || "-",
         label: slot.label,
         x,
         y: slot.value === null ? null : yForValue(slot.value),
+        y2: slot.value2 === null ? null : yForValue(slot.value2),
       };
     });
 
@@ -296,7 +358,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       yForValue,
       segments: buildSegmentPaths(renderSlots),
     };
-  }, [data, selectedChain, selectedScore]);
+  }, [data, data2, selectedChain, selectedScore]);
 
   if (!selectedChain) {
     return (
@@ -334,7 +396,19 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
           {getMetricLabel(selectedScore)}
         </div>
 
-        <div className="flex items-stretch">
+        <div className="flex items-stretch relative">
+          {data2 && (
+            <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-md p-2 border border-gray-200 shadow-md text-xs pointer-events-none z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-teal-700"></div>
+                <span className="text-gray-700">Original</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-600"></div>
+                <span className="text-gray-700">Refinement</span>
+              </div>
+            </div>
+          )}
           <svg
             width={chartPadding.left}
             height={plotHeight}
@@ -419,12 +493,24 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                 </>
               )}
 
-              {chartData.segments.map((segment, index) => (
+              {chartData.segments.segments1.map((segment, index) => (
                 <path
-                  key={`segment-${index}`}
+                  key={`segment-1-${index}`}
                   d={segment}
                   fill="none"
                   stroke="#0f766e"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+
+              {chartData.segments.segments2.map((segment, index) => (
+                <path
+                  key={`segment-2-${index}`}
+                  d={segment}
+                  fill="none"
+                  stroke="#dc2626"
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -455,6 +541,29 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                     >
                       <title>
                         {`Residue ${point.residue.original_index} | ${point.residue.base} | ${point.residue.structure || "-"} | ${point.displayValue}`}
+                      </title>
+                    </circle>
+                  </g>
+                );
+              })}
+
+              {chartData.points.map((point, index) => {
+                if (point.kind !== "residue" || point.y2 === null || point.value2 === null) {
+                  return null;
+                }
+
+                return (
+                  <g key={`${point.residue.original_index}-2-${index}`}>
+                    <circle
+                      cx={point.x}
+                      cy={point.y2}
+                      r={point.value2 === 0 ? 3.5 : 4.5}
+                      fill="#dc2626"
+                      stroke="#ffffff"
+                      strokeWidth={1.5}
+                    >
+                      <title>
+                        {`Residue ${point.residue.original_index} (Refinement) | ${point.displayValue2}`}
                       </title>
                     </circle>
                   </g>

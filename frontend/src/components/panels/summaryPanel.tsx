@@ -33,7 +33,17 @@ const SummaryPanel: React.FC = () => {
     modelNumber ? parseInt(modelNumber) : 1
   );
   const [selectedChain, setSelectedChain] = useState<string>("");
+  const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
   const [originalResults, setOriginalResults] = useState<SummaryJob>();
+  const [simulationResults, setSimulationResults] = useState<SummaryJob>();
+
+  const selectedModelStatus = originalResults?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+  const simulationTabEnabled = selectedModelStatus === "sim_completed";
+  // Which results are currently displayed: simulation (if selected and available) or original
+  const displayedResults =
+    selectedResultsSource === "simulation" && simulationTabEnabled && simulationResults
+      ? simulationResults
+      : originalResults;
   const [myError, setMyError] = useState<ErrorPageProps | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
   const [numbering, setNumbering] = useState(true);
@@ -52,17 +62,14 @@ const SummaryPanel: React.FC = () => {
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isStartingSimulation, setIsStartingSimulation] = useState(false);
   const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
-  const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
-  const selectedModelStatus = originalResults?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
   const canStartSimulation =
     ["completed", "sim_completed", "sim_failed"].includes(selectedModelStatus || "") ||
     (!selectedModelStatus && originalResults?.metadata.status === "completed");
-  const simulationTabEnabled = selectedModelStatus === "sim_completed";
   const isSimulationInProgress = ["sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(selectedModelStatus || "");
   const hasSimulationStarted = (selectedModelStatus || "").startsWith("sim_");
 
@@ -136,9 +143,9 @@ const SummaryPanel: React.FC = () => {
   const simulationStatusPresentation = getModelStatusPresentation(selectedModelStatus);
 
   const getClashesForForna = () => {
-    if (showClashes && originalResults) {
+    if (showClashes && displayedResults) {
       const clashes = new Set();
-      for (const item of originalResults.results.data) {
+      for (const item of displayedResults.results.data) {
         const sourceNum = item.residue_number;
 
         if (!item.residueMetrics) continue;
@@ -166,8 +173,8 @@ const SummaryPanel: React.FC = () => {
   };
 
   const colorGnodes = () => {
-    if (!originalResults || !originalResults.results || !originalResults.results.data) {
-      console.warn("No data in myData.results.data");
+    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+      console.warn("No data in displayedResults.results.data");
       return;
     }
     //@ts-ignore
@@ -184,7 +191,7 @@ const SummaryPanel: React.FC = () => {
       }
     });
 
-    originalResults.results.data.forEach((residue) => {
+    displayedResults.results.data.forEach((residue) => {
       try {
         const node = nodeByNumber.get(residue.residue_number);
         if (node) {
@@ -211,16 +218,16 @@ const SummaryPanel: React.FC = () => {
     showClashes,
     setAnimation,
     selectedQualityScore,
-    originalResults,
+    displayedResults,
   ]);
 
   const updateColorMaps = () => {
-    if (!originalResults || !originalResults.results || !originalResults.results.data) {
-      console.error("No data in myData.results.data");
+    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+      console.error("No data in displayedResults.results.data");
       return;
     }
 
-    originalResults.results.data.forEach((residue) => {
+    displayedResults.results.data.forEach((residue) => {
       var color = getColor(residue, QualityScore.CLASH_SCORE);
       clashScoreColorMap.set(residue.residue_number, color);
       color = getColor(residue, QualityScore.BAD_ANGLES);
@@ -232,75 +239,86 @@ const SummaryPanel: React.FC = () => {
 
   useEffect(() => {
     updateColorMaps();
-  }, [originalResults]);
+  }, [displayedResults]);
 
 
   useEffect(() => {
     let interval: NodeJS.Timeout; // Declare interval variable
     async function fetchData() {
-      //console.log("Start to fetch data");
       try {
-        const effectiveResultsSource =
-          selectedResultsSource === "simulation" && simulationTabEnabled
-            ? "simulation"
-            : "original";
-        const response = await fetchMyData(jobId, selectedModel, effectiveResultsSource);
-        const data = await response.json();
-        if (!response.ok) {
-          // console.log(
-          //     `Error during fetching data. Message: ${data.error} Status code: ${response.status}`
-          // );
+        // Always fetch original results so originalResults holds only the original data
+        const origResponse = await fetchMyData(jobId, selectedModel, "original");
+        const origData = await origResponse.json();
+
+        if (!origResponse.ok) {
           setMyError({
-            errorMessage: data.error,
-            statusCode: response.status.toString(),
+            errorMessage: origData.error,
+            statusCode: origResponse.status.toString(),
           });
           clearInterval(interval);
           return;
         } else {
-            setOriginalResults((prevData) => {
-            if (JSON.stringify(prevData) !== JSON.stringify(data)) {
-              const chains = transformJobToChains(data);
-              setChainsState((prevChains) => 
-              JSON.stringify(prevChains) !== JSON.stringify(chains) ? chains : prevChains
+          setOriginalResults((prevData) => {
+            if (JSON.stringify(prevData) !== JSON.stringify(origData)) {
+              const chains = transformJobToChains(origData);
+              setChainsState((prevChains) =>
+                JSON.stringify(prevChains) !== JSON.stringify(chains) ? chains : prevChains
               );
               setSelectedChain(chains[0]?.name || "");
-              return data;
+              return origData;
             }
             return prevData;
-            });
-          console.log("data:", data);
+          });
 
-            if (data.metadata.status === "failed") {
+          if (origData.metadata.status === "failed") {
             setMyError({
-              errorMessage: data.metadata.error_message,
+              errorMessage: origData.metadata.error_message,
               statusCode: "500",
             });
             clearInterval(interval);
             return;
-            }
-            if (
-              data.results &&
-              (data.metadata.status === "running" || data.metadata.status === "completed" || isSimulationStatus(data.metadata.status)) &&
-              data.results &&
-              isLoading &&
-              !hasStoppedLoading.current
-            ) {
-              console.log("stop loading ", isLoading);
-              setInitialQualityScore(data);
-              setIsLoading(false);
-              hasStoppedLoading.current = true;
-            }
+          }
 
-            const currentModelStatus = data.metadata.resultsStatus?.[selectedModel.toString()]?.status;
-            const isBackgroundWorkActive =
-              ["creating", "starting", "running", "simulation_starting", "simulation_running"].includes(data.metadata.status) ||
-              ["starting", "running", "sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(currentModelStatus || "");
+          if (
+            origData.results &&
+            (origData.metadata.status === "running" || origData.metadata.status === "completed" || isSimulationStatus(origData.metadata.status)) &&
+            isLoading &&
+            !hasStoppedLoading.current
+          ) {
+            setInitialQualityScore(origData);
+            setIsLoading(false);
+            hasStoppedLoading.current = true;
+          }
 
-            if (!isBackgroundWorkActive) {
-              if (isLoading && data.results) setInitialQualityScore(data);
-              clearInterval(interval);
-              setIsLoading(false);
+          const currentModelStatus = origData.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+          const isBackgroundWorkActive =
+            ["creating", "starting", "running", "simulation_starting", "simulation_running"].includes(origData.metadata.status) ||
+            ["starting", "running", "sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(currentModelStatus || "");
+
+          if (!isBackgroundWorkActive) {
+            if (isLoading && origData.results) setInitialQualityScore(origData);
+            clearInterval(interval);
+            setIsLoading(false);
+          }
+        }
+
+        // If simulation tab is enabled, fetch simulation results separately and store them in simulationResults
+        if (simulationTabEnabled) {
+          try {
+            const simResponse = await fetchMyData(jobId, selectedModel, "simulation");
+            const simData = await simResponse.json();
+            if (simResponse.ok) {
+              setSimulationResults((prev) => {
+                return JSON.stringify(prev) !== JSON.stringify(simData) ? simData : prev;
+              });
+            } else {
+              // If simulation fetch failed, clear simulationResults to avoid showing stale sim data
+              setSimulationResults(undefined);
             }
+          } catch (err) {
+            console.error("Failed to fetch simulation data:", err);
+            setSimulationResults(undefined);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -317,7 +335,7 @@ const SummaryPanel: React.FC = () => {
 
     // Cleanup interval when component unmounts or jobId changes
     return () => clearInterval(interval);
-  }, [jobId, selectedModel, selectedResultsSource, refreshToken]);
+  }, [jobId, selectedModel, selectedResultsSource, refreshToken, simulationTabEnabled]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
@@ -530,8 +548,8 @@ const SummaryPanel: React.FC = () => {
                 <div className="overflow-x-auto">
                   <GlobalResultsTable
                     selectedModel={selectedModel}
-                    modelMetrics={originalResults.results.modelMetrics} 
-                    fragmentMetrics={originalResults.results.fragmentMetrics} />
+                    modelMetrics={displayedResults?.results.modelMetrics || originalResults.results.modelMetrics} 
+                    fragmentMetrics={displayedResults?.results.fragmentMetrics || originalResults.results.fragmentMetrics} />
                 </div>
               </div>
               {/* Chain selection */}
@@ -586,21 +604,25 @@ const SummaryPanel: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <ChainMetricLineChart
                     data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.CLASH_SCORE}
                   />
                   <ChainMetricLineChart
                     data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.BAD_BONDS}
                   />
                   <ChainMetricLineChart
                     data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.BAD_ANGLES}
                   />
                   <ChainMetricLineChart
                     data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.SUITENESS}
                   />
@@ -625,8 +647,8 @@ const SummaryPanel: React.FC = () => {
                 <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                   <ResultsResidueTable
                   key={`residue-table-${selectedModel}-${selectedResultsSource}`}
-                  data={originalResults.results.data}
-                  analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
+                  data={displayedResults?.results.data || originalResults.results.data}
+                  analyzeNeighborhood={displayedResults?.metadata.analyzeNeighborhoods ?? originalResults.metadata.analyzeNeighborhoods}
                   selectedScore={selectedQualityScore}
                   setSelectedScore={setQualityScore}
                   modelStatus={selectedModelStatus}
