@@ -650,8 +650,9 @@ const SummaryPanel: React.FC = () => {
                 <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                   <ResultsResidueTable
                   key={`residue-table-${selectedModel}-${selectedResultsSource}`}
-                  data={displayedResults?.results.data || originalResults.results.data}
-                  analyzeNeighborhood={displayedResults?.metadata.analyzeNeighborhoods ?? originalResults.metadata.analyzeNeighborhoods}
+                  data={originalResults.results.data}
+                  simData={simulationResults?.results.data}
+                  analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
                   selectedScore={selectedQualityScore}
                   setSelectedScore={setQualityScore}
                   modelStatus={selectedModelStatus}
