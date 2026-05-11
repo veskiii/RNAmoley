@@ -33,7 +33,7 @@ const SummaryPanel: React.FC = () => {
     modelNumber ? parseInt(modelNumber) : 1
   );
   const [selectedChain, setSelectedChain] = useState<string>("");
-  const [myData, setMyData] = useState<SummaryJob>();
+  const [originalResults, setOriginalResults] = useState<SummaryJob>();
   const [myError, setMyError] = useState<ErrorPageProps | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
   const [numbering, setNumbering] = useState(true);
@@ -58,10 +58,10 @@ const SummaryPanel: React.FC = () => {
   const fornaContainerRef = useRef<HTMLDivElement>(null);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
-  const selectedModelStatus = myData?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+  const selectedModelStatus = originalResults?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
   const canStartSimulation =
     ["completed", "sim_completed", "sim_failed"].includes(selectedModelStatus || "") ||
-    (!selectedModelStatus && myData?.metadata.status === "completed");
+    (!selectedModelStatus && originalResults?.metadata.status === "completed");
   const simulationTabEnabled = selectedModelStatus === "sim_completed";
   const isSimulationInProgress = ["sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(selectedModelStatus || "");
   const hasSimulationStarted = (selectedModelStatus || "").startsWith("sim_");
@@ -136,9 +136,9 @@ const SummaryPanel: React.FC = () => {
   const simulationStatusPresentation = getModelStatusPresentation(selectedModelStatus);
 
   const getClashesForForna = () => {
-    if (showClashes && myData) {
+    if (showClashes && originalResults) {
       const clashes = new Set();
-      for (const item of myData.results.data) {
+      for (const item of originalResults.results.data) {
         const sourceNum = item.residue_number;
 
         if (!item.residueMetrics) continue;
@@ -166,7 +166,7 @@ const SummaryPanel: React.FC = () => {
   };
 
   const colorGnodes = () => {
-    if (!myData || !myData.results || !myData.results.data) {
+    if (!originalResults || !originalResults.results || !originalResults.results.data) {
       console.warn("No data in myData.results.data");
       return;
     }
@@ -184,7 +184,7 @@ const SummaryPanel: React.FC = () => {
       }
     });
 
-    myData.results.data.forEach((residue) => {
+    originalResults.results.data.forEach((residue) => {
       try {
         const node = nodeByNumber.get(residue.residue_number);
         if (node) {
@@ -211,16 +211,16 @@ const SummaryPanel: React.FC = () => {
     showClashes,
     setAnimation,
     selectedQualityScore,
-    myData,
+    originalResults,
   ]);
 
   const updateColorMaps = () => {
-    if (!myData || !myData.results || !myData.results.data) {
+    if (!originalResults || !originalResults.results || !originalResults.results.data) {
       console.error("No data in myData.results.data");
       return;
     }
 
-    myData.results.data.forEach((residue) => {
+    originalResults.results.data.forEach((residue) => {
       var color = getColor(residue, QualityScore.CLASH_SCORE);
       clashScoreColorMap.set(residue.residue_number, color);
       color = getColor(residue, QualityScore.BAD_ANGLES);
@@ -232,7 +232,7 @@ const SummaryPanel: React.FC = () => {
 
   useEffect(() => {
     updateColorMaps();
-  }, [myData]);
+  }, [originalResults]);
 
 
   useEffect(() => {
@@ -257,7 +257,7 @@ const SummaryPanel: React.FC = () => {
           clearInterval(interval);
           return;
         } else {
-            setMyData((prevData) => {
+            setOriginalResults((prevData) => {
             if (JSON.stringify(prevData) !== JSON.stringify(data)) {
               const chains = transformJobToChains(data);
               setChainsState((prevChains) => 
@@ -370,7 +370,7 @@ const SummaryPanel: React.FC = () => {
     return <Loading  message="Preparing data and computing initial analysis..."/>;
   }
 
-  if (!myData || !myData.results || !myData.results.data ) {
+  if (!originalResults || !originalResults.results || !originalResults.results.data ) {
     return <ErrorPage />;
   }
 
@@ -399,15 +399,15 @@ const SummaryPanel: React.FC = () => {
 
     const changeModel = (modelNum: number) => {
       if (
-        myData &&
-        myData.metadata.resultsStatus &&
-        myData.metadata.resultsStatus[modelNum.toString()] &&
-        myData.metadata.resultsStatus[modelNum.toString()].status === "starting"
+        originalResults &&
+        originalResults.metadata.resultsStatus &&
+        originalResults.metadata.resultsStatus[modelNum.toString()] &&
+        originalResults.metadata.resultsStatus[modelNum.toString()].status === "starting"
       ) {
         return;
       }
 
-      const targetModelStatus = myData?.metadata.resultsStatus?.[modelNum.toString()]?.status;
+      const targetModelStatus = originalResults?.metadata.resultsStatus?.[modelNum.toString()]?.status;
       if (selectedResultsSource === "simulation" && targetModelStatus !== "sim_completed") {
         setSelectedResultsSource("original");
       }
@@ -429,11 +429,11 @@ const SummaryPanel: React.FC = () => {
             <div className="mt-10 text-gray-500">
               <p>Input data</p>
               <div className="mt-2 space-y-0">
-                <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
+                <p><span>Structure:</span><i className="ml-2">{originalResults.name || "Unnamed job"}</i></p>
                 <p><span>Analysed models (chains): </span>
-                {myData.metadata.resultsStatus && Object.keys(myData.metadata.resultsStatus).length > 0 ? (
+                {originalResults.metadata.resultsStatus && Object.keys(originalResults.metadata.resultsStatus).length > 0 ? (
                     (() => {
-                      const entries = Object.entries(myData.metadata.resultsStatus);
+                      const entries = Object.entries(originalResults.metadata.resultsStatus);
                       return entries.map(([modelNum, modelStatus], idx) => (
                         <span key={modelNum}>
                           {modelNum} ({modelStatus.chains?.join(", ") || ""}){idx < entries.length - 1 ? ", " : ""}
@@ -444,8 +444,8 @@ const SummaryPanel: React.FC = () => {
                   <p>No analysed models available.</p>
                 )}</p>
                 <p><span>Local analysis {
-                myData.metadata.analyzeNeighborhoods ? 
-                "enabled; sphere radius (Å): " + myData.metadata.radius
+                originalResults.metadata.analyzeNeighborhoods ? 
+                "enabled; sphere radius (Å): " + originalResults.metadata.radius
                 // + "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
@@ -491,8 +491,8 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
-                    {myData.metadata.models.map((modelNum) => {
-                      const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
+                    {originalResults.metadata.models.map((modelNum) => {
+                      const modelStatus = originalResults.metadata.resultsStatus?.[modelNum.toString()]?.status;
                       const modelListStatus = getModelListStatus(modelStatus);
                       const modelStatusPresentation = getModelStatusPresentation(modelListStatus);
                       const isModelAccessable = modelStatus && ["running", "completed", "sim_starting", "sim_running", "sim_finished", "sim_analyzing", "sim_completed", "sim_failed"].includes(modelStatus);
@@ -501,7 +501,7 @@ const SummaryPanel: React.FC = () => {
                         <div
                           key={"model" + modelNum}
                           className={`w-12 p-2 rounded shadow transition-all flex-shrink-0
-                            ${myData && isModelAccessable ?
+                            ${originalResults && isModelAccessable ?
                                 "cursor-pointer bg-white" : "cursor-not-allowed bg-gray-200"}
                             ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
                           } flex items-center justify-center`}
@@ -530,8 +530,8 @@ const SummaryPanel: React.FC = () => {
                 <div className="overflow-x-auto">
                   <GlobalResultsTable
                     selectedModel={selectedModel}
-                    modelMetrics={myData.results.modelMetrics} 
-                    fragmentMetrics={myData.results.fragmentMetrics} />
+                    modelMetrics={originalResults.results.modelMetrics} 
+                    fragmentMetrics={originalResults.results.fragmentMetrics} />
                 </div>
               </div>
               {/* Chain selection */}
@@ -585,22 +585,22 @@ const SummaryPanel: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <ChainMetricLineChart
-                    data={myData.results.data}
+                    data={originalResults.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.CLASH_SCORE}
                   />
                   <ChainMetricLineChart
-                    data={myData.results.data}
+                    data={originalResults.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.BAD_BONDS}
                   />
                   <ChainMetricLineChart
-                    data={myData.results.data}
+                    data={originalResults.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.BAD_ANGLES}
                   />
                   <ChainMetricLineChart
-                    data={myData.results.data}
+                    data={originalResults.results.data}
                     selectedChain={selectedChain}
                     selectedScore={QualityScore.SUITENESS}
                   />
@@ -625,8 +625,8 @@ const SummaryPanel: React.FC = () => {
                 <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                   <ResultsResidueTable
                   key={`residue-table-${selectedModel}-${selectedResultsSource}`}
-                  data={myData.results.data}
-                  analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
+                  data={originalResults.results.data}
+                  analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
                   selectedScore={selectedQualityScore}
                   setSelectedScore={setQualityScore}
                   modelStatus={selectedModelStatus}
@@ -755,8 +755,8 @@ const SummaryPanel: React.FC = () => {
 
                     <FornacSummaryComponent
                       key={`forna-${selectedModel}-${selectedResultsSource}`}
-                      structures={myData.annotation.map((a) => a.dotbracket)}
-                      sequences={myData.annotation.map((a) => a.sequnece)}
+                      structures={originalResults.annotation.map((a) => a.dotbracket)}
+                      sequences={originalResults.annotation.map((a) => a.sequnece)}
                       clashMap={getClashesForForna() || []}
                       chains={chainsState}
                       setChains={setChainsState}
@@ -768,7 +768,7 @@ const SummaryPanel: React.FC = () => {
                       showClashes={showClashes}
                       directionArrows={false}
                       setAnimation={animation}
-                      job={myData}
+                      job={originalResults}
                       colorGnodes={colorGnodes}
                     />
                   </div>
@@ -776,14 +776,14 @@ const SummaryPanel: React.FC = () => {
                     <Molstar
                       key={`molstar-${selectedModel}-${selectedResultsSource}`}
                       useInterface={true}
-                      file={myData.pdb_file_string}
+                      file={originalResults.pdb_file_string}
                       chains={chainsState}
                       setChains={setChainsState}
                       initialized={initialized}
                       setInitialized={setInitialized}
-                      resultResidues={myData.results.data}
+                      resultResidues={originalResults.results.data}
                       selectedQualityScore={selectedQualityScore}
-                      radius={myData.metadata.radius}
+                      radius={originalResults.metadata.radius}
                     />
                   </div>
                 </div>
