@@ -15,3 +15,15 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Fornac overrides: gray nucleotides, neon-green selected outline */
+#rna_ss.forna-main-view circle.fornac-node:not([node_type="label"]):not([node_type="protein"]),
+#rna_ss.forna-main-view polygon.fornac-node:not([node_type="label"]):not([node_type="protein"]) {
+  fill: #dadada !important;
+}
+
+#rna_ss.forna-main-view g.fornac-selectedNode > circle.fornac-node,
+#rna_ss.forna-main-view g.fornac-selectedNode > polygon.fornac-node {
+  stroke: #39ff14 !important;
+  stroke-width: 2px !important;
+}
