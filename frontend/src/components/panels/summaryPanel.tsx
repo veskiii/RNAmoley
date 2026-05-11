@@ -69,6 +69,7 @@ const SummaryPanel: React.FC = () => {
   const hasStoppedLoading = useRef(false);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
   const [showResidueTable, setShowResidueTable] = useState(false);
+  const [comparisonModeMolstar, setComparisonModeMolstar] = useState(false);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
   const canStartSimulation =
@@ -740,6 +741,20 @@ const SummaryPanel: React.FC = () => {
                           )}
                         </div>
                       </button>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={comparisonModeMolstar}
+                          onChange={() => {
+                            if (simulationTabEnabled) {
+                              setComparisonModeMolstar(!comparisonModeMolstar);
+                            }
+                          }}
+                          disabled={!simulationTabEnabled}
+                          className="cursor-pointer"
+                        />
+                        <span className="text-sm">Compare 3D</span>
+                      </label>
                     </div>
                   </div>
                 )}
@@ -926,14 +941,16 @@ const SummaryPanel: React.FC = () => {
                     <Molstar
                       key={`molstar-${selectedModel}-${selectedResultsSource}`}
                       useInterface={true}
-                      file={displayedResults?.pdb_file_string || originalResults.pdb_file_string}
+                      file={comparisonModeMolstar ? originalResults.pdb_file_string : displayedResults?.pdb_file_string || originalResults.pdb_file_string}
                       chains={chainsState}
                       setChains={setChainsState}
                       initialized={initialized}
                       setInitialized={setInitialized}
-                      resultResidues={displayedResults?.results.data || originalResults.results.data}
+                      resultResidues={comparisonModeMolstar ? originalResults.results.data : displayedResults?.results.data || originalResults.results.data}
                       selectedQualityScore={selectedQualityScore}
                       radius={originalResults.metadata.radius}
+                      comparisonFile={simulationTabEnabled && simulationResults ? simulationResults.pdb_file_string : undefined}
+                      comparisonMode={comparisonModeMolstar}
                     />
                   </div>
                 </div>
