@@ -58,6 +58,8 @@ const Molstar = (props) => {
     resultResidues,
     selectedQualityScore,
     radius,
+    comparisonFile,
+    comparisonMode,
   } = props;
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
@@ -65,6 +67,8 @@ const Molstar = (props) => {
   const coloringRunId = useRef(0);
   const isStructureLoading = useRef(false);
   const c1PrimeComponentsRef = useRef([]);
+  const comparisonStructureCell = useRef(null);
+  const comparisonComponent = useRef(null);
   const [canColor, setCanColor] = useState(false);
   const [isContainerReady, setIsContainerReady] = useState(false);
   const sphereRadiusAngstrom =
@@ -102,6 +106,11 @@ const Molstar = (props) => {
   const changeNucleotideColors = async () => {
     if (!plugin.current) {
       console.warn("Plugin not initialized.");
+      return;
+    }
+
+    // Skip coloring in comparison mode
+    if (comparisonMode) {
       return;
     }
 
@@ -432,6 +441,58 @@ const Molstar = (props) => {
     };
   }, [selectedQualityScore, resultResidues, initialized, radius]);
 
+  // Handle comparison mode
+  useEffect(() => {
+    if (!initialized || !plugin.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        if (comparisonMode && comparisonFile) {
+          isStructureLoading.current = true;
+          // Load first structure in blue
+          await loadStructure(pdbId, url, file, plugin.current, false, "#5073ff");
+          if (cancelled) return;
+          
+          // Load second structure in orange
+          await loadStructure(null, null, comparisonFile, plugin.current, true, "#ff8c42");
+          isStructureLoading.current = false;
+        } else {
+          isStructureLoading.current = true;
+          // Return to normal mode - reload primary structure
+          await loadStructure(pdbId, url, file, plugin.current);
+          isStructureLoading.current = false;
+          
+          if (cancelled) return;
+          
+          // Restore nucleotide coloring after structure is fully loaded
+          await new Promise(resolve => setTimeout(resolve, 100));
+          if (!cancelled) {
+            await changeNucleotideColors();
+            
+            // Restore C1' spheres if needed
+            if (C1_PRIME_SPHERES_QUALITY_SCORES.has(selectedQualityScore)) {
+              c1PrimeComponentsRef.current = [];
+              const result = await addC1PrimeSpheres(plugin.current);
+              if (!cancelled && result) {
+                c1PrimeComponentsRef.current = result;
+              }
+            }
+          }
+        }
+      } finally {
+        isStructureLoading.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [comparisonMode, comparisonFile, initialized, pdbId, url, file, selectedQualityScore]);
+
   const addC1PrimeSpheres = async (pluginInstance) => {
     const structureCell =
       pluginInstance?.managers?.structure?.hierarchy?.current?.structures?.[0]
@@ -596,10 +657,12 @@ const Molstar = (props) => {
     await pluginInstance.builders.structure.hierarchy.applyPreset(traj, "default");
   };
 
-  const loadStructure = async (pdbId, url, file = null, plugin) => {
+  const loadStructure = async (pdbId, url, file = null, plugin, isComparison = false, comparisonColorHex = null) => {
     //console.log("Fetching:", pdbId);
     if (plugin) {
-      plugin.clear();
+      if (!isComparison) {
+        plugin.clear();
+      }
       if (file) {
         const format = detectTrajectoryFormat(file);
 
@@ -613,7 +676,40 @@ const Molstar = (props) => {
             data: file,
           });
 
-          await loadTrajectory(plugin, data, format);
+          const traj = await plugin.builders.structure.parseTrajectory(
+            data,
+            format
+          );
+          await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
+
+          // Apply color to comparison structure
+          if (isComparison && comparisonColorHex) {
+            const structureCell = plugin?.managers?.structure?.hierarchy?.current?.structures?.[plugin?.managers?.structure?.hierarchy?.current?.structures?.length - 1]?.cell;
+            if (structureCell) {
+              comparisonStructureCell.current = structureCell;
+              const structureData = structureCell?.obj?.data;
+              if (structureData) {
+                const allAtoms = MS.struct.generator.atomGroups({});
+                const selection = Script.getStructureSelection(allAtoms, structureData);
+                if (selection) {
+                  const loci = StructureSelection.toLociWithSourceUnits(selection);
+                  const component = plugin?.managers?.structure?.hierarchy?.current?.structures?.[plugin?.managers?.structure?.hierarchy?.current?.structures?.length - 1]?.components?.[0];
+                  if (component && loci?.elements?.length > 0) {
+                    try {
+                      await setStructureOverpaint(
+                        plugin,
+                        [component],
+                        Color(parseInt(comparisonColorHex.replace("#", ""), 16)),
+                        async () => loci
+                      );
+                    } catch (error) {
+                      console.warn("Failed to apply comparison color", error);
+                    }
+                  }
+                }
+              }
+            }
+          }
         } catch (error) {
           console.warn("Failed to load structure with detected format", format, error);
 
@@ -623,7 +719,7 @@ const Molstar = (props) => {
                 data: file,
               });
 
-              await loadTrajectory(plugin, data, "mmcif");
+              await plugin.builders.structure.parseTrajectory(plugin, data, "mmcif");
               return;
             } catch (fallbackError) {
               console.warn("MMcIF fallback also failed", fallbackError);
@@ -716,6 +812,8 @@ Molstar.propTypes = {
   resultResidues: PropTypes.array.isRequired,
   selectedQualityScore: PropTypes.any.isRequired,
   radius: PropTypes.number,
+  comparisonFile: PropTypes.string,
+  comparisonMode: PropTypes.bool,
 };
 
 export default Molstar;

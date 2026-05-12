@@ -9,7 +9,6 @@ import { Job, Chain, Nucleotide, SelectedFragment, ChainElement } from "../utils
 import { fetchJobData, sendDataToAnalyze } from "../utils/api";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import ErrorPage from "../common/ErrorPage";
-import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResidueTable from "../visualizations/ResidueTable";
@@ -274,8 +273,6 @@ const Panel: React.FC = () => {
   const jobID = jobId;
   const navigate = useNavigate();
   const [showVisualization, setShowVisualization] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState(0);
   const [showFornaSettings, setShowFornaSettings] = useState(false);
   const [modelSelections, setModelSelections] = useState<Record<number, {chainsState: Chain[], selectedFragments: SelectedFragment[]}>>({});
 
@@ -317,10 +314,6 @@ const Panel: React.FC = () => {
 
   const handleInputChangeEnd = (event: SelectChangeEvent) => {
     setInputValueEnd(event.target.value);
-  };
-
-  const handleChange = (event: SelectChangeEvent) => {
-    setSelectedChain(event.target.value);
   };
 
   //do placeholder z max i min original_id nukleotydów podanego chain
@@ -901,6 +894,11 @@ const Panel: React.FC = () => {
                 // + "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
+                {myData.metadata.containsNonRNA &&
+                  <p>
+                    <span className="text-green-600">Note: The structure contains non-RNA components; only RNA will be included in the analysis.</span>
+                  </p>
+                }
               </div>
             </div>
             {/* Analysis setup */}
@@ -1243,10 +1241,6 @@ const Panel: React.FC = () => {
           <Footer />
         </div>
       </div>
-      {/* Mobile view */}
-      {/* <div className="md:hidden h-full w-full overflow-y-auto">
-        <SmallScreenPage />
-      </div> */}
     </div>
   );
 };

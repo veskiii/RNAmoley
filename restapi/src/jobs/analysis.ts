@@ -374,8 +374,7 @@ export async function analyzeStructure(
   const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
     const original_index = extractResidueNumber(res.residue);
     const chainID = extractChainID(res.residue);
-    console.log(`[Job ${jobID}, Model ${modelNumber}] Processing residue: "${res.residue}" -> chainID='${chainID}', original_index=${original_index}`);
-    
+
     // Try to find in numeration with fallbacks: auth first, then label
     let residueNumeration = Object.values(numeration).find(
       (n: NumerationItem) => n.auth_residue_number === original_index && n.auth_chain_id === chainID);
@@ -476,47 +475,65 @@ async function analyzeSphereFilesIncremental(
   const resultMap = new Map<number, nucleotideResult>();
   initialData.forEach((res) => resultMap.set(res.residue_number, { ...res }));
 
-  const batchSize = 10;
+  const batchSize = 5;
+  const maxRetries = 3;
+  const initialDelay = 1000; // 1 second
+
+  async function fetchWithRetry(file: string, retryCount = 0): Promise<nucleotideResult | null> {
+    try {
+      const res = await fetch(
+        `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelNumber}_sphere/${file}`,
+        { keepalive: true }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
+      }
+
+      const tmpMetrics: metrics = (await res.json()) as metrics;
+      const [chainId, originalNumberStr] = file.split(".")[0]?.split("_") ?? [];
+      const originalNumber = parseInt(originalNumberStr ?? "");
+      // find in initialData the nucleotide with this original index and chain id
+      if (!chainId || isNaN(originalNumber)) {
+        throw new Error(`Invalid file name format: ${file}`);
+      }
+      const initialNucleotide = initialData.find((n) => n.original_index === originalNumber && n.chainID === chainId);
+      if (!initialNucleotide) {
+        throw new Error(`Initial nucleotide not found for chain ${chainId} and index ${originalNumber} in file ${file}`);
+      }
+      const initialNucleotideResults = resultMap.get(initialNucleotide.residue_number);
+
+      return {
+        ...initialNucleotideResults,
+        metrics: tmpMetrics,
+      } as nucleotideResult;
+    } catch (error) {
+      const isTransientError = error instanceof Error && 
+        (error.message.includes('ECONNRESET') || 
+         error.message.includes('ETIMEDOUT') || 
+         error.message.includes('ECONNREFUSED') ||
+         error.message.includes('fetch failed'));
+      
+      if (isTransientError && retryCount < maxRetries) {
+        const delay = initialDelay * Math.pow(2, retryCount); // Exponential backoff
+        console.warn(`[Job ${jobID}, Model ${modelNumber}] Transient error for file ${file}, retry ${retryCount + 1}/${maxRetries} after ${delay}ms:`, error instanceof Error ? error.message : error);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return fetchWithRetry(file, retryCount + 1);
+      }
+
+      console.error(`Error processing file ${file}:`, error);
+      return null;
+    }
+  }
+
   for (let i = 0; i < files.length; i += batchSize) {
     const batchFiles = files.slice(i, i + batchSize);
-    const batchTasks = batchFiles.map((file) => async () => {
-      try {
-        const res = await fetch(
-          `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelNumber}_sphere/${file}`,
-          { keepalive: true }
-        );
+    const batchTasks = batchFiles.map((file) => fetchWithRetry(file));
 
-        if (!res.ok) {
-          throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
-        }
-
-        const tmpMetrics: metrics = (await res.json()) as metrics;
-        const [chainId, originalNumberStr] = file.split(".")[0]?.split("_") ?? [];
-        const originalNumber = parseInt(originalNumberStr ?? "");
-        // find in initialData the nucleotide with this original index and chain id
-        if (!chainId || isNaN(originalNumber)) {
-          throw new Error(`Invalid file name format: ${file}`);
-        }
-        const initialNucleotide = initialData.find((n) => n.original_index === originalNumber && n.chainID === chainId);
-        if (!initialNucleotide) {
-          throw new Error(`Initial nucleotide not found for chain ${chainId} and index ${originalNumber} in file ${file}`);
-        }
-        const initialNucleotideResults = resultMap.get(initialNucleotide.residue_number);
-
-        return {
-          ...initialNucleotideResults,
-          metrics: tmpMetrics,
-        } as nucleotideResult;
-      } catch (error) {
-        console.error(`Error processing file ${file}:`, error);
-        return null;
-      }
-    });
-
-    const batchResults = await Promise.allSettled(batchTasks.map((t) => t()));
+    const batchResults = await Promise.allSettled(batchTasks);
     const fulfilled = batchResults
       .filter(
-        (p): p is PromiseFulfilledResult<nucleotideResult> =>
+        (p): p is PromiseFulfilledResult<nucleotideResult | null> =>
           p.status === "fulfilled"
       )
       .map((p) => p.value)

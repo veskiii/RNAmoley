@@ -15,6 +15,7 @@ import {
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import { MolScriptBuilder as MS } from "molstar/lib/mol-script/language/builder";
 import { StructureSelectionQuery } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
+import { Color } from "molstar/lib/mol-util/color";
 
 const Molstar = (props) => {
   const {
@@ -338,6 +339,15 @@ const Molstar = (props) => {
           "pdb"
         );
         await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
+
+        const structures =
+          plugin.managers?.structure?.hierarchy?.current?.structures || [];
+        for (const structure of structures) {
+          await plugin.managers.structure.component.updateRepresentationsTheme(
+            structure.components,
+            { color: "uniform", colorParams: { value: Color(0xdadada) } }
+          );
+        }
       }
     }
   };

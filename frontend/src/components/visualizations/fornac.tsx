@@ -257,7 +257,7 @@ const FornaComponent = ({
         </div>
       ) : (
         <>
-          <div id="rna_ss" className="h-full">
+          <div id="rna_ss" className="h-full forna-main-view">
             <div
               id="tooltip"
               className="hidden absolute mt-2 right-2 bg-teal-500 text-white text-xs rounded px-2 py-1 z-50"

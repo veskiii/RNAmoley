@@ -1,4 +1,4 @@
-ARG NODE_VERSION=20.15.0
+ARG NODE_VERSION=22.13.0
 ARG PNPM_VERSION=9.4.0
 
 FROM python:3.12-slim-bookworm
@@ -33,19 +33,13 @@ SHELL ["/bin/bash", "-c"]
 
 RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# install node
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-ENV NVM_DIR=/root/.nvm
-ENV NODE_VERSION=20.15.0
+# install node via NodeSource (avoids nvm in non-interactive container builds)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
-RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
-RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
-ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
-
-# Install pnpm.
-RUN --mount=type=cache,target=/root/.npm \
-    npm install -g pnpm@${PNPM_VERSION}
+# Install pnpm globally (uses cached npm where possible)
+RUN npm install -g pnpm@${PNPM_VERSION}
 
 # install maxit
 WORKDIR /usr/src

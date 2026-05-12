@@ -12,18 +12,17 @@ import {
   QualityScore,
   SummaryJob,
 } from "../utils/types";
-import { Colors } from "../common/colors";
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
 import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
-import { colorMapByRange, getColor } from "../utils/ColorUtils";
+import { getColor } from "../utils/ColorUtils";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { fetchMyData, startSimulation } from "../utils/api";
-import SmallScreenPage from "../common/smallScreenPage";
 import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
+import ChainMetricLineChart from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 
 const SummaryPanel: React.FC = () => {
@@ -34,7 +33,17 @@ const SummaryPanel: React.FC = () => {
     modelNumber ? parseInt(modelNumber) : 1
   );
   const [selectedChain, setSelectedChain] = useState<string>("");
-  const [myData, setMyData] = useState<SummaryJob>();
+  const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
+  const [originalResults, setOriginalResults] = useState<SummaryJob>();
+  const [simulationResults, setSimulationResults] = useState<SummaryJob>();
+
+  const selectedModelStatus = originalResults?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+  const simulationTabEnabled = selectedModelStatus === "sim_completed";
+  // Which results are currently displayed: simulation (if selected and available) or original
+  const displayedResults =
+    selectedResultsSource === "simulation" && simulationTabEnabled && simulationResults
+      ? simulationResults
+      : originalResults;
   const [myError, setMyError] = useState<ErrorPageProps | null>(null);
   const [labelInterval, setLabelInterval] = useState(10);
   const [numbering, setNumbering] = useState(true);
@@ -43,31 +52,29 @@ const SummaryPanel: React.FC = () => {
   const [links, setLinks] = useState(true);
   const [showClashes, setShowClashes] = useState(true);
   const [animation, setAnimation] = useState(false);
-  const [showRangeDetails, setshowRangeDetails] = useState(false);
-  const [showDisplayOptions, setshowDisplayOptions] = useState(false);
   const [showFornaSettings, setShowFornaSettings] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedQualityScore, setQualityScore] = useState<QualityScore>(
     QualityScore.CLASH_SCORE
   );
+  const [selectedQualityScoreInResidueTable, setQualityScoreInResidueTable] = useState<QualityScore>(
+    QualityScore.CLASH_SCORE
+  );
   const [chainsState, setChainsState] = useState<Chain[]>([]);
-  const [sidebarTab, setSidebarTab] = useState(0);
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isStartingSimulation, setIsStartingSimulation] = useState(false);
   const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
-  const [simulationStartSuccess, setSimulationStartSuccess] = useState<string | null>(null);
-  const [selectedResultsSource, setSelectedResultsSource] = useState<ResultsSource>("original");
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
+  const [showResidueTable, setShowResidueTable] = useState(false);
+  const [comparisonModeMolstar, setComparisonModeMolstar] = useState(false);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
-  const selectedModelStatus = myData?.metadata.resultsStatus?.[selectedModel.toString()]?.status;
   const canStartSimulation =
     ["completed", "sim_completed", "sim_failed"].includes(selectedModelStatus || "") ||
-    (!selectedModelStatus && myData?.metadata.status === "completed");
-  const simulationTabEnabled = selectedModelStatus === "sim_completed";
+    (!selectedModelStatus && originalResults?.metadata.status === "completed");
   const isSimulationInProgress = ["sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(selectedModelStatus || "");
   const hasSimulationStarted = (selectedModelStatus || "").startsWith("sim_");
 
@@ -141,9 +148,9 @@ const SummaryPanel: React.FC = () => {
   const simulationStatusPresentation = getModelStatusPresentation(selectedModelStatus);
 
   const getClashesForForna = () => {
-    if (showClashes && myData) {
+    if (showClashes && displayedResults) {
       const clashes = new Set();
-      for (const item of myData.results.data) {
+      for (const item of displayedResults.results.data) {
         const sourceNum = item.residue_number;
 
         if (!item.residueMetrics) continue;
@@ -171,8 +178,8 @@ const SummaryPanel: React.FC = () => {
   };
 
   const colorGnodes = () => {
-    if (!myData || !myData.results || !myData.results.data) {
-      console.warn("No data in myData.results.data");
+    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+      console.warn("No data in displayedResults.results.data");
       return;
     }
     //@ts-ignore
@@ -189,7 +196,7 @@ const SummaryPanel: React.FC = () => {
       }
     });
 
-    myData.results.data.forEach((residue) => {
+    displayedResults.results.data.forEach((residue) => {
       try {
         const node = nodeByNumber.get(residue.residue_number);
         if (node) {
@@ -216,16 +223,16 @@ const SummaryPanel: React.FC = () => {
     showClashes,
     setAnimation,
     selectedQualityScore,
-    myData,
+    displayedResults,
   ]);
 
   const updateColorMaps = () => {
-    if (!myData || !myData.results || !myData.results.data) {
-      console.error("No data in myData.results.data");
+    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+      console.error("No data in displayedResults.results.data");
       return;
     }
 
-    myData.results.data.forEach((residue) => {
+    displayedResults.results.data.forEach((residue) => {
       var color = getColor(residue, QualityScore.CLASH_SCORE);
       clashScoreColorMap.set(residue.residue_number, color);
       color = getColor(residue, QualityScore.BAD_ANGLES);
@@ -237,83 +244,96 @@ const SummaryPanel: React.FC = () => {
 
   useEffect(() => {
     updateColorMaps();
-  }, [myData]);
+  }, [displayedResults]);
 
-
-  const toggleRangeMenuVisibility = () => {
-    setshowRangeDetails((prevShowMenu) => !prevShowMenu);
-  };
-
-  const toggleDisplayOptionsVisibility = () => {
-    setshowDisplayOptions((prevShowOptions) => !prevShowOptions);
-  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout; // Declare interval variable
     async function fetchData() {
-      //console.log("Start to fetch data");
       try {
-        const effectiveResultsSource =
-          selectedResultsSource === "simulation" && simulationTabEnabled
-            ? "simulation"
-            : "original";
-        const response = await fetchMyData(jobId, selectedModel, effectiveResultsSource);
-        const data = await response.json();
-        if (!response.ok) {
-          // console.log(
-          //     `Error during fetching data. Message: ${data.error} Status code: ${response.status}`
-          // );
+        // Always fetch original results so originalResults holds only the original data
+        const origResponse = await fetchMyData(jobId, selectedModel, "original");
+        const origData = await origResponse.json();
+
+        if (!origResponse.ok) {
           setMyError({
-            errorMessage: data.error,
-            statusCode: response.status.toString(),
+            errorMessage: origData.error,
+            statusCode: origResponse.status.toString(),
           });
           clearInterval(interval);
           return;
         } else {
-            setMyData((prevData) => {
-            if (JSON.stringify(prevData) !== JSON.stringify(data)) {
-              const chains = transformJobToChains(data);
-              setChainsState((prevChains) => 
-              JSON.stringify(prevChains) !== JSON.stringify(chains) ? chains : prevChains
-              );
-              setSelectedChain(chains[0]?.name || "");
-              return data;
+          setOriginalResults((prevData) => {
+            if (JSON.stringify(prevData) !== JSON.stringify(origData)) {
+              const chains = transformJobToChains(origData);
+
+              setChainsState((prevChains) => {
+                if (JSON.stringify(prevChains) !== JSON.stringify(chains)) {
+                  setSelectedChain((prevSelected) => {
+                    if (prevSelected && chains.some((c) => c.name === prevSelected)) {
+                      return prevSelected;
+                    }
+                    return chains[0]?.name || "";
+                  });
+                  return chains;
+                }
+                return prevChains;
+              });
+
+              return origData;
             }
             return prevData;
-            });
-          console.log("data:", data);
+          });
 
-            if (data.metadata.status === "failed") {
+          if (origData.metadata.status === "failed") {
             setMyError({
-              errorMessage: data.metadata.error_message,
+              errorMessage: origData.metadata.error_message,
               statusCode: "500",
             });
             clearInterval(interval);
             return;
-            }
-            if (
-              data.results &&
-              (data.metadata.status === "running" || data.metadata.status === "completed" || isSimulationStatus(data.metadata.status)) &&
-              data.results &&
-              isLoading &&
-              !hasStoppedLoading.current
-            ) {
-              console.log("stop loading ", isLoading);
-              setInitialQualityScore(data);
-              setIsLoading(false);
-              hasStoppedLoading.current = true;
-            }
+          }
 
-            const currentModelStatus = data.metadata.resultsStatus?.[selectedModel.toString()]?.status;
-            const isBackgroundWorkActive =
-              ["creating", "starting", "running", "simulation_starting", "simulation_running"].includes(data.metadata.status) ||
-              ["starting", "running", "sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(currentModelStatus || "");
+          if (
+            origData.results &&
+            (origData.metadata.status === "running" || origData.metadata.status === "completed" || isSimulationStatus(origData.metadata.status)) &&
+            isLoading &&
+            !hasStoppedLoading.current
+          ) {
+            setInitialQualityScore(origData);
+            setIsLoading(false);
+            hasStoppedLoading.current = true;
+          }
 
-            if (!isBackgroundWorkActive) {
-              if (isLoading && data.results) setInitialQualityScore(data);
-              clearInterval(interval);
-              setIsLoading(false);
+          const currentModelStatus = origData.metadata.resultsStatus?.[selectedModel.toString()]?.status;
+          const isBackgroundWorkActive =
+            ["creating", "starting", "running", "simulation_starting", "simulation_running"].includes(origData.metadata.status) ||
+            ["starting", "running", "sim_starting", "sim_running", "sim_finished", "sim_analyzing"].includes(currentModelStatus || "");
+
+          if (!isBackgroundWorkActive) {
+            if (isLoading && origData.results) setInitialQualityScore(origData);
+            clearInterval(interval);
+            setIsLoading(false);
+          }
+        }
+
+        // If simulation tab is enabled, fetch simulation results separately and store them in simulationResults
+        if (simulationTabEnabled) {
+          try {
+            const simResponse = await fetchMyData(jobId, selectedModel, "simulation");
+            const simData = await simResponse.json();
+            if (simResponse.ok) {
+              setSimulationResults((prev) => {
+                return JSON.stringify(prev) !== JSON.stringify(simData) ? simData : prev;
+              });
+            } else {
+              // If simulation fetch failed, clear simulationResults to avoid showing stale sim data
+              setSimulationResults(undefined);
             }
+          } catch (err) {
+            console.error("Failed to fetch simulation data:", err);
+            setSimulationResults(undefined);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -330,7 +350,7 @@ const SummaryPanel: React.FC = () => {
 
     // Cleanup interval when component unmounts or jobId changes
     return () => clearInterval(interval);
-  }, [jobId, selectedModel, selectedResultsSource, refreshToken]);
+  }, [jobId, selectedModel, selectedResultsSource, refreshToken, simulationTabEnabled]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
@@ -348,7 +368,6 @@ const SummaryPanel: React.FC = () => {
 
     setIsStartingSimulation(true);
     setSimulationStartError(null);
-    setSimulationStartSuccess(null);
 
     try {
       await startSimulation({
@@ -360,7 +379,6 @@ const SummaryPanel: React.FC = () => {
         rmsdCutoff: values.rmsdCutoff,
       });
 
-      setSimulationStartSuccess("Simulation started.");
       setIsSimulationModalOpen(false);
       setSelectedResultsSource("original");
       setRefreshToken((prev) => prev + 1);
@@ -385,124 +403,10 @@ const SummaryPanel: React.FC = () => {
     return <Loading  message="Preparing data and computing initial analysis..."/>;
   }
 
-  if (!myData || !myData.results || !myData.results.data ) {
+  if (!originalResults || !originalResults.results || !originalResults.results.data ) {
     return <ErrorPage />;
   }
 
-
-  function createRangeMenu() {
-    return (
-      <div>
-        <div>
-          <h2>
-            <b>Clashscore</b>
-          </h2>
-          <div className="ml-4">
-            <div className="mb-1">
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(1) }}
-              >
-                &nbsp;Clashscore &lt; 10 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(2) }}
-              >
-                &nbsp; 10 &le;Clashscore &lt; 40 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(3) }}
-              >
-                &nbsp; 40 &le;Clashscore &lt; 70 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(4) }}
-              >
-                &nbsp; 70 &le;Clashscore &lt; 100 &nbsp;
-                <br />
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(5) }}
-              >
-                &nbsp;Clashscore &gt; 100 &nbsp;
-                <br />
-              </span>
-            </div>
-          </div>
-          <h2>
-            <b> Bad bonds </b>
-          </h2>
-          <div className="ml-4">
-            <div className="mb-1">
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(1) }}
-              >
-                &nbsp; Bad bonds &lt; 0,01% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(3) }}
-              >
-                &nbsp; 0,01% &le; Bad bonds &lt; 0,2% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(5) }}
-              >
-                &nbsp; Bad bonds &ge; 0,2% &nbsp;
-                <br />{" "}
-              </span>
-            </div>
-          </div>
-          <h2>
-            <b> Bad angles </b>
-          </h2>
-          <div className="ml-4">
-            &nbsp;
-            <div className="mb-1">
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(1) }}
-              >
-                &nbsp; Bad angles &lt; 0,1% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(3) }}
-              >
-                &nbsp; 0,1% &le; Bad angles &lt; 0,5% &nbsp;
-                <br />{" "}
-              </span>
-              <span
-                className="rounded"
-                style={{ backgroundColor: colorMapByRange.get(5) }}
-              >
-                &nbsp; Bad angles &ge; 0,5% &nbsp;
-                <br />{" "}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleLabelIntervalChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setLabelInterval(parseInt(e.target.value, 10));
-  };
 
   const handleDownloadFornaView = async () => {
     if (!fornaContainerRef.current) {
@@ -526,91 +430,23 @@ const SummaryPanel: React.FC = () => {
     }
   };
 
-  const handleCheckboxChange =
-    (setter: (checked: boolean) => void) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setter(e.target.checked);
-    };
-
     const changeModel = (modelNum: number) => {
       if (
-        myData &&
-        myData.metadata.resultsStatus &&
-        myData.metadata.resultsStatus[modelNum.toString()] &&
-        myData.metadata.resultsStatus[modelNum.toString()].status === "starting"
+        originalResults &&
+        originalResults.metadata.resultsStatus &&
+        originalResults.metadata.resultsStatus[modelNum.toString()] &&
+        originalResults.metadata.resultsStatus[modelNum.toString()].status === "starting"
       ) {
         return;
       }
 
-      const targetModelStatus = myData?.metadata.resultsStatus?.[modelNum.toString()]?.status;
+      const targetModelStatus = originalResults?.metadata.resultsStatus?.[modelNum.toString()]?.status;
       if (selectedResultsSource === "simulation" && targetModelStatus !== "sim_completed") {
         setSelectedResultsSource("original");
       }
 
       setSelectedModel(modelNum);
     }
-
-  function createFornacDisplayDetails() {
-    return (
-      <div>
-        <div className="flex flex-col">
-          {numbering && (
-            <label>
-              Label interval:
-              <br />
-              <input
-                type="number"
-                value={labelInterval}
-                onChange={handleLabelIntervalChange}
-                placeholder="Label Interval"
-                className="rounded-lg w-24 mb-2 border-gray-300 border-2 pl-2 p-1"
-              />
-            </label>
-          )}
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={numbering}
-              onChange={handleCheckboxChange(setNumbering)}
-            />{" "}
-            Numbering
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={nodeOutline}
-              onChange={handleCheckboxChange(setNodeOutline)}
-            />{" "}
-            Node Outline
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={nodeLabel}
-              onChange={handleCheckboxChange(setNodeLabel)}
-            />{" "}
-            Node Label
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={links}
-              onChange={handleCheckboxChange(setLinks)}
-            />{" "}
-            Links
-          </label>
-          <label className="options">
-            <input
-              type="checkbox"
-              checked={showClashes}
-              onChange={handleCheckboxChange(setShowClashes)}
-            />{" "}
-            Clashes
-          </label>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
@@ -626,11 +462,11 @@ const SummaryPanel: React.FC = () => {
             <div className="mt-10 text-gray-500">
               <p>Input data</p>
               <div className="mt-2 space-y-0">
-                <p><span>Structure:</span><i className="ml-2">{myData.name || "Unnamed job"}</i></p>
+                <p><span>Structure:</span><i className="ml-2">{originalResults.name || "Unnamed job"}</i></p>
                 <p><span>Analysed models (chains): </span>
-                {myData.metadata.resultsStatus && Object.keys(myData.metadata.resultsStatus).length > 0 ? (
+                {originalResults.metadata.resultsStatus && Object.keys(originalResults.metadata.resultsStatus).length > 0 ? (
                     (() => {
-                      const entries = Object.entries(myData.metadata.resultsStatus);
+                      const entries = Object.entries(originalResults.metadata.resultsStatus);
                       return entries.map(([modelNum, modelStatus], idx) => (
                         <span key={modelNum}>
                           {modelNum} ({modelStatus.chains?.join(", ") || ""}){idx < entries.length - 1 ? ", " : ""}
@@ -641,11 +477,16 @@ const SummaryPanel: React.FC = () => {
                   <p>No analysed models available.</p>
                 )}</p>
                 <p><span>Local analysis {
-                myData.metadata.analyzeNeighborhoods ? 
-                "enabled; sphere radius (Å): " + myData.metadata.radius
+                originalResults.metadata.analyzeNeighborhoods ? 
+                "enabled; sphere radius (Å): " + originalResults.metadata.radius
                 // + "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
+                {originalResults.metadata.containsNonRNA &&
+                  <p>
+                    <span className="text-green-600">Note: The input structure contains non-RNA components; results are reported for RNA only.</span>
+                  </p>
+                }
               </div>
             </div>
             {/* Copy link and download buttons */}
@@ -688,8 +529,8 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
-                    {myData.metadata.models.map((modelNum) => {
-                      const modelStatus = myData.metadata.resultsStatus?.[modelNum.toString()]?.status;
+                    {originalResults.metadata.models.map((modelNum) => {
+                      const modelStatus = originalResults.metadata.resultsStatus?.[modelNum.toString()]?.status;
                       const modelListStatus = getModelListStatus(modelStatus);
                       const modelStatusPresentation = getModelStatusPresentation(modelListStatus);
                       const isModelAccessable = modelStatus && ["running", "completed", "sim_starting", "sim_running", "sim_finished", "sim_analyzing", "sim_completed", "sim_failed"].includes(modelStatus);
@@ -698,7 +539,7 @@ const SummaryPanel: React.FC = () => {
                         <div
                           key={"model" + modelNum}
                           className={`w-12 p-2 rounded shadow transition-all flex-shrink-0
-                            ${myData && isModelAccessable ?
+                            ${originalResults && isModelAccessable ?
                                 "cursor-pointer bg-white" : "cursor-not-allowed bg-gray-200"}
                             ${selectedModel === modelNum ? "border-2 border-moley-darkGreen" : "border border-transparent"
                           } flex items-center justify-center`}
@@ -727,8 +568,11 @@ const SummaryPanel: React.FC = () => {
                 <div className="overflow-x-auto">
                   <GlobalResultsTable
                     selectedModel={selectedModel}
-                    modelMetrics={myData.results.modelMetrics} 
-                    fragmentMetrics={myData.results.fragmentMetrics} />
+                    modelMetrics={originalResults.results.modelMetrics} 
+                    fragmentMetrics={originalResults.results.fragmentMetrics} 
+                    simModelMetrics={simulationResults?.results.modelMetrics}
+                    simFragmentMetrics={simulationResults?.results.fragmentMetrics}
+                  />
                 </div>
               </div>
               {/* Chain selection */}
@@ -747,7 +591,7 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </span>
                 </div>
-                <div>
+                <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
                   {chainsState.map((chain) => {
                     return (
                       <div
@@ -764,10 +608,10 @@ const SummaryPanel: React.FC = () => {
                   })}
                 </div>
               </div>
-              {/* Local quality map */}
-              <div>
+              {/* Line plots of chain quality */}
+              <div className="mt-6">
                 <div>
-                  <label>Local quality map (per residue)</label>
+                  <label>Local quality line charts (per residue)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                     <span
                       aria-label="What this field does"
@@ -776,21 +620,76 @@ const SummaryPanel: React.FC = () => {
                       ?
                     </span>
                     <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                      Displays local quality score for each residue's neighborhood. Select a metric to color the structure visualization accordingly.
+                      Display line charts of Clash score, bad bonds, bad angles and suiteness for each residue's neighborhood. Hover a mouse on a point to see the exact value for selected residue.
                     </span>
                   </span>
                 </div>
-                <div className="overflow-x-auto">
-                  <ResultsResidueTable
-                  key={`residue-table-${selectedModel}-${selectedResultsSource}`}
-                  data={myData.results.data}
-                  analyzeNeighborhood={myData.metadata.analyzeNeighborhoods}
-                  selectedScore={selectedQualityScore}
-                  setSelectedScore={setQualityScore}
-                  modelStatus={selectedModelStatus}
-                  selectedChain={selectedChain}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <ChainMetricLineChart
+                    data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.CLASH_SCORE}
+                  />
+                  <ChainMetricLineChart
+                    data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.BAD_BONDS}
+                  />
+                  <ChainMetricLineChart
+                    data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.BAD_ANGLES}
+                  />
+                  <ChainMetricLineChart
+                    data={originalResults.results.data}
+                    data2={simulationResults?.results.data}
+                    selectedChain={selectedChain}
+                    selectedScore={QualityScore.SUITENESS}
                   />
                 </div>
+              </div>
+              {/* Local quality map */}
+              <div className="mt-6">
+                <button
+                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
+                  onClick={() => setShowResidueTable(!showResidueTable)}
+                  title={"Show or hide local quality map."}
+                >
+                  {showResidueTable ? "Hide local quality map ▲" : "Show local quality map ▼"}
+                </button>
+                {showResidueTable && (
+                  <div>
+                    <div>
+                      <label>Local quality map (per residue)</label>
+                      <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                        <span
+                          aria-label="What this field does"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                        >
+                          ?
+                        </span>
+                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                          Displays local quality score for each residue's neighborhood. Select a metric to color the data accordingly.
+                        </span>
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+                      <ResultsResidueTable
+                      key={`residue-table-${selectedModel}`}
+                      data={originalResults.results.data}
+                      simData={simulationResults?.results.data}
+                      analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
+                      selectedScore={selectedQualityScoreInResidueTable}
+                      setSelectedScore={setQualityScoreInResidueTable}
+                      modelStatus={selectedModelStatus}
+                      selectedChain={selectedChain}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               {/* Visualizations */}
               <div className="mt-6">
@@ -807,6 +706,129 @@ const SummaryPanel: React.FC = () => {
                         Displays the 2D and 3D structure colored according to the selected quality score.
                       </span>
                     </span>
+                </div>
+                {hasSimulationStarted && (
+                  <div className="my-3">
+                    <div className="flex flex-row gap-2">
+                      <button
+                        tabIndex={0}
+                        onClick={() => setSelectedResultsSource("original")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedResultsSource("original");
+                          }
+                        }}
+                        className={`h-auto w-24 px-2 mt-0 rounded-md text-center text-sm transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                          selectedResultsSource === "original"
+                            ? "bg-moley-darkGreen text-white"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        }`}
+                      >
+                        Original
+                      </button>
+
+                      <button
+                        tabIndex={simulationTabEnabled ? 0 : -1}
+                        aria-disabled={!simulationTabEnabled}
+                        onClick={() => {
+                          if (simulationTabEnabled) {
+                            setSelectedResultsSource("simulation");
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (!simulationTabEnabled) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedResultsSource("simulation");
+                          }
+                        }}
+                        className={`w-24 h-auto mt-0 rounded-md px-2 py-1 text-center text-sm transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
+                          selectedResultsSource === "simulation"
+                            ? "bg-moley-darkGreen text-white"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : ""}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="mr-1">Refined</span>
+                          {isSimulationInProgress && (
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                          )}
+                        </div>
+                      </button>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={comparisonModeMolstar}
+                          onChange={() => {
+                            if (simulationTabEnabled) {
+                              setComparisonModeMolstar(!comparisonModeMolstar);
+                            }
+                          }}
+                          disabled={!simulationTabEnabled}
+                          className="cursor-pointer disabled:cursor-not-allowed"
+                        />
+                        <span className="text-sm">Compare 3D</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-row gap-4 my-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.CLASH_SCORE}
+                      checked={selectedQualityScore === QualityScore.CLASH_SCORE}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Clash Score</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.BAD_BONDS}
+                      checked={selectedQualityScore === QualityScore.BAD_BONDS}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Bad Bonds</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.BAD_ANGLES}
+                      checked={selectedQualityScore === QualityScore.BAD_ANGLES}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Bad Angles</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.SUITENESS}
+                      checked={selectedQualityScore === QualityScore.SUITENESS}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Suiteness</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qualityScore"
+                      value={QualityScore.SUGAR_PUCKER_OUT}
+                      checked={selectedQualityScore === QualityScore.SUGAR_PUCKER_OUT}
+                      onChange={(e) => setQualityScore(e.target.value as QualityScore)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Sugar Pucker Outlier</span>
+                  </label>
                 </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
                   <div className="w-full md:w-1/2 h-full relative border border-gray-300" ref={fornaContainerRef}>
@@ -913,8 +935,8 @@ const SummaryPanel: React.FC = () => {
 
                     <FornacSummaryComponent
                       key={`forna-${selectedModel}-${selectedResultsSource}`}
-                      structures={myData.annotation.map((a) => a.dotbracket)}
-                      sequences={myData.annotation.map((a) => a.sequnece)}
+                      structures={displayedResults?.annotation.map((a) => a.dotbracket) || originalResults.annotation.map((a) => a.dotbracket)}
+                      sequences={displayedResults?.annotation.map((a) => a.sequnece) || originalResults.annotation.map((a) => a.sequnece)}
                       clashMap={getClashesForForna() || []}
                       chains={chainsState}
                       setChains={setChainsState}
@@ -926,7 +948,7 @@ const SummaryPanel: React.FC = () => {
                       showClashes={showClashes}
                       directionArrows={false}
                       setAnimation={animation}
-                      job={myData}
+                      job={displayedResults || originalResults}
                       colorGnodes={colorGnodes}
                     />
                   </div>
@@ -934,104 +956,56 @@ const SummaryPanel: React.FC = () => {
                     <Molstar
                       key={`molstar-${selectedModel}-${selectedResultsSource}`}
                       useInterface={true}
-                      file={myData.pdb_file_string}
+                      file={comparisonModeMolstar ? originalResults.pdb_file_string : displayedResults?.pdb_file_string || originalResults.pdb_file_string}
                       chains={chainsState}
                       setChains={setChainsState}
                       initialized={initialized}
                       setInitialized={setInitialized}
-                      resultResidues={myData.results.data}
+                      resultResidues={comparisonModeMolstar ? originalResults.results.data : displayedResults?.results.data || originalResults.results.data}
                       selectedQualityScore={selectedQualityScore}
-                      radius={myData.metadata.radius}
+                      radius={originalResults.metadata.radius}
+                      comparisonFile={simulationTabEnabled && simulationResults ? simulationResults.pdb_file_string : undefined}
+                      comparisonMode={comparisonModeMolstar}
                     />
                   </div>
                 </div>
               </div>
             </div>
             {/* Correct the structure */}
-            <div className="mb-6">
-              <button
-                role="button"
-                tabIndex={canStartSimulation ? 0 : -1}
-                disabled={!canStartSimulation}
-                onClick={() => {
-                  if (!canStartSimulation) return;
-                  setSimulationStartError(null);
-                  setSimulationStartSuccess(null);
-                  setIsSimulationModalOpen(true);
-                }}
-                onKeyDown={(e) => {
-                  if (!canStartSimulation) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
+            <div className="my-6">
+              <div className="flex flex-row items-center gap-x-4">
+                <button
+                  role="button"
+                  tabIndex={canStartSimulation ? 0 : -1}
+                  disabled={!canStartSimulation}
+                  onClick={() => {
+                    if (!canStartSimulation) return;
                     setSimulationStartError(null);
-                    setSimulationStartSuccess(null);
                     setIsSimulationModalOpen(true);
-                  }
-                }}
-                className="rounded-md px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
-              >
-                Run refinement
-              </button>
-
-              {hasSimulationStarted && (
-                <div className="mt-3 border-t border-gray-200 pt-3">
-                  <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">Results source</div>
-                  <div className="flex flex-row gap-2">
-                    <button
-                      tabIndex={0}
-                      onClick={() => setSelectedResultsSource("original")}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setSelectedResultsSource("original");
-                        }
-                      }}
-                      className={`w-52 mt-2 rounded-md px-3 py-2 text-center text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
-                        selectedResultsSource === "original"
-                          ? "bg-moley-darkGreen text-white"
-                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                      }`}
-                    >
-                      Original
-                    </button>
-
-                    <button
-                      tabIndex={simulationTabEnabled ? 0 : -1}
-                      aria-disabled={!simulationTabEnabled}
-                      onClick={() => {
-                        if (simulationTabEnabled) {
-                          setSelectedResultsSource("simulation");
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (!simulationTabEnabled) return;
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setSelectedResultsSource("simulation");
-                        }
-                      }}
-                      className={`w-52 mt-2 rounded-md px-3 py-2 text-center text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
-                        selectedResultsSource === "simulation"
-                          ? "bg-moley-darkGreen text-white"
-                          : "bg-gray-100 text-gray-800"
-                      } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-200"}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="mr-1">Simulation</span>
-                        {isSimulationInProgress && (
-                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                        )}
-                      </div>
-                      <div>
-                        <span className={`inline-block rounded-full px-2 py-1 text-xs ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
-                          {simulationStatusPresentation.label || "No simulation"}
-                        </span>
-                      </div>
-                    </button>
+                  }}
+                  onKeyDown={(e) => {
+                    if (!canStartSimulation) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSimulationStartError(null);
+                      setIsSimulationModalOpen(true);
+                    }
+                  }}
+                  className="rounded-md mt-0 px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
+                >
+                  Run refinement
+                </button>
+                {hasSimulationStarted &&
+                  <div>
+                    <span className={`w-48 inline-block rounded-full px-2 py-2 text-xs text-center ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                      {simulationStatusPresentation.label || "No simulation"}
+                    </span>
                   </div>
-                </div>
-              )}
+                }
+              </div>
+
+              
             </div>
           </div>
           <Footer />
