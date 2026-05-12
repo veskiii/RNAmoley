@@ -266,10 +266,20 @@ const SummaryPanel: React.FC = () => {
           setOriginalResults((prevData) => {
             if (JSON.stringify(prevData) !== JSON.stringify(origData)) {
               const chains = transformJobToChains(origData);
-              setChainsState((prevChains) =>
-                JSON.stringify(prevChains) !== JSON.stringify(chains) ? chains : prevChains
-              );
-              setSelectedChain(chains[0]?.name || "");
+
+              setChainsState((prevChains) => {
+                if (JSON.stringify(prevChains) !== JSON.stringify(chains)) {
+                  setSelectedChain((prevSelected) => {
+                    if (prevSelected && chains.some((c) => c.name === prevSelected)) {
+                      return prevSelected;
+                    }
+                    return chains[0]?.name || "";
+                  });
+                  return chains;
+                }
+                return prevChains;
+              });
+
               return origData;
             }
             return prevData;
