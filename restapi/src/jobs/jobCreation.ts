@@ -11,6 +11,19 @@ import {
 import { Queue, Worker } from "bullmq";
 import { createJobQuery } from "./queries.js";
 
+interface OriginalFileInspection {
+  fileFormat: "pdb" | "cif" | "unknown";
+  containsOnlyRNA: boolean;
+  hasRNA: boolean;
+  hasProtein: boolean;
+  hasDNA: boolean;
+  hasOtherNonWaterComponents: boolean;
+  hasWater: boolean;
+  observedResidues: string[];
+  nonRNAContents: string[];
+  notes: string[];
+}
+
 export const createJobQueue = new Queue("create-job", {
   connection: {
     host: process.env.REDIS_HOST,
@@ -78,6 +91,13 @@ export async function addCreateJobTask(
 export const performJobCreation = async (job:NewJob & { modelsDir?: string }) => {
     const modelsDir = job.modelsDir || "models";
     var pdbFile;
+
+  const originalInspection = await inspectOriginalFileComposition(job.id, job.new_filename, job.metadata);
+  if (originalInspection) {
+    job.metadata.containsNonRNA = !originalInspection.containsOnlyRNA;
+    job.metadata.nonRNAContents = originalInspection.nonRNAContents;
+    await saveMetadata(job.id, job.metadata);
+  }
 
     // Convert to PDB if needed
     if (job.original_extension != "pdb") {
@@ -150,6 +170,26 @@ const convertToPDB = async (jobId: UUID, metadata: Metadata, newFilename: string
         console.log(`Conversion for job ${jobId} successful.`);
     }
 }
+
+const inspectOriginalFileComposition = async (
+  jobId: UUID,
+  filename: string,
+  metadata: Metadata
+): Promise<OriginalFileInspection | undefined> => {
+  const inspectResponse = await fetch(
+    `${TOOLS_URL}/inspectOriginal?id=${jobId}&filename=${filename}`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!inspectResponse.ok) {
+    handleAnalysisError(jobId, metadata, "Original file inspection failed.");
+    return;
+  }
+
+  return (await inspectResponse.json()) as OriginalFileInspection;
+};
 
 const splitFileIntoModels = async (jobId : UUID, sourceFormat: string, modelsDir = "models") : Promise<number[]> => {
   const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`, {

@@ -472,6 +472,11 @@ const SummaryPanel: React.FC = () => {
                 // + "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
+                {originalResults.metadata.containsNonRNA &&
+                  <p>
+                    <span className="text-green-600">Note: The input structure contains non-RNA components; results are reported for RNA only.</span>
+                  </p>
+                }
               </div>
             </div>
             {/* Copy link and download buttons */}
@@ -576,7 +581,7 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </span>
                 </div>
-                <div>
+                <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
                   {chainsState.map((chain) => {
                     return (
                       <div

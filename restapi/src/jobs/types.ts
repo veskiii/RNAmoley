@@ -86,6 +86,8 @@ export interface Metadata {
   interval?: number;
   error_message?: string;
   analyzeNeighborhoods?: boolean;
+  containsNonRNA?: boolean;
+  nonRNAContents?: string[];
 }
 
 export interface SimulationInfo {

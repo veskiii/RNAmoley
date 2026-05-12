@@ -179,6 +179,8 @@ export interface Metadata {
   analyzeNeighborhoods?: boolean;
   radius?: number;
   interval?: number;
+  containsNonRNA?: boolean;
+  nonRNAContents?: string[];
 }
 
 export enum QualityScore {

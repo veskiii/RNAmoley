@@ -894,6 +894,11 @@ const Panel: React.FC = () => {
                 // + "; sampling interval: " + myData.metadata.interval
                 : "disabled"}
                 </span></p>
+                {myData.metadata.containsNonRNA &&
+                  <p>
+                    <span className="text-green-600">Note: The structure contains non-RNA components; only RNA will be included in the analysis.</span>
+                  </p>
+                }
               </div>
             </div>
             {/* Analysis setup */}

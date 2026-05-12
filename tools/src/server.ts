@@ -1,6 +1,7 @@
 import express from "express";
 import {
   correctModels,
+  inspectOriginalFileComposition,
   runAnnotator,
   runConverter,
   runFragmentExtraction,
@@ -87,6 +88,30 @@ app.post("/convert", (req, res) => {
       res.status(200).send(output);
     })
     .catch((error) => {
+      res.status(500).send(error);
+    });
+});
+
+app.post("/inspectOriginal", (req, res) => {
+  const id = req.query.id as string;
+  const filename = req.query.filename as string;
+
+  if (!id) {
+    res.status(400).send({ error: "Inspection error: id is required" });
+    return;
+  }
+
+  if (!filename) {
+    res.status(400).send({ error: "Inspection error: filename is required" });
+    return;
+  }
+
+  inspectOriginalFileComposition(id, filename)
+    .then((output) => {
+      res.status(200).send(output);
+    })
+    .catch((error) => {
+      console.log(error);
       res.status(500).send(error);
     });
 });

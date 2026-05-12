@@ -53,10 +53,323 @@ const MOTIF_TYPE_NAME_MAP = {
   Junction: "J",
 };
 
+const PROTEIN_RESIDUES = new Set([
+  "ALA",
+  "ARG",
+  "ASN",
+  "ASP",
+  "CYS",
+  "GLN",
+  "GLU",
+  "GLY",
+  "HIS",
+  "ILE",
+  "LEU",
+  "LYS",
+  "MET",
+  "PHE",
+  "PRO",
+  "SER",
+  "THR",
+  "TRP",
+  "TYR",
+  "VAL",
+  "SEC",
+  "PYL",
+]);
+
+const DNA_RESIDUES = new Set([
+  "DA",
+  "DC",
+  "DG",
+  "DT",
+  "DI",
+  "ADE",
+  "CYT",
+  "GUA",
+  "THY",
+  "URA",
+]);
+
+const WATER_RESIDUES = new Set(["HOH", "WAT", "H2O", "DOD"]);
+
+const ION_RESIDUES = new Set([
+  "NA",
+  "K",
+  "MG",
+  "MN",
+  "CA",
+  "ZN",
+  "FE",
+  "CL",
+  "BR",
+  "IOD",
+  "SR",
+  "CD",
+  "CO",
+  "CU",
+  "NI",
+]);
+
+interface CompositionInspection {
+  fileFormat: "pdb" | "cif" | "unknown";
+  containsOnlyRNA: boolean;
+  hasRNA: boolean;
+  hasProtein: boolean;
+  hasDNA: boolean;
+  hasOtherNonWaterComponents: boolean;
+  hasWater: boolean;
+  observedResidues: string[];
+  nonRNAContents: string[];
+  notes: string[];
+}
+
 async function formatOutput(output: string) {
   const splt = output.split("/\r?\n/");
   const filtered = splt.filter((line) => line !== "");
   return JSON.stringify(filtered);
+}
+
+function classifyResidueName(residueName: string) {
+  const normalized = residueName.trim().toUpperCase();
+
+  if (WATER_RESIDUES.has(normalized)) {
+    return "water";
+  }
+
+  if (PROTEIN_RESIDUES.has(normalized)) {
+    return "protein";
+  }
+
+  if (DNA_RESIDUES.has(normalized)) {
+    return "dna";
+  }
+
+  if (ION_RESIDUES.has(normalized)) {
+    return "ion";
+  }
+
+  if (normalized === "A" || normalized === "C" || normalized === "G" || normalized === "U" || normalized === "I") {
+    return "rna";
+  }
+
+  return "other";
+}
+
+function inspectPdbContent(content: string): CompositionInspection {
+  const residues = new Set<string>();
+  const nonRNAContents = new Set<string>();
+  let hasRNA = false;
+  let hasProtein = false;
+  let hasDNA = false;
+  let hasWater = false;
+  let hasOtherNonWaterComponents = false;
+
+  for (const line of content.split(/\r?\n/)) {
+    if (!line.startsWith("ATOM") && !line.startsWith("HETATM")) {
+      continue;
+    }
+
+    const residueName = line.slice(17, 20).trim();
+    if (!residueName) {
+      continue;
+    }
+
+    residues.add(residueName);
+
+    const category = classifyResidueName(residueName);
+    if (category === "rna") {
+      hasRNA = true;
+    } else if (category === "protein") {
+      hasProtein = true;
+      nonRNAContents.add(residueName);
+    } else if (category === "dna") {
+      hasDNA = true;
+      nonRNAContents.add(residueName);
+    } else if (category === "water") {
+      hasWater = true;
+      nonRNAContents.add(residueName);
+    } else if (category === "other") {
+      hasOtherNonWaterComponents = true;
+      nonRNAContents.add(residueName);
+    }
+  }
+
+  return {
+    fileFormat: "pdb",
+    containsOnlyRNA: hasRNA && !hasProtein && !hasDNA && !hasOtherNonWaterComponents,
+    hasRNA,
+    hasProtein,
+    hasDNA,
+    hasOtherNonWaterComponents,
+    hasWater,
+    observedResidues: Array.from(residues).sort(),
+    nonRNAContents: Array.from(nonRNAContents).sort(),
+    notes: [
+      "PDB inspection is heuristic and focuses on residue names in ATOM/HETATM records.",
+    ],
+  };
+}
+
+function tokenizeMmCifRow(line: string) {
+  const tokens = line.match(/(?:'[^']*'|\"[^\"]*\"|\S+)/g) ?? [];
+  return tokens.map((token) => token.replace(/^['\"]|['\"]$/g, ""));
+}
+
+function inspectMmCifContent(content: string): CompositionInspection {
+  const residues = new Set<string>();
+  const nonRNAContents = new Set<string>();
+  let hasRNA = false;
+  let hasProtein = false;
+  let hasDNA = false;
+  let hasWater = false;
+  let hasOtherNonWaterComponents = false;
+
+  const lines = content.split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line) {
+      continue;
+    }
+
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine.startsWith("loop_")) {
+      continue;
+    }
+
+    const headers: string[] = [];
+    let headerIndex = index + 1;
+
+    while (headerIndex < lines.length) {
+      const headerLine = lines[headerIndex];
+      if (!headerLine) {
+        break;
+      }
+
+      const trimmedHeaderLine = headerLine.trim();
+      if (!trimmedHeaderLine.startsWith("_")) {
+        break;
+      }
+
+      headers.push(trimmedHeaderLine);
+      headerIndex += 1;
+    }
+
+    const groupIndex = headers.indexOf("_atom_site.group_PDB");
+    const compIdIndex = headers.indexOf("_atom_site.label_comp_id");
+    const altCompIdIndex = headers.indexOf("_atom_site.auth_comp_id");
+
+    if (groupIndex === -1 || (compIdIndex === -1 && altCompIdIndex === -1)) {
+      continue;
+    }
+
+    let rowIndex = headerIndex;
+    while (rowIndex < lines.length) {
+      const rowLine = lines[rowIndex];
+      if (!rowLine) {
+        break;
+      }
+
+      const trimmedRowLine = rowLine.trim();
+
+      if (!trimmedRowLine || trimmedRowLine.startsWith("#") || trimmedRowLine.startsWith("loop_") || trimmedRowLine.startsWith("data_")) {
+        break;
+      }
+
+      if (trimmedRowLine.startsWith("_")) {
+        break;
+      }
+
+      const row = tokenizeMmCifRow(trimmedRowLine);
+      const residueName = (row[compIdIndex] || row[altCompIdIndex] || "").trim();
+      const groupPdb = row[groupIndex]?.toUpperCase();
+
+      if (residueName) {
+        residues.add(residueName);
+        const category = classifyResidueName(residueName);
+
+        if (category === "rna") {
+          hasRNA = true;
+        } else if (category === "protein") {
+          hasProtein = true;
+          nonRNAContents.add(residueName);
+        } else if (category === "dna") {
+          hasDNA = true;
+          nonRNAContents.add(residueName);
+        } else if (category === "water") {
+          hasWater = true;
+          nonRNAContents.add(residueName);
+        } else if (category === "other" && groupPdb === "HETATM") {
+          hasOtherNonWaterComponents = true;
+          nonRNAContents.add(residueName);
+        }
+      }
+
+      rowIndex += 1;
+    }
+  }
+
+  const entityPolyTypes = Array.from(content.matchAll(/_entity_poly\.type\s+([^\n#]+)/gi)).map((match) => (match[1] ?? "").trim().toLowerCase());
+  for (const type of entityPolyTypes) {
+    if (type.includes("polypeptide")) {
+      hasProtein = true;
+    }
+    if (type.includes("deoxyribonucleotide")) {
+      hasDNA = true;
+    }
+    if (type.includes("ribonucleotide")) {
+      hasRNA = true;
+    }
+  }
+
+  const chemCompTypes = Array.from(content.matchAll(/_chem_comp\.type\s+([^\n#]+)/gi)).map((match) => (match[1] ?? "").trim().toLowerCase());
+  if (chemCompTypes.some((type) => type.includes("non-polymer") || type.includes("ligand"))) {
+    hasOtherNonWaterComponents = true;
+  }
+
+  return {
+    fileFormat: "cif",
+    containsOnlyRNA: hasRNA && !hasProtein && !hasDNA && !hasOtherNonWaterComponents,
+    hasRNA,
+    hasProtein,
+    hasDNA,
+    hasOtherNonWaterComponents,
+    hasWater,
+    observedResidues: Array.from(residues).sort(),
+    nonRNAContents: Array.from(nonRNAContents).sort(),
+    notes: [
+      "mmCIF inspection is heuristic and combines atom-site residue names with entity annotations.",
+    ],
+  };
+}
+
+export async function inspectOriginalFileComposition(id: string, filename: string) {
+  const filePath = resolve(`${JOBS_DIR}/${id}/${filename}`);
+  const content = await fs.readFile(filePath, "utf-8");
+  const extension = filename.split(".").pop()?.toLowerCase() ?? "";
+
+  if (extension === "pdb") {
+    return inspectPdbContent(content);
+  }
+
+  if (extension === "cif" || extension === "mmcif") {
+    return inspectMmCifContent(content);
+  }
+
+  return {
+    fileFormat: "unknown" as const,
+    containsOnlyRNA: false,
+    hasRNA: false,
+    hasProtein: false,
+    hasDNA: false,
+    hasOtherNonWaterComponents: false,
+    hasWater: false,
+    observedResidues: [],
+    nonRNAContents: [],
+    notes: [`Unsupported file extension: ${extension || "unknown"}`],
+  };
 }
 
 export async function runConverter(id: string, filename: string) {
