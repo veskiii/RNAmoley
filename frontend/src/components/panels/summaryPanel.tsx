@@ -741,7 +741,7 @@ const SummaryPanel: React.FC = () => {
                           )}
                         </div>
                       </button>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={comparisonModeMolstar}
@@ -751,7 +751,7 @@ const SummaryPanel: React.FC = () => {
                             }
                           }}
                           disabled={!simulationTabEnabled}
-                          className="cursor-pointer"
+                          className="cursor-pointer disabled:cursor-not-allowed"
                         />
                         <span className="text-sm">Compare 3D</span>
                       </label>
