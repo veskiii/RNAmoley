@@ -656,14 +656,14 @@ const SummaryPanel: React.FC = () => {
                 <button
                   className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
                   onClick={() => setShowResidueTable(!showResidueTable)}
-                  title={"Show or hide local quality map."}
+                  title={"Show or hide local quality table."}
                 >
-                  {showResidueTable ? "Hide local quality map ▲" : "Show local quality map ▼"}
+                  {showResidueTable ? "Hide local quality table ▲" : "Show local quality table ▼"}
                 </button>
                 {showResidueTable && (
                   <div>
                     <div>
-                      <label>Local quality map (per residue)</label>
+                      <label>Local quality table (per residue)</label>
                       <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                         <span
                           aria-label="What this field does"

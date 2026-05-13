@@ -540,7 +540,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                       strokeWidth={1.5}
                     >
                       <title>
-                        {`Residue ${point.residue.original_index} | ${point.residue.base} | ${point.residue.structure || "-"} | ${point.displayValue}`}
+                        {`${point.residue.base}_${point.residue.original_index}: ${point.displayValue}`}
                       </title>
                     </circle>
                   </g>
