@@ -182,7 +182,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
       <table className="mt-4 w-max border-separate border-spacing-1">
         <tbody>
           <tr>
-            <td></td>
+            {/* <td></td> */}
             <td className="w-32 p-2 text-left">Index</td>
             {hasSimRows && <td></td>}
             {tableColumns.map((column, index) => {
@@ -199,7 +199,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             )})}
           </tr>
           <tr>
-            <td></td>
+            {/* <td></td> */}
             <td className="w-32 p-2 text-left">Residue</td>
             {hasSimRows && <td></td>}
             {tableColumns.map((column, index) => {
@@ -216,9 +216,9 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             )})}
           </tr>
           <tr>
-            <td></td>
+            {/* <td></td> */}
             <td className="w-32 p-2 text-left">
-              Secondary Structure
+              Secondary structure
             </td>
             {hasSimRows && <td></td>}
             {tableColumns.map((column, index) => {
@@ -260,7 +260,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           </tr> */}
           { analyzeNeighborhood && (
           <tr>
-            <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -268,21 +268,21 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 onChange={() => handleClick(QualityScore.CLASH_SCORE)}
                 className="cursor-pointer"
               />
-            </td>
+            </td> */}
             <td
             id="tableClashscore"
             rowSpan={hasSimRows ? 2 : undefined}
-            className="w-32 p-2 text-left cursor-pointer"
-            onClick={(_) => handleClick(QualityScore.CLASH_SCORE)}
-            style={{
-              borderWidth: "3px",
-              borderColor:
-                effectiveSelectedScore === QualityScore.CLASH_SCORE
-                  ? selectedBorderColor
-                  : "#ffffff",
-            }}
+            className="w-32 p-2 text-left"// cursor-pointer"
+            // onClick={(_) => handleClick(QualityScore.CLASH_SCORE)}
+            // style={{
+            //   borderWidth: "3px",
+            //   borderColor:
+            //     effectiveSelectedScore === QualityScore.CLASH_SCORE
+            //       ? selectedBorderColor
+            //       : "#ffffff",
+            // }}
             >
-              Clashscore
+              Clash score
             </td>
             {hasSimRows && <td>Original</td>}
             {tableColumns.map((column, index) => {
@@ -294,7 +294,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-CLASH_SCORE even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.CLASH_SCORE)}
+                // style={activeCellStyle(column, QualityScore.CLASH_SCORE)}
               >
                 {nucleotide && nucleotide.selected ? (
                   nucleotide.metrics
@@ -324,7 +324,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-CLASH_SCORE even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.CLASH_SCORE, true)}
+                // style={activeCellStyle(column, QualityScore.CLASH_SCORE, true)}
               >
                 {value}
               </td>
@@ -332,7 +332,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
-            <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -340,21 +340,21 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 onChange={() => handleClick(QualityScore.BAD_BONDS)}
                 className="cursor-pointer"
               />
-            </td>
+            </td> */}
             <td 
             id="tableBadBonds"
             rowSpan={hasSimRows ? 2 : undefined}
-            className="w-32 p-2 text-left cursor-pointer"
-            onClick={(_) => handleClick(QualityScore.BAD_BONDS)}
-            style={{
-              borderWidth: "3px",
-              borderColor:
-                effectiveSelectedScore === QualityScore.BAD_BONDS
-                  ? selectedBorderColor
-                  : "#ffffff",
-            }}
+            className="w-32 p-2 text-left"// cursor-pointer"
+            // onClick={(_) => handleClick(QualityScore.BAD_BONDS)}
+            // style={{
+            //   borderWidth: "3px",
+            //   borderColor:
+            //     effectiveSelectedScore === QualityScore.BAD_BONDS
+            //       ? selectedBorderColor
+            //       : "#ffffff",
+            // }}
             >
-              Bad Bonds
+              Bad bonds
             </td>
             {hasSimRows && <td>Original</td>}
             {tableColumns.map((column, index) => {
@@ -366,7 +366,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-BAD_BONDS even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.BAD_BONDS)}
+                // style={activeCellStyle(column, QualityScore.BAD_BONDS)}
               >
                 {nucleotide && nucleotide.selected ? (nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
@@ -395,7 +395,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-BAD_BONDS even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.BAD_BONDS, true)}
+                // style={activeCellStyle(column, QualityScore.BAD_BONDS, true)}
               >
                 {value}
               </td>
@@ -403,7 +403,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
-            <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -411,21 +411,21 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 onChange={() => handleClick(QualityScore.BAD_ANGLES)}
                 className="cursor-pointer"
               />
-            </td>
+            </td> */}
             <td 
             id="tableBadAngles"
             rowSpan={hasSimRows ? 2 : undefined}
-            className="w-32 p-2 text-left cursor-pointer"
-            onClick={(_) => handleClick(QualityScore.BAD_ANGLES)}
-            style={{
-              borderWidth: "3px",
-              borderColor:
-                effectiveSelectedScore === QualityScore.BAD_ANGLES
-                  ? selectedBorderColor
-                  : "#ffffff",
-            }}
+            className="w-32 p-2 text-left"// cursor-pointer"
+            // onClick={(_) => handleClick(QualityScore.BAD_ANGLES)}
+            // style={{
+            //   borderWidth: "3px",
+            //   borderColor:
+            //     effectiveSelectedScore === QualityScore.BAD_ANGLES
+            //       ? selectedBorderColor
+            //       : "#ffffff",
+            // }}
             >
-              Bad Angles
+              Bad angles
             </td>
             {hasSimRows && <td>Original</td>}
             {tableColumns.map((column, index) => {
@@ -437,7 +437,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.BAD_ANGLES)}
+                // style={activeCellStyle(column, QualityScore.BAD_ANGLES)}
               >
                 {nucleotide && nucleotide.selected ? (nucleotide.metrics 
                 ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
@@ -466,14 +466,14 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.BAD_ANGLES, true)}
+                // style={activeCellStyle(column, QualityScore.BAD_ANGLES, true)}
               >
                 {value}
               </td>
             )})}
           </tr>)}
           <tr>
-            <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -481,19 +481,19 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 onChange={() => handleClick(QualityScore.SUITENESS)}
                 className="cursor-pointer"
               />
-            </td>
+            </td> */}
             <td 
             id="tableSuiteness"
             rowSpan={hasSimRows ? 2 : undefined}
-            className="w-32 p-2 text-left cursor-pointer"
-            onClick={(_) => handleClick(QualityScore.SUITENESS)}
-            style={{
-              borderWidth: "3px",
-              borderColor:
-                effectiveSelectedScore === QualityScore.SUITENESS
-                  ? selectedBorderColor
-                  : "#ffffff",
-            }}
+            className="w-32 p-2 text-left"// cursor-pointer"
+            // onClick={(_) => handleClick(QualityScore.SUITENESS)}
+            // style={{
+            //   borderWidth: "3px",
+            //   borderColor:
+            //     effectiveSelectedScore === QualityScore.SUITENESS
+            //       ? selectedBorderColor
+            //       : "#ffffff",
+            // }}
             >
               Suiteness
             </td>
@@ -507,7 +507,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-SUITENESS even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.SUITENESS)}
+                // style={activeCellStyle(column, QualityScore.SUITENESS)}
               >
                 {nucleotide && nucleotide.selected ? (nucleotide.residueMetrics ? nucleotide.residueMetrics.suiteness : "") : "N/A"}
               </td>
@@ -528,14 +528,14 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-SUITENESS even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.SUITENESS, true)}
+                // style={activeCellStyle(column, QualityScore.SUITENESS, true)}
               >
                 {nucleotide && nucleotide.selected ? (value) : "N/A"}
               </td>
             )})}
           </tr>}
           <tr>
-            <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -543,21 +543,21 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 onChange={() => handleClick(QualityScore.SUGAR_PUCKER_OUT)}
                 className="cursor-pointer"
               />
-            </td>
+            </td> */}
             <td 
             id="tableSugarPuckerOut"
             rowSpan={hasSimRows ? 2 : undefined}
-            className="w-32 p-2 text-left cursor-pointer"
-            onClick={(_) => handleClick(QualityScore.SUGAR_PUCKER_OUT)}
-            style={{
-              borderWidth: "3px",
-              borderColor:
-                effectiveSelectedScore === QualityScore.SUGAR_PUCKER_OUT
-                  ? selectedBorderColor
-                  : "#ffffff",
-            }}
+            className="w-32 p-2 text-left"//</tr> cursor-pointer"
+            // onClick={(_) => handleClick(QualityScore.SUGAR_PUCKER_OUT)}
+            // style={{
+            //   borderWidth: "3px",
+            //   borderColor:
+            //     effectiveSelectedScore === QualityScore.SUGAR_PUCKER_OUT
+            //       ? selectedBorderColor
+            //       : "#ffffff",
+            // }}
             >
-              Sugar Pucker Outlier
+              Sugar pucker outlier
             </td>
             {hasSimRows && <td>Original</td>}
             {tableColumns.map((column, index) => {
@@ -569,7 +569,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center  column-SUGAR_PUCKER_OUT even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT)}
+                // style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT)}
                 title={nucleotide && nucleotide.residueMetrics && nucleotide.residueMetrics.pucker_outlier_type}
               >
                 {nucleotide &&nucleotide.selected ? replaceGreekLetterNames(nucleotide?.residueMetrics?.pucker_outlier_type) || "-" : "N/A"}
@@ -591,7 +591,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 className={
                   "w-12 p-2 text-center column-SUGAR_PUCKER_OUT even:bg-gray-50"
                 }
-                style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT, true)}
+                // style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT, true)}
               >
                 {nucleotide && nucleotide.selected ? (value) : "N/A"}
               </td>
