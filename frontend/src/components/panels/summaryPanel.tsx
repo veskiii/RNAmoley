@@ -336,6 +336,9 @@ const SummaryPanel: React.FC = () => {
             setSimulationResults(undefined);
           }
         }
+        else {
+          setSimulationResults(undefined);
+        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setMyError({
