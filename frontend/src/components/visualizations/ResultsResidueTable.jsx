@@ -322,7 +322,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-CLASH_SCORE even:bg-gray-50"
+                  "w-12 p-2 text-center column-CLASH_SCORE odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.CLASH_SCORE, true)}
               >
@@ -393,7 +393,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-BAD_BONDS even:bg-gray-50"
+                  "w-12 p-2 text-center column-BAD_BONDS odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.BAD_BONDS, true)}
               >
@@ -464,7 +464,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
+                  "w-12 p-2 text-center column-BAD_ANGLES odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.BAD_ANGLES, true)}
               >
@@ -526,7 +526,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-SUITENESS even:bg-gray-50"
+                  "w-12 p-2 text-center column-SUITENESS odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.SUITENESS, true)}
               >
@@ -589,7 +589,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-SUGAR_PUCKER_OUT even:bg-gray-50"
+                  "w-12 p-2 text-center column-SUGAR_PUCKER_OUT odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT, true)}
               >

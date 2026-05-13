@@ -174,6 +174,7 @@ export interface ModelStatus {
 export interface Metadata {
   status: string;
   resultsStatus?: Record<string, ModelStatus>;
+  simulations?: Record<string, SimulationInfo>;
   models: number[];
   error_message?: string;
   analyzeNeighborhoods?: boolean;
@@ -181,6 +182,21 @@ export interface Metadata {
   interval?: number;
   containsNonRNA?: boolean;
   nonRNAContents?: string[];
+}
+
+export interface SimulationParameters {
+  restraintBackboneForce: number;
+  restraintGlobalForce: number;
+  restraintBasePairsForce: number;
+  rmsdCutoff: number;
+};
+
+export interface SimulationInfo {
+  simJobId: string;
+  status: string;
+  parameters: SimulationParameters;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export enum QualityScore {

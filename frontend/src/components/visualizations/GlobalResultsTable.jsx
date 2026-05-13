@@ -58,9 +58,9 @@ const renderCombinedMetricValue = (metrics, keys) => {
 const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simModelMetrics, simFragmentMetrics }) => {
     const rows = [
         { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics },
+        simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (refined)`, metrics: simModelMetrics },
         { label: "Analysed fragment", metrics: fragmentMetrics },
-        simModelMetrics && { label: "Entire refined model", metrics: simModelMetrics },
-        simFragmentMetrics && { label: "Refined analysed fragment", metrics: simFragmentMetrics },
+        simFragmentMetrics && { label: "Analysed fragment (refined)", metrics: simFragmentMetrics },
     ];
 
     return (
@@ -80,7 +80,7 @@ const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simM
             </thead>
             <tbody>
                 {rows.filter(Boolean).map((row) => (
-                    <tr key={row.label}>
+                    <tr key={row.label} className="even:bg-gray-50">
                         <td className="px-4 py-2 border-b border-gray-200 font-semibold">{row.label}</td>
                         {fieldRows.map((field) => (
                             <td key={`${row.label}-${field.label}`} className="px-4 py-2 border-b border-gray-200">
