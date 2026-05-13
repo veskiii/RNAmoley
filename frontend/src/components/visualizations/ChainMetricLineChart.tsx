@@ -400,11 +400,11 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
           {data2 && (
             <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-md p-2 border border-gray-200 shadow-md text-xs pointer-events-none z-10">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-teal-700"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-orange-400"></div>
                 <span className="text-gray-700">Original</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-600"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
                 <span className="text-gray-700">Refined</span>
               </div>
             </div>
@@ -498,7 +498,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                   key={`segment-1-${index}`}
                   d={segment}
                   fill="none"
-                  stroke="#0f766e"
+                  stroke="#fb923c"
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -510,7 +510,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                   key={`segment-2-${index}`}
                   d={segment}
                   fill="none"
-                  stroke="#dc2626"
+                  stroke="#60a5fa"
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -535,7 +535,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                       cx={point.x}
                       cy={point.y}
                       r={point.value === 0 ? 3.5 : 4.5}
-                      fill="#0f766e"
+                      fill="#fb923c"
                       stroke="#ffffff"
                       strokeWidth={1.5}
                     >
@@ -558,7 +558,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                       cx={point.x}
                       cy={point.y2}
                       r={point.value2 === 0 ? 3.5 : 4.5}
-                      fill="#dc2626"
+                      fill="#60a5fa"
                       stroke="#ffffff"
                       strokeWidth={1.5}
                     >
