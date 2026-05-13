@@ -90,9 +90,17 @@ export interface Metadata {
   nonRNAContents?: string[];
 }
 
+export interface SimulationParameters {
+  restraintBackboneForce: number;
+  restraintGlobalForce: number;
+  restraintBasePairsForce: number;
+  rmsdCutoff: number;
+};
+
 export interface SimulationInfo {
   simJobId: string;
   status: string;
+  parameters: SimulationParameters;
   startedAt?: string;
   completedAt?: string;
 }

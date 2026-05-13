@@ -90,53 +90,54 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "created") {
-      return { label: "Created", className: "bg-slate-200 text-slate-900" };
+      return { label: "Created", className: "text-gray-800" };
     }
 
     if (status === "starting") {
-      return { label: "Starting", className: "bg-yellow-300 text-black" };
+      return { label: "Starting", className: "text-gray-800" };
     }
 
     if (status === "running") {
       return {
         label: "Running",
-        className: "bg-blue-500 text-white",
+        className: "text-gray-800",
       };
     }
 
     if (status === "completed") {
-      return { label: "Completed", className: "bg-green-600 text-white" };
+      return { label: "Completed", className: "text-gray-800" };
     }
 
     if (status === "failed") {
-      return { label: "Failed", className: "bg-red-500 text-white" };
+      return { label: "Failed", className: "text-red-600" };
     }
 
     if (status === "sim_starting") {
-      return { label: "Refinement starting", className: "bg-cyan-300 text-cyan-950" };
+      return { label: "Refinement starting...", className: "text-gray-800" };
     }
 
     if (status === "sim_running") {
-      return { label: "Refinement running", className: "bg-cyan-500 text-white" };
+      return { label: "Refinement running...", className: "text-gray-800" };
     }
 
     if (status === "sim_finished") {
-      return { label: "Refinement done", className: "bg-sky-600 text-white" };
+      return { label: "Refinement done...", className: "text-gray-800" };
     }
 
     if (status === "sim_analyzing") {
-      return { label: "Analyzing results", className: "bg-indigo-600 text-white" };
+      return { label: "Analyzing results...", className: "text-gray-800" };
     }
 
     if (status === "sim_completed") {
-      return { label: "Refinement completed", className: "bg-cyan-700 text-white" };
+      const simParams = simulationResults?.metadata.simulations?.[selectedModel]?.parameters;
+      return { label: `Refinement completed with parameters: `, className: "text-gray-800", parameters: simParams };
     }
 
     if (status === "sim_failed") {
-      return { label: "Refinement failed", className: "bg-rose-600 text-white" };
+      return { label: "Refinement failed", className: "text-red-500" };
     }
 
-    return { label: status, className: "bg-gray-300 text-black" };
+    return { label: status, className: "text-gray-800" };
   };
 
   const getModelListStatus = (status?: string) => {
@@ -335,6 +336,9 @@ const SummaryPanel: React.FC = () => {
             setSimulationResults(undefined);
           }
         }
+        else {
+          setSimulationResults(undefined);
+        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setMyError({
@@ -362,7 +366,7 @@ const SummaryPanel: React.FC = () => {
 
   const handleStartSimulation = async (values: SimulationFormValues) => {
     if (!jobId) {
-      setSimulationStartError("Brak ID zadania.");
+      setSimulationStartError("No job id.");
       return;
     }
 
@@ -656,14 +660,14 @@ const SummaryPanel: React.FC = () => {
                 <button
                   className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
                   onClick={() => setShowResidueTable(!showResidueTable)}
-                  title={"Show or hide local quality map."}
+                  title={"Show or hide local quality table."}
                 >
-                  {showResidueTable ? "Hide local quality map ▲" : "Show local quality map ▼"}
+                  {showResidueTable ? "Hide local quality table ▲" : "Show local quality table ▼"}
                 </button>
                 {showResidueTable && (
                   <div>
                     <div>
-                      <label>Local quality map (per residue)</label>
+                      <label>Local quality table (per residue)</label>
                       <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                         <span
                           aria-label="What this field does"
@@ -845,7 +849,7 @@ const SummaryPanel: React.FC = () => {
                     <button
                       onClick={handleDownloadFornaView}
                       className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
-                      title="Download Forna view as image"
+                      title="Download the 2D structure diagram as a PNG image"
                     >
                       ⬇️
                     </button>
@@ -996,13 +1000,22 @@ const SummaryPanel: React.FC = () => {
                 >
                   Run refinement
                 </button>
-                {hasSimulationStarted &&
-                  <div>
-                    <span className={`w-48 inline-block rounded-full px-2 py-2 text-xs text-center ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                {hasSimulationStarted && (
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2 py-2 ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
                       {simulationStatusPresentation.label || "No simulation"}
                     </span>
+                    {simulationStatusPresentation.parameters && (
+                      <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
+                        {Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => (
+                          <span key={param}>
+                            <span className="font-semibold">{param}:</span> {value}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                }
+                )}
               </div>
 
               

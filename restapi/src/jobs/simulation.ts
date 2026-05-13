@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import type { UUID } from "crypto";
-import type { ChainElement, Metadata } from "./types.js";
+import type { ChainElement, Metadata, SimulationParameters } from "./types.js";
 import { SIM_URL, TOOLS_URL } from "../server.js";
 import {
     JOBS_DIR,
@@ -16,13 +16,6 @@ export const simulationQueue = new Queue("simulation", {
     port: Number(process.env.REDIS_PORT),
   },
 });
-
-export type SimulationParameters = {
-  restraintBackboneForce: number;
-  restraintGlobalForce: number;
-  restraintBasePairsForce: number;
-  rmsdCutoff: number;
-};
 
 export function createSimulationWorker() {
   const worker = new Worker<{
@@ -127,6 +120,7 @@ async function performSimulation(
       simJobId: simJobId,
       status: "running",
       startedAt: new Date().toISOString(),
+      parameters: simulationParams,
     };
 
     updateModelMetadata(metadata, modelNumber, "sim_running");

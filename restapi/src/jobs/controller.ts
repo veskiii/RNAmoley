@@ -31,12 +31,13 @@ import type {
   ChainElement,
   Job,
   Metadata,
+  SimulationParameters,
   splitModelsResponse,
   StructuralElement,
 } from "./types.js";
 import { TOOLS_URL } from "../server.js";
 import { addAnalysisTask, applyPreCalculatedDemoResult, getPreCalculatedDemoResult } from "./analysis.js";
-import { addSimulationTask, fetchSimulationStatus, type SimulationParameters } from "./simulation.js";
+import { addSimulationTask, fetchSimulationStatus } from "./simulation.js";
 import { existsSync } from "fs";
 import { join } from "path";
 import fs from "fs/promises";
@@ -618,6 +619,7 @@ export async function startSimulation(req: Request, res: Response) {
   metadata.simulations[modelNumber] = {
     simJobId: "",
     status: "starting",
+    parameters: simulationParams,
   };
   await saveMetadata(id, metadata);
 
