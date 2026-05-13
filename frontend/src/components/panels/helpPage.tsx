@@ -314,7 +314,12 @@ const HelpPage = () => {
             >
               Correcting the structure
             </h3>
-            <p>To correct the structure, click <i>Correct the structure</i> button. The modal will appear with options for correction:</p>
+            <p>
+              To correct the structure, click <i>Run refinement</i> button. This will perform an energy minimization using the Amber force field
+              with some modifications. In addition, some restraints can be applied to ensure that specific structural features are less prone 
+              to distortions due to the energy minimization.
+            </p>
+            <p>The modal will appear with options for correction:</p>
             <ul className="list-disc ml-6">
               <li>
                 <strong>Backbone restraint force</strong> (kcal/mol/Å²) - Adjust the strength of restraints 
@@ -326,16 +331,17 @@ const HelpPage = () => {
                 affecting how strongly all atoms will be held to their original positions during refinement simulations.
               </li>
               <li>
-                <strong>Base pairs restraint force</strong> (kcal/mol/Å²) - Adjust the strength of restraints applied to base pairs, 
-                influencing how closely the base pairs will be pulled to ideal geometries of base pairing during refinement simulations.
+                <strong>Base pairs restraint force</strong> (kcal/mol/Å²) - Adjust the strength of restraints applied to canonical base pairs, 
+                influencing how closely the base pairs will be pulled to ideal geometries of base pairing during refinement procedure.
               </li>
               <li>
                 <strong>RMSD cutoff</strong> (Å) - Set the threshold for the root-mean-square deviation, 
                 determining the maximum allowed deviation between the original and refined structure.
               </li>
             </ul>
-            <p>Next, click <i>Start simulation</i> and wait for the simulation to complete. After the simulation is done,
-            original and simulation results can be switched between below <i>Correct the structure</i> button.</p>
+            <p>Next, click <i>Run refinement</i> and wait for the simulation to complete. After the simulation is done,
+            refinement results will appear automatically on graphs and in tables, coloring of the structure in 2D view can be switched above those views.
+            Moreover, check "<i>Compare 3D</i>" box to view both original and refined structures in 3D view.</p>
             <p className="mt-4"></p>
           </div>
         </div>

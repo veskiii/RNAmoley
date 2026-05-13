@@ -86,7 +86,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Start simulation</h2>
+          <h2 className="text-xl font-bold text-gray-900">Run refinement</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -200,7 +200,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               disabled={isSubmitting}
               className="rounded-lg bg-moley-darkGreen px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSubmitting ? "Starting..." : "Start simulation"}
+              {isSubmitting ? "Starting..." : "Run refinement"}
             </button>
           </div>
         </form>
