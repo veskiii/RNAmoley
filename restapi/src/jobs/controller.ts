@@ -79,22 +79,28 @@ export async function getJobById(req: Request, res: Response) {
   const modelNumber = (req.params.modelNumber as string) || "1";
   const resultsSource = ((req.query.resultsSource as string) || "original").toLowerCase();
 
+  console.log(`[getJobById] start id=${id} model=${modelNumber} source=${resultsSource}`);
+
   if (!id) {
+    console.log(`[getJobById] validation failed: missing id`);
     res.status(400).send({ error: "Job ID is required." });
     return;
   }
 
   if (id.length !== 36) {
+    console.log(`[getJobById] validation failed: invalid id length (${id?.length}) for id=${id}`);
     res.status(422).send({ error: "Invalid job ID." });
     return;
   }
 
   if (!Number.isInteger(parseInt(modelNumber))) {
+    console.log(`[getJobById] validation failed: invalid modelNumber=${modelNumber}`);
     res.status(422).send({ error: "Invalid model number." });
     return;
   }
 
   if (!["original", "simulation"].includes(resultsSource)) {
+    console.log(`[getJobById] validation failed: invalid resultsSource=${resultsSource}`);
     res.status(422).send({ error: "Invalid results source." });
     return;
   }
@@ -106,11 +112,12 @@ export async function getJobById(req: Request, res: Response) {
   try {
     metadata = await readMetadata(id);
     if (!metadata) {
+      console.log(`[getJobById] metadata empty for id=${id}`);
       res.status(500).send({ error: "Metadata file not found." });
       return;
     }
   } catch (error) {
-    console.error(error);
+    console.error("[getJobById] error reading metadata for id=", id, error);
     res.status(404).send({ error: "Job not found." });
     return;
   }
@@ -124,8 +131,9 @@ export async function getJobById(req: Request, res: Response) {
   }
 
   db.query(getJobByIdQuery, [id], async (err, result) => {
+
     if (err) {
-      console.error(err);
+      console.error("[getJobById] error querying database for id=", id, err);
       res.status(500).send({ error: "Database error." });
       return;
     }
@@ -133,8 +141,7 @@ export async function getJobById(req: Request, res: Response) {
       res.status(404).send({ error: "Job not found." });
       return;
     }
-    // res.status(200).json(result.rows[0]);
-    //load annotation json file
+
     const annotation = await fetchJSONFile(
       id,
       `${modelNumber}_annotation.json`,
@@ -142,6 +149,7 @@ export async function getJobById(req: Request, res: Response) {
       modelsDir
     );
     if (!annotation) {
+      console.log(`[getJobById] annotation empty for id=${id} model=${modelNumber} source=${resultsSource}`);
       res.status(500).send({ error: "Annotation file not found." });
       return;
     }
@@ -153,6 +161,7 @@ export async function getJobById(req: Request, res: Response) {
       modelsDir
     );
     if (!numeration) {
+      console.log(`[getJobById] numeration empty for id=${id} model=${modelNumber} source=${resultsSource}`);
       res.status(500).send({ error: "Numeration file not found." });
       return;
     }
@@ -164,18 +173,14 @@ export async function getJobById(req: Request, res: Response) {
       modelsDir
     );
     if (!motifs) {
+      console.log(`[getJobById] motifs empty for id=${id} model=${modelNumber} source=${resultsSource}`);
       res.status(500).send({ error: "Motifs file not found." });
-      return;
-    }
-
-    const pdbFile = await fetchPdbFileAsJSON(id, modelNumber, modelsDir);
-    if (!pdbFile) {
-      res.status(500).send({ error: "PDB file not found." });
       return;
     }
 
     const file_string = await fetchModelFileAsString(id, modelNumber, modelsDir);
     if (!file_string) {
+      console.log(`[getJobById] model file empty for id=${id} model=${modelNumber} source=${resultsSource}`);
       res.status(500).send({ error: "Blob file not found." });
       return;
     }
@@ -185,6 +190,8 @@ export async function getJobById(req: Request, res: Response) {
     let results: Analysis_results | null = null;
     if (existsSync(resultsFilePath)) {
       results = await readResults(id, modelNumber, resultsSuffix);
+    } else {
+      console.log(`[getJobById] no results file for id=${id} (${resultsFilePath})`);
     }
 
     const jobResponse: Job = {
@@ -198,10 +205,11 @@ export async function getJobById(req: Request, res: Response) {
       annotation: annotation,
       numeration: numeration,
       motifs: motifs,
-      pdb_file: pdbFile,
       pdb_file_string: file_string,
       results: results,
     };
+
+    console.log(`[getJobById] complete id=${id} model=${modelNumber}.`);
 
     res.status(200).json(jobResponse);
   });

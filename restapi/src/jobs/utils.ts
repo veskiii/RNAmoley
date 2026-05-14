@@ -13,6 +13,8 @@ import type {
   Job,
   nucleotideResult,
   residueMetrics,
+  StructuralElement,
+  RangeOfResidues,
 } from "./types.js";
 import archiver from "archiver";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
@@ -153,10 +155,86 @@ export async function saveResults(
   results: Analysis_results,
   resultsSuffix = "_results"
 ) {
+  const sanitizedResults = sanitizeAnalysisResults(results);
   await fs.writeFile(
     `${JOBS_DIR}/${jobID}/${modelNumber}${resultsSuffix}.json`,
-    JSON.stringify(results)
+    JSON.stringify(sanitizedResults)
   );
+}
+
+function sanitizeMetrics(value: metrics): metrics {
+  return {
+    pdbFileName: value.pdbFileName,
+    chains: value.chains,
+    residues: value.residues,
+    clashscore: value.clashscore,
+    numbadbonds: value.numbadbonds,
+    numbonds: value.numbonds,
+    pct_badbonds: value.pct_badbonds,
+    pct_resbadbonds: value.pct_resbadbonds,
+    numbadangles: value.numbadangles,
+    numangles: value.numangles,
+    pct_badangles: value.pct_badangles,
+    pct_resbadangles: value.pct_resbadangles,
+    numSuiteOutliers: value.numSuiteOutliers,
+    numSuites: value.numSuites,
+    medianSuiteness: value.medianSuiteness,
+  };
+}
+
+function sanitizeResidueMetrics(value: residueMetrics): residueMetrics {
+  return {
+    file_name: value.file_name,
+    residue: value.residue,
+    worst_clash: value.worst_clash,
+    src_atom: value.src_atom,
+    dst_atom: value.dst_atom,
+    dst_residue: value.dst_residue,
+    pucker_outlier_type: value.pucker_outlier_type,
+    implied_pucker: value.implied_pucker,
+    suitename: value.suitename,
+    suiteness: value.suiteness,
+  };
+}
+
+function sanitizeRangeOfResidues(value: RangeOfResidues): RangeOfResidues {
+  return {
+    start: value.start,
+    end: value.end,
+    residues: value.residues,
+    dotbracket: value.dotbracket,
+  };
+}
+
+function sanitizeStructuralElement(value: StructuralElement): StructuralElement {
+  return {
+    name: value.name,
+    type: value.type,
+    residues: value.residues ? value.residues.map((residue) => sanitizeRangeOfResidues(residue)) : value.residues,
+  };
+}
+
+function sanitizeNucleotideResult(value: nucleotideResult): nucleotideResult {
+  return {
+    residue_number: value.residue_number,
+    original_index: value.original_index,
+    base: value.base,
+    structure: value.structure,
+    chainID: value.chainID,
+    original_chain_id: value.original_chain_id,
+    selected: value.selected,
+    structuralElements: value.structuralElements.map((element) => sanitizeStructuralElement(element)),
+    metrics: value.metrics ? sanitizeMetrics(value.metrics) : value.metrics,
+    residueMetrics: sanitizeResidueMetrics(value.residueMetrics),
+  };
+}
+
+function sanitizeAnalysisResults(value: Analysis_results): Analysis_results {
+  return {
+    data: value.data.map((item) => sanitizeNucleotideResult(item)),
+    modelMetrics: sanitizeMetrics(value.modelMetrics),
+    fragmentMetrics: sanitizeMetrics(value.fragmentMetrics),
+  }
 }
 
 export async function readResults(

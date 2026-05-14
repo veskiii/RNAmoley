@@ -804,7 +804,7 @@ const Panel: React.FC = () => {
     
         console.log(`Selected range: ${start} to ${end} on chain ${selectedChain}`);
 
-    if (isNaN(start) || isNaN(end) || start > end || start <= 0 || end <= 0) {
+    if (isNaN(start) || isNaN(end) || start > end) {// || start <= 0 || end <= 0) {
         alert(`Invalid range: ${start} to ${end}`);
         return;
     }
