@@ -107,20 +107,20 @@ export interface SimulationInfo {
 
 export interface metrics {
   pdbFileName: string;
-  x_H_type: string;
+  // x_H_type: string;
   chains: string;
   residues: string;
-  nucacids: string;
-  resolution: string;
-  rvalue: string;
-  rfree: string;
+  // nucacids: string;
+  // resolution: string;
+  // rvalue: string;
+  // rfree: string;
   clashscore: string;
-  clashscoreB_40: string;
-  minresol: string;
-  maxresol: string;
-  n_samples: string;
-  pct_rank: string;
-  pct_rank40: string;
+  // clashscoreB_40: string;
+  // minresol: string;
+  // maxresol: string;
+  // n_samples: string;
+  // pct_rank: string;
+  // pct_rank40: string;
   numbadbonds: string;
   numbonds: string;
   pct_badbonds: string;
@@ -129,15 +129,16 @@ export interface metrics {
   numangles: string;
   pct_badangles: string;
   pct_resbadangles: string;
-  chiralSwaps: string;
-  tetraOutliers: string;
-  pseudochiralErrors: string;
-  waterClashes: string;
-  totalWaters: string;
-  numPperpOutliers: string;
-  numPperp: string;
+  // chiralSwaps: string;
+  // tetraOutliers: string;
+  // pseudochiralErrors: string;
+  // waterClashes: string;
+  // totalWaters: string;
+  // numPperpOutliers: string;
+  // numPperp: string;
   numSuiteOutliers: string;
   numSuites: string;
+  medianSuiteness?: string;
 }
 
 export interface nucleotideResult {
@@ -189,7 +190,7 @@ export interface Job {
   annotation: Annotation[];
   numeration: Numeration;
   motifs: StructuralElement[];
-  pdb_file: PDBFile;
+  // pdb_file: PDBFile;
   pdb_file_string: string;
   results?: Analysis_results | null;
 }
@@ -205,10 +206,10 @@ export interface NewJob {
 
 export interface residueMetrics {
   file_name: string;
-  "x-H_type": string;
+  // "x-H_type": string;
   residue: string;
-  res_high_B: string;
-  mc_high_B: string;
+  // res_high_B: string;
+  // mc_high_B: string;
   worst_clash: string;
   src_atom: string;
   dst_atom: string;
@@ -216,19 +217,19 @@ export interface residueMetrics {
   pucker_outlier_type: string;
   implied_pucker: string;
   suitename: string;
-  "d-1dg_bin": string;
-  triage: string;
+  // "d-1dg_bin": string;
+  // triage: string;
   suiteness: string;
-  num_length_out: string;
-  worst_length: string;
-  worst_length_value: string;
-  worst_length_sigma: string;
-  num_angle_out: string;
-  worst_angle: string;
-  worst_angle_value: string;
-  worst_angle_sigma: string;
-  outlier_count: string;
-  outlier_count_sep_geom: string;
+  // num_length_out: string;
+  // worst_length: string;
+  // worst_length_value: string;
+  // worst_length_sigma: string;
+  // num_angle_out: string;
+  // worst_angle: string;
+  // worst_angle_value: string;
+  // worst_angle_sigma: string;
+  // outlier_count: string;
+  // outlier_count_sep_geom: string;
 }
 
 export interface ChainElement {
