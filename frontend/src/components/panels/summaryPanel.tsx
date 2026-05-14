@@ -276,7 +276,7 @@ const SummaryPanel: React.FC = () => {
             errorMessage: origData.error,
             statusCode: origResponse.status.toString(),
           });
-          clearInterval(interval);
+          if (interval) clearInterval(interval);
           return;
         } else {
           setOriginalResults((prevData) => {
@@ -306,7 +306,7 @@ const SummaryPanel: React.FC = () => {
               errorMessage: origData.metadata.error_message,
               statusCode: "500",
             });
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
             return;
           }
 
@@ -368,7 +368,7 @@ const SummaryPanel: React.FC = () => {
     interval = setInterval(fetchData, 3000); // Retry every 3 seconds
 
     // Cleanup interval when component unmounts or jobId changes
-    return () => clearInterval(interval);
+    return () => { if (interval) clearInterval(interval); };
   }, [jobId, selectedModel, selectedResultsSource, refreshToken, simulationTabEnabled]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
