@@ -130,7 +130,7 @@ const SummaryPanel: React.FC = () => {
 
     if (status === "sim_completed") {
       const simParams = simulationResults?.metadata.simulations?.[selectedModel]?.parameters;
-      return { label: `Refinement completed with parameters: `, className: "text-gray-800", parameters: simParams };
+      return { label: `Refinement completed`, className: "text-gray-800", parameters: simParams };
     }
 
     if (status === "sim_failed") {
@@ -138,6 +138,21 @@ const SummaryPanel: React.FC = () => {
     }
 
     return { label: status, className: "text-gray-800" };
+  };
+
+  const getLabelForSimulationParameter = (paramName: string) => {
+    switch (paramName) {
+      case "restraintBackboneForce":
+        return "Backbone restraint force";
+      case "restraintGlobalForce":
+        return "Global restraint force";
+      case "restraintBasePairsForce":
+        return "Base pairs restraint force";
+      case "rmsdCutoff":
+        return "RMSD cutoff";
+      default:
+        return paramName;
+    }
   };
 
   const getModelListStatus = (status?: string) => {
@@ -676,7 +691,7 @@ const SummaryPanel: React.FC = () => {
                           ?
                         </span>
                         <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                          Displays local quality score for each residue's neighborhood. Select a metric to color the data accordingly.
+                          Displays local quality score for each residue's neighborhood.
                         </span>
                       </span>
                     </div>
@@ -787,7 +802,7 @@ const SummaryPanel: React.FC = () => {
                       onChange={(e) => setQualityScore(e.target.value as QualityScore)}
                       className="cursor-pointer"
                     />
-                    <span className="text-sm">Clash Score</span>
+                    <span className="text-sm">Clash score</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -798,7 +813,7 @@ const SummaryPanel: React.FC = () => {
                       onChange={(e) => setQualityScore(e.target.value as QualityScore)}
                       className="cursor-pointer"
                     />
-                    <span className="text-sm">Bad Bonds</span>
+                    <span className="text-sm">Bad bonds</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -809,7 +824,7 @@ const SummaryPanel: React.FC = () => {
                       onChange={(e) => setQualityScore(e.target.value as QualityScore)}
                       className="cursor-pointer"
                     />
-                    <span className="text-sm">Bad Angles</span>
+                    <span className="text-sm">Bad angles</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -831,7 +846,7 @@ const SummaryPanel: React.FC = () => {
                       onChange={(e) => setQualityScore(e.target.value as QualityScore)}
                       className="cursor-pointer"
                     />
-                    <span className="text-sm">Sugar Pucker Outlier</span>
+                    <span className="text-sm">Sugar pucker outlier</span>
                   </label>
                 </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
@@ -1001,19 +1016,25 @@ const SummaryPanel: React.FC = () => {
                   Run refinement
                 </button>
                 {hasSimulationStarted && (
-                  <div className="flex items-center gap-3">
-                    <span className={`px-2 py-2 ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`py-2 ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
                       {simulationStatusPresentation.label || "No simulation"}
                     </span>
-                    {simulationStatusPresentation.parameters && (
+                    {(() => {
+                      const simulationParameters = simulationStatusPresentation.parameters;
+                      if (!simulationParameters) return null;
+                      return (
                       <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
-                        {Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => (
+                        {Object.entries(simulationParameters).map(([param, value], i) => (
                           <span key={param}>
-                            <span className="font-semibold">{param}:</span> {value}
+                            {i == 0 ? " (" : ""}
+                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {value}
+                            {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
                           </span>
                         ))}
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
               </div>
