@@ -108,6 +108,13 @@ const Dashboard: React.FC = () => {
       return `${radiobutton}`;
     }
 
+    const pdbCodeTrimmed = pdbCode.trim();
+    if (pdbCodeTrimmed.length === 4) {
+      return pdbCodeTrimmed.toUpperCase();
+    } else if (pdbCodeTrimmed.length === 12 && pdbCodeTrimmed.toLowerCase().startsWith("pdb_")) {
+      return pdbCodeTrimmed.substring(4).toUpperCase();
+    }
+
     return pdbCode.trim();
   };
 
