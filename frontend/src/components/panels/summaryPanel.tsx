@@ -556,9 +556,14 @@ const SummaryPanel: React.FC = () => {
               </div>
             </div>
             {/* Copy link and download buttons */}
-            <div className={"flex flex-row gap-2 mt-6"}>
+            <div className={"flex flex-row gap-2 mt-6 items-center"}>
               <DownloadLink />
               <DownloadFile id={jobId} disabled={!canStartSimulation}/>
+              {!canStartSimulation && (
+                <p className="text-sm font-bold">
+                  Analysis in progress...
+                </p>
+              )}
             </div>
             {/* Analysis results */}
             <div className="mt-6">
