@@ -392,10 +392,10 @@ export async function analyzeStructure(
     }
 
     if (!residueNumeration) {
-      const sampleEntries = Object.entries(numeration).slice(0, 3).map(([idx, item]) => 
-        `idx=${idx} auth=(chain=${item.auth_chain_id} res=${item.auth_residue_number}) label=(chain=${item.label_chain_id} res=${item.label_residue_number})`
-      ).join(' | ');
-      console.error(`Numeration not found for residue ${res.residue}. Looking for chainID='${chainID}' residueNum=${original_index}. Sample: ${sampleEntries}`);
+      // const sampleEntries = Object.entries(numeration).slice(0, 3).map(([idx, item]) => 
+      //   `idx=${idx} auth=(chain=${item.auth_chain_id} res=${item.auth_residue_number}) label=(chain=${item.label_chain_id} res=${item.label_residue_number})`
+      // ).join(' | ');
+      // console.error(`Numeration not found for residue ${res.residue}. Looking for chainID='${chainID}' residueNum=${original_index}. Sample: ${sampleEntries}`);
       return null;
     }
     const residueNumber = residueNumeration.annotator_residue_number;
