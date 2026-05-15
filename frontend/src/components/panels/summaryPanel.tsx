@@ -68,6 +68,11 @@ const SummaryPanel: React.FC = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
+  const failureCountRef = useRef(0);
+  const pollIntervalRef = useRef(10000); // milliseconds
+  const MAX_RETRIES = 3;
+  const BACKOFF_FACTOR = 2;
+  const MAX_POLL_INTERVAL = 60000;
   const [showResidueTable, setShowResidueTable] = useState(false);
   const [comparisonModeMolstar, setComparisonModeMolstar] = useState(false);
 
@@ -264,20 +269,34 @@ const SummaryPanel: React.FC = () => {
 
 
   useEffect(() => {
-    let interval: NodeJS.Timeout; // Declare interval variable
+    let timeout: NodeJS.Timeout | null = null;
+    let cancelled = false;
+
     async function fetchData() {
       try {
         // Always fetch original results so originalResults holds only the original data
+        console.log(`Fetching original results for job ${jobId}, model ${selectedModel}`);
         const origResponse = await fetchMyData(jobId, selectedModel, "original");
         const origData = await origResponse.json();
 
+        // On successful fetch, reset failure counter and poll interval
+        failureCountRef.current = 0;
+        pollIntervalRef.current = 10000;
+
         if (!origResponse.ok) {
-          setMyError({
-            errorMessage: origData.error,
-            statusCode: origResponse.status.toString(),
-          });
-          if (interval) clearInterval(interval);
-          return;
+          // Treat non-ok as a failure but allow retries up to MAX_RETRIES
+          failureCountRef.current += 1;
+          if (failureCountRef.current >= MAX_RETRIES) {
+            setMyError({
+              errorMessage: origData?.error || origData?.message || 'Failed to fetch data',
+              statusCode: origResponse.status.toString(),
+            });
+            cancelled = true;
+            if (timeout) clearTimeout(timeout);
+            return;
+          }
+          // Back off before next retry
+          pollIntervalRef.current = Math.min(pollIntervalRef.current * BACKOFF_FACTOR, MAX_POLL_INTERVAL);
         } else {
           setOriginalResults((prevData) => {
             if (JSON.stringify(prevData) !== JSON.stringify(origData)) {
@@ -306,7 +325,8 @@ const SummaryPanel: React.FC = () => {
               errorMessage: origData.metadata.error_message,
               statusCode: "500",
             });
-            if (interval) clearInterval(interval);
+            cancelled = true;
+            if (timeout) clearTimeout(timeout);
             return;
           }
 
@@ -328,7 +348,8 @@ const SummaryPanel: React.FC = () => {
 
           if (!isBackgroundWorkActive) {
             if (isLoading && origData.results) setInitialQualityScore(origData);
-            clearInterval(interval);
+            cancelled = true;
+            if (timeout) clearTimeout(timeout);
             setIsLoading(false);
           }
         }
@@ -336,6 +357,7 @@ const SummaryPanel: React.FC = () => {
         // If simulation tab is enabled, fetch simulation results separately and store them in simulationResults
         if (simulationTabEnabled) {
           try {
+            console.log(`Fetching simulation results for job ${jobId}, model ${selectedModel}`);
             const simResponse = await fetchMyData(jobId, selectedModel, "simulation");
             const simData = await simResponse.json();
             if (simResponse.ok) {
@@ -356,20 +378,38 @@ const SummaryPanel: React.FC = () => {
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
-        setMyError({
-          errorMessage: "Failed to fetch data",
-          statusCode: "500",
-        });
-        clearInterval(interval);
+        // Increment failure counter and backoff
+        failureCountRef.current += 1;
+        if (failureCountRef.current >= MAX_RETRIES) {
+          setMyError({
+            errorMessage: (error as any)?.message || "Failed to fetch data",
+            statusCode: "500",
+          });
+          cancelled = true;
+          if (timeout) clearTimeout(timeout);
+          return;
+        }
+
+        pollIntervalRef.current = Math.min(pollIntervalRef.current * BACKOFF_FACTOR, MAX_POLL_INTERVAL);
+      } finally {
+        // Schedule next fetch only if not cancelled
+        if (!cancelled) {
+          timeout = setTimeout(fetchData, pollIntervalRef.current);
+        }
       }
     }
 
+    // Start polling
     fetchData();
-    interval = setInterval(fetchData, 3000); // Retry every 3 seconds
 
-    // Cleanup interval when component unmounts or jobId changes
-    return () => { if (interval) clearInterval(interval); };
-  }, [jobId, selectedModel, selectedResultsSource, refreshToken, simulationTabEnabled]);
+    // Cleanup when component unmounts or dependencies change
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      // Reset counters so next effect run starts fresh
+      failureCountRef.current = 0;
+      pollIntervalRef.current = 10000;
+    };
+  }, [jobId, selectedModel, selectedResultsSource, refreshToken]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
