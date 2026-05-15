@@ -69,6 +69,10 @@ const SummaryPanel: React.FC = () => {
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
+  const clashChartRef = useRef<HTMLDivElement | null>(null);
+  const badBondsChartRef = useRef<HTMLDivElement | null>(null);
+  const badAnglesChartRef = useRef<HTMLDivElement | null>(null);
+  const suitenessChartRef = useRef<HTMLDivElement | null>(null);
   const failureCountRef = useRef(0);
   const pollIntervalRef = useRef(10000); // milliseconds
   const MAX_RETRIES = 3;
@@ -502,6 +506,155 @@ const SummaryPanel: React.FC = () => {
     }
   };
 
+  const serializeSvg = (svg: SVGSVGElement) => {
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(svg);
+    if (!source.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)) {
+      source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    if (!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www.w3.org\/1999\/xlink"/)) {
+      source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+    }
+    return source;
+  };
+
+  const downloadSvgFile = (svg: SVGSVGElement, filename: string) => {
+    try {
+      const source = serializeSvg(svg);
+      const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download SVG:", err);
+    }
+  };
+
+  const downloadSvgAsPng = async (svg: SVGSVGElement, filename: string) => {
+    try {
+      const source = serializeSvg(svg);
+      const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const width = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width ? svg.viewBox.baseVal.width : svg.clientWidth || 800;
+        const height = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.height ? svg.viewBox.baseVal.height : svg.clientHeight || 600;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+        URL.revokeObjectURL(url);
+        const pngUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = pngUrl;
+        a.download = `${filename}.png`;
+        a.click();
+      };
+      img.onerror = (err) => {
+        console.error("Failed to render SVG to image:", err);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    } catch (err) {
+      console.error("Failed to download PNG:", err);
+    }
+  };
+
+  const downloadCombinedSvgsAsPng = async (
+    leftSvg: SVGSVGElement | null | undefined,
+    contentSvg: SVGSVGElement | null | undefined,
+    filename: string,
+    scale = 2
+  ) => {
+    try {
+      // If only one SVG is present, fallback to existing method
+      if (!leftSvg && !contentSvg) return;
+      if (!leftSvg || !contentSvg) {
+        const target = leftSvg || contentSvg;
+        if (target) return downloadSvgAsPng(target, filename);
+        return;
+      }
+
+      const leftSource = serializeSvg(leftSvg);
+      const contentSource = serializeSvg(contentSvg);
+
+      const stripOuter = (s: string) => s.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+      const leftInner = stripOuter(leftSource);
+      const contentInner = stripOuter(contentSource);
+
+      const getSize = (el: SVGSVGElement) => {
+        const vb = el.viewBox && el.viewBox.baseVal;
+        if (vb && vb.width && vb.height) return { w: vb.width, h: vb.height };
+        const w = el.clientWidth || parseFloat(el.getAttribute("width") || "0") || 0;
+        const h = el.clientHeight || parseFloat(el.getAttribute("height") || "0") || 0;
+        return { w, h };
+      };
+
+      const leftSize = getSize(leftSvg);
+      const contentSize = getSize(contentSvg);
+      const totalWidth = Math.max(1, leftSize.w + contentSize.w);
+      const totalHeight = Math.max(leftSize.h || contentSize.h || 1, contentSize.h || leftSize.h || 1);
+
+      const wrapper = `<?xml version="1.0" encoding="utf-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">` +
+        // Ensure background matches browser by adding white rect beneath content
+        `<rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />` +
+        `<g>${leftInner}</g>` +
+        `<g transform="translate(${leftSize.w},0)">${contentInner}</g>` +
+        `</svg>`;
+
+      const blob = new Blob([wrapper], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(totalWidth * scale);
+        canvas.height = Math.round(totalHeight * scale);
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+        URL.revokeObjectURL(url);
+        const pngUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = pngUrl;
+        a.download = `${filename}.png`;
+        a.click();
+      };
+      img.onerror = (err) => {
+        console.error("Failed to render combined SVG to image:", err);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    } catch (err) {
+      console.error("Failed to download combined PNG:", err);
+    }
+  };
+
+  const downloadChartContainerAsPng = async (container: HTMLElement | null | undefined, filename: string, scale = 2) => {
+    if (!container) return;
+    try {
+      const canvas = await html2canvas(container, { backgroundColor: "#ffffff", scale, useCORS: true });
+      const url = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.png`;
+      a.click();
+    } catch (err) {
+      console.error("html2canvas failed for chart container:", err);
+      // fallback to SVG combination if available
+    }
+  };
+
     const changeModel = (modelNum: number) => {
       if (
         originalResults &&
@@ -705,30 +858,85 @@ const SummaryPanel: React.FC = () => {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <ChainMetricLineChart
-                    data={originalResults.results.data}
-                    data2={simulationResults?.results.data}
-                    selectedChain={selectedChain}
-                    selectedScore={QualityScore.CLASH_SCORE}
-                  />
-                  <ChainMetricLineChart
-                    data={originalResults.results.data}
-                    data2={simulationResults?.results.data}
-                    selectedChain={selectedChain}
-                    selectedScore={QualityScore.BAD_BONDS}
-                  />
-                  <ChainMetricLineChart
-                    data={originalResults.results.data}
-                    data2={simulationResults?.results.data}
-                    selectedChain={selectedChain}
-                    selectedScore={QualityScore.BAD_ANGLES}
-                  />
-                  <ChainMetricLineChart
-                    data={originalResults.results.data}
-                    data2={simulationResults?.results.data}
-                    selectedChain={selectedChain}
-                    selectedScore={QualityScore.SUITENESS}
-                  />
+                  <div className="relative" ref={clashChartRef as any}>
+                    <button
+                      onClick={() => {
+                          const container = clashChartRef.current as HTMLElement | null;
+                          if (!container) return;
+                          downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-ClashScore`);
+                        }}
+                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Download chart as PNG"
+                    >
+                      ⬇️
+                    </button>
+                    <ChainMetricLineChart
+                      data={originalResults.results.data}
+                      data2={simulationResults?.results.data}
+                      selectedChain={selectedChain}
+                      selectedScore={QualityScore.CLASH_SCORE}
+                    />
+                  </div>
+
+                  <div className="relative" ref={badBondsChartRef as any}>
+                    <button
+                      onClick={() => {
+                        const container = badBondsChartRef.current as HTMLElement | null;
+                        if (!container) return;
+                        downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-BadBonds`);
+                      }}
+                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Download chart as PNG"
+                    >
+                      ⬇️
+                    </button>
+                    <ChainMetricLineChart
+                      data={originalResults.results.data}
+                      data2={simulationResults?.results.data}
+                      selectedChain={selectedChain}
+                      selectedScore={QualityScore.BAD_BONDS}
+                    />
+                  </div>
+
+                  <div className="relative" ref={badAnglesChartRef as any}>
+                    <button
+                      onClick={() => {
+                        const container = badAnglesChartRef.current as HTMLElement | null;
+                        if (!container) return;
+                        downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-BadAngles`);
+                      }}
+                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Download chart as PNG"
+                    >
+                      ⬇️
+                    </button>
+                    <ChainMetricLineChart
+                      data={originalResults.results.data}
+                      data2={simulationResults?.results.data}
+                      selectedChain={selectedChain}
+                      selectedScore={QualityScore.BAD_ANGLES}
+                    />
+                  </div>
+
+                  <div className="relative" ref={suitenessChartRef as any}>
+                    <button
+                      onClick={() => {
+                        const container = suitenessChartRef.current as HTMLElement | null;
+                        if (!container) return;
+                        downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-Suiteness`);
+                      }}
+                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      title="Download chart as PNG"
+                    >
+                      ⬇️
+                    </button>
+                    <ChainMetricLineChart
+                      data={originalResults.results.data}
+                      data2={simulationResults?.results.data}
+                      selectedChain={selectedChain}
+                      selectedScore={QualityScore.SUITENESS}
+                    />
+                  </div>
                 </div>
               </div>
               {/* Local quality map */}
