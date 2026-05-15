@@ -25,6 +25,7 @@ type ChartSlot =
       displayValue: string;
       displayValue2: string;
       label: string;
+      hideLabel?: boolean;
       x: number;
       y: number | null;
       y2: number | null;
@@ -32,6 +33,7 @@ type ChartSlot =
   | {
       kind: "missing-range";
       label: string;
+      hideLabel?: boolean;
       x: number;
       y: null;
       y2: null;
@@ -258,6 +260,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       displayValue?: string;
       displayValue2?: string;
       label: string;
+      hideLabel?: boolean;
     }> = [];
 
     let cursor = 0;
@@ -287,12 +290,14 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       const end = cursor;
       const startIndex = residuePoints[start].residue.original_index;
       const endIndex = residuePoints[end].residue.original_index;
+      const hideLabel = !hasNumericValues && start === 0 && end === residuePoints.length - 1;
 
       slots.push({
         kind: "missing-range",
         value: null,
         value2: null,
         label: startIndex === endIndex ? `${startIndex}` : `${startIndex}-${endIndex}`,
+        hideLabel,
       });
 
       cursor += 1;
@@ -322,6 +327,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
         return {
           kind: "missing-range",
           label: slot.label,
+          hideLabel: slot.hideLabel,
           x,
           y: null,
           y2: null,
@@ -375,6 +381,19 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
       <div className={className}>
         <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm">
           No residues found for the selected chain.
+        </div>
+      </div>
+    );
+  }
+
+  if (!chartData.hasNumericValues) {
+    return (
+      <div className={className}>
+        <div className="flex flex-wrap items-center justify-center gap-2 text-center">
+          {getMetricLabel(selectedScore)}
+        </div>
+        <div className="mt-2 bg-white p-4 text-center text-gray-500">
+          No metric values available for this chain.
         </div>
       </div>
     );
@@ -576,34 +595,36 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
 
                 return (
                   <g key={`label-${item.label}-${index}`}>
-                    <text
-                      x={labelX}
-                      y={firstLineY}
-                      textAnchor="middle"
-                      className="fill-gray-900"
-                      style={{ fontSize: 11, fontWeight: 600 }}
-                    >
-                      {item.label}
-                    </text>
+                    {!item.hideLabel && (
+                      <text
+                        x={labelX}
+                        y={firstLineY}
+                        textAnchor="middle"
+                        className="fill-gray-900"
+                        style={{ fontSize: 11, fontWeight: 600 }}
+                      >
+                        {item.label}
+                      </text>
+                    )}
                     {item.kind === "residue" && (
                       <>
                         <text
                           x={labelX}
                           y={firstLineY + 18}
                           textAnchor="middle"
-                          className="fill-gray-600"
-                          style={{ fontSize: 11 }}
+                          className="fill-gray-700"
+                          style={{ fontSize: 11, fontWeight: 600 }}
                         >
-                          {item.residue.structure || "-"}
+                          {item.residue.base || "-"}
                         </text>
                         <text
                           x={labelX}
                           y={firstLineY + 36}
                           textAnchor="middle"
-                          className="fill-gray-700"
-                          style={{ fontSize: 11, fontWeight: 600 }}
+                          className="fill-gray-600"
+                          style={{ fontSize: 11 }}
                         >
-                          {item.residue.base || "-"}
+                          {item.residue.structure || "-"}
                         </text>
                       </>
                     )}
@@ -613,11 +634,6 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
             </svg>
           </div>
         </div>
-        {!chartData.hasNumericValues && (
-          <div className="mt-2 text-xs text-gray-500">
-            No numeric metric values for this chain; grouped residue labels are still shown.
-          </div>
-        )}
     </div>
   );
 };

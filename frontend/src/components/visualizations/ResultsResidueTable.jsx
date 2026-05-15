@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import { QualityScore } from "../utils/types";
 import { getColor } from "../utils/ColorUtils";
 import { Colors } from "../common/colors";
+import { formatNumberForDisplay } from "../utils/displayUniform";
 
 const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore, setSelectedScore, modelStatus, selectedChain }) => {
   const selectedBorderColor = Colors.white; // Colors.salmon;
@@ -191,7 +192,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
               <td
                 key={`${selectedChain}-id-${index}`}
                 className={
-                  "w-12 p-2 text-center even:bg-gray-50"
+                  "w-16 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide ? nucleotide.original_index : column.label}
@@ -208,7 +209,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
               <td
                 key={`${selectedChain}-name-${index}`}
                 className={
-                  "w-12 p-2 text-center even:bg-gray-50"
+                  "w-16 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide ? nucleotide.base : ""}
@@ -227,7 +228,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
               <td
                 key={`${selectedChain}-index-${index}`}
                 className={
-                  "w-12 p-2 text-center even:bg-gray-50"
+                  "w-16 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide ? nucleotide.structure : ""}
@@ -246,7 +247,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
               <td
                 key={`${selectedChain}-struct-${index}`}
                 className={
-                  "w-12 p-2 text-center even:bg-gray-50"
+                  "w-16 p-2 text-center even:bg-gray-50"
                 }
               >
                 {nucleotide && nucleotide.structuralElements && nucleotide.structuralElements.length > 0
@@ -260,7 +261,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           </tr> */}
           { analyzeNeighborhood && (
           <tr>
-            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-16 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -292,13 +293,13 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-CLASH_SCORE even:bg-gray-50"
+                  "w-16 p-2 text-center column-CLASH_SCORE even:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.CLASH_SCORE)}
               >
                 {nucleotide && nucleotide.selected ? (
                   nucleotide.metrics
-                    ? nucleotide.metrics.clashscore
+                    ? formatNumberForDisplay(nucleotide.metrics.clashscore.toString())
                     : !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                       <span className="inline-block align-middle">
                         <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-500"></span>
@@ -322,17 +323,17 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-CLASH_SCORE odd:bg-gray-50"
+                  "w-16 p-2 text-center column-CLASH_SCORE odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.CLASH_SCORE, true)}
               >
-                {value}
+                {formatNumberForDisplay(value.toString())}
               </td>
             )})}
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
-            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-16 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -364,12 +365,12 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-BAD_BONDS even:bg-gray-50"
+                  "w-16 p-2 text-center column-BAD_BONDS even:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.BAD_BONDS)}
               >
                 {nucleotide && nucleotide.selected ? (nucleotide.metrics 
-                ? `${nucleotide.metrics.numbadbonds} / ${nucleotide.metrics.numbonds} (${nucleotide.metrics.pct_badbonds}%)`
+                ? `${formatNumberForDisplay(nucleotide.metrics.numbadbonds.toString())} / ${formatNumberForDisplay(nucleotide.metrics.numbonds.toString())} (${formatNumberForDisplay(nucleotide.metrics.pct_badbonds.toString())}%)`
                 : 
                   !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
@@ -386,24 +387,24 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
               const nucleotide = getColumnNucleotide(column);
               const simEntries = nucleotide ? nucleotide.simData : column.simData;
               const value = simEntries && simEntries.length > 0 && simEntries[0].metrics !== undefined
-                ? simEntries[0].metrics.numbadbonds + " / " + simEntries[0].metrics.numbonds + " (" + simEntries[0].metrics.pct_badbonds + "%)"
+                ? formatNumberForDisplay(simEntries[0].metrics.numbadbonds.toString()) + " / " + formatNumberForDisplay(simEntries[0].metrics.numbonds.toString()) + " (" + formatNumberForDisplay(simEntries[0].metrics.pct_badbonds.toString()) + "%)"
                 : "N/A";
               return (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-BAD_BONDS odd:bg-gray-50"
+                  "w-16 p-2 text-center column-BAD_BONDS odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.BAD_BONDS, true)}
               >
-                {value}
+                {formatNumberForDisplay(value.toString())}
               </td>
             )})}
           </tr>)}
           {analyzeNeighborhood && (
           <tr>
-            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-16 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -435,12 +436,12 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
+                  "w-16 p-2 text-center column-BAD_ANGLES even:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.BAD_ANGLES)}
               >
                 {nucleotide && nucleotide.selected ? (nucleotide.metrics 
-                ? `${nucleotide.metrics.numbadangles} / ${nucleotide.metrics.numangles} (${nucleotide.metrics.pct_badangles}%)`
+                ? `${formatNumberForDisplay(nucleotide.metrics.numbadangles.toString())} / ${formatNumberForDisplay(nucleotide.metrics.numangles.toString())} (${formatNumberForDisplay(nucleotide.metrics.pct_badangles.toString())}%)`
                 : 
                   !shouldHideSpinners && nucleotide && nucleotide.selected ? (
                     <span className="inline-block align-middle">
@@ -457,23 +458,23 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
               const nucleotide = getColumnNucleotide(column);
               const simEntries = nucleotide ? nucleotide.simData : column.simData;
               const value = simEntries && simEntries.length > 0 && simEntries[0].metrics !== undefined
-                ? simEntries[0].metrics.numbadangles + " / " + simEntries[0].metrics.numangles + " (" + simEntries[0].metrics.pct_badangles + "%)"
+                ? formatNumberForDisplay(simEntries[0].metrics.numbadangles.toString()) + " / " + formatNumberForDisplay(simEntries[0].metrics.numangles.toString()) + " (" + formatNumberForDisplay(simEntries[0].metrics.pct_badangles.toString()) + "%)"
                 : "N/A";
               return (
               <td
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-BAD_ANGLES odd:bg-gray-50"
+                  "w-16 p-2 text-center column-BAD_ANGLES odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.BAD_ANGLES, true)}
               >
-                {value}
+                {formatNumberForDisplay(value.toString())}
               </td>
             )})}
           </tr>)}
           <tr>
-            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-16 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -505,11 +506,11 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-SUITENESS even:bg-gray-50"
+                  "w-16 p-2 text-center column-SUITENESS even:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.SUITENESS)}
               >
-                {nucleotide && nucleotide.selected ? (nucleotide.residueMetrics ? nucleotide.residueMetrics.suiteness : "") : "N/A"}
+                {nucleotide && nucleotide.selected ? (nucleotide.residueMetrics ? formatNumberForDisplay(nucleotide.residueMetrics.suiteness.toString()) : "") : "N/A"}
               </td>
             )})}
           </tr>
@@ -526,16 +527,16 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-SUITENESS odd:bg-gray-50"
+                  "w-16 p-2 text-center column-SUITENESS odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.SUITENESS, true)}
               >
-                {nucleotide && nucleotide.selected ? (value) : "N/A"}
+                {nucleotide && nucleotide.selected ? (formatNumberForDisplay(value.toString())) : "N/A"}
               </td>
             )})}
           </tr>}
           <tr>
-            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-12 p-2 text-center">
+            {/* <td rowSpan={hasSimRows ? 2 : undefined} className="w-16 p-2 text-center">
               <input
                 type="radio"
                 name="metric-selector"
@@ -567,7 +568,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center  column-SUGAR_PUCKER_OUT even:bg-gray-50"
+                  "w-16 p-2 text-center  column-SUGAR_PUCKER_OUT even:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT)}
                 title={nucleotide && nucleotide.residueMetrics && nucleotide.residueMetrics.pucker_outlier_type}
@@ -589,7 +590,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
                 key={`${selectedChain}-struct-${index}`}
                 data-residue-number={nucleotide ? nucleotide.residue_number : undefined}
                 className={
-                  "w-12 p-2 text-center column-SUGAR_PUCKER_OUT odd:bg-gray-50"
+                  "w-16 p-2 text-center column-SUGAR_PUCKER_OUT odd:bg-gray-50"
                 }
                 // style={activeCellStyle(column, QualityScore.SUGAR_PUCKER_OUT, true)}
               >
