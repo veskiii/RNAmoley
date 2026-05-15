@@ -54,7 +54,7 @@ export async function fetchMyData(
   // TODO: czy tego potrzebuje? Wywalilo bez powodu
   // Safari doesnt support AbortSignal
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
     const response = await fetch(`${API_URL}/jobs/${jobID}/${modelNumber}?resultsSource=${resultsSource}`, {
