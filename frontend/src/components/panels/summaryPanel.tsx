@@ -477,6 +477,15 @@ const SummaryPanel: React.FC = () => {
       return;
     }
 
+    const nameForQualityScore =
+    {
+      [QualityScore.CLASH_SCORE]: "ClashScore",
+      [QualityScore.BAD_ANGLES]: "BadAngles",
+      [QualityScore.BAD_BONDS]: "BadBonds",
+      [QualityScore.SUITENESS]: "Suiteness",
+      [QualityScore.SUGAR_PUCKER_OUT]: "SugarPucker",
+    }
+
     try {
       const canvas = await html2canvas(fornaContainerRef.current, {
         backgroundColor: "#ffffff",
@@ -486,7 +495,7 @@ const SummaryPanel: React.FC = () => {
 
       const link = document.createElement("a");
       link.href = canvas.toDataURL("image/png");
-      link.download = `forna-structure-${selectedModel}-${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `${originalResults.name || "forna-structure"}-m${selectedModel}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`;
       link.click();
     } catch (error) {
       console.error("Failed to download Forna view:", error);
