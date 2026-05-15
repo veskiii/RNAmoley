@@ -612,19 +612,19 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
                           x={labelX}
                           y={firstLineY + 18}
                           textAnchor="middle"
-                          className="fill-gray-600"
-                          style={{ fontSize: 11 }}
+                          className="fill-gray-700"
+                          style={{ fontSize: 11, fontWeight: 600 }}
                         >
-                          {item.residue.structure || "-"}
+                          {item.residue.base || "-"}
                         </text>
                         <text
                           x={labelX}
                           y={firstLineY + 36}
                           textAnchor="middle"
-                          className="fill-gray-700"
-                          style={{ fontSize: 11, fontWeight: 600 }}
+                          className="fill-gray-600"
+                          style={{ fontSize: 11 }}
                         >
-                          {item.residue.base || "-"}
+                          {item.residue.structure || "-"}
                         </text>
                       </>
                     )}
