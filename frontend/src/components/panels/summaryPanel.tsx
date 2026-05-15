@@ -308,7 +308,10 @@ const SummaryPanel: React.FC = () => {
                     if (prevSelected && chains.some((c) => c.name === prevSelected)) {
                       return prevSelected;
                     }
-                    return chains[0]?.name || "";
+                    // Prefer the first chain that is listed for the selected model in resultsStatus
+                    const availableForModel: string[] | undefined = origData?.metadata?.resultsStatus?.[selectedModel?.toString() || ""]?.chains;
+                    const defaultChain = chains.find((c) => !availableForModel || availableForModel.includes(c.name))?.name || "";
+                    return defaultChain;
                   });
                   return chains;
                 }
@@ -507,6 +510,9 @@ const SummaryPanel: React.FC = () => {
       setSelectedModel(modelNum);
     }
 
+  // Available chains for the currently selected model (used in JSX below)
+  const availableChains: string[] | undefined = originalResults?.metadata?.resultsStatus?.[selectedModel?.toString() || ""]?.chains;
+
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
       {/* Desktop view */}
@@ -651,8 +657,9 @@ const SummaryPanel: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
-                  {chainsState.map((chain) => {
-                    return (
+                  {chainsState
+                    .filter((chain) => !availableChains || availableChains.includes(chain.name))
+                    .map((chain) => (
                       <div
                         key={"chain" + chain.name}
                         className={`p-2 bg-white rounded shadow transition-all w-12 flex-shrink-0 flex items-center justify-center
@@ -663,8 +670,7 @@ const SummaryPanel: React.FC = () => {
                       >
                         <span>{chain.original_name}</span>
                       </div>
-                    );
-                  })}
+                    ))}
                 </div>
               </div>
               {/* Line plots of chain quality */}
