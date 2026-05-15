@@ -69,8 +69,9 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4">
           <h2 className="text-xl font-bold text-gray-900">Refinement parameters</h2>
+          <p>Structure refinement is performed using NAMD energy minimization.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
