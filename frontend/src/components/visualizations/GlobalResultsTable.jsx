@@ -1,4 +1,5 @@
 import React from "react";
+import { formatNumberForDisplay } from "../utils/displayUniform";
 
 const fieldRows = [
     {
@@ -36,7 +37,7 @@ const renderMetricValue = (metrics, key) => {
         return <span className="text-gray-400">—</span>;
     }
 
-    return metrics[key];
+    return formatNumberForDisplay(metrics[key].toString());
 };
 
 const renderCombinedMetricValue = (metrics, keys) => {
@@ -49,10 +50,10 @@ const renderCombinedMetricValue = (metrics, keys) => {
     }
 
     if (values.length === 3) {
-        return `${values[0]} / ${values[1]} (${values[2]}%)`;
+        return `${formatNumberForDisplay(values[0].toString())} / ${formatNumberForDisplay(values[1].toString())} (${formatNumberForDisplay(values[2].toString())}%)`;
     }
 
-    return values.join(" / ");
+    return values.map((value) => formatNumberForDisplay(value.toString())).join(" / ");
 };
 
 const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simModelMetrics, simFragmentMetrics }) => {

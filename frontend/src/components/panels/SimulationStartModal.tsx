@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatNumberForDisplay } from "../utils/displayUniform";
 
 export type SimulationFormValues = {
   restraintBackboneForce: number;
@@ -13,23 +14,6 @@ type SimulationStartModalProps = {
   errorMessage?: string;
   onClose: () => void;
   onSubmit: (values: SimulationFormValues) => Promise<void>;
-};
-
-const formatNumberForDisplay = (value: string) => {
-  if (value === "") {
-    return "";
-  }
-
-  const normalizedValue = value.replace(/,/g, "");
-  const parsedValue = Number(normalizedValue);
-
-  if (Number.isNaN(parsedValue)) {
-    return value;
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 20,
-  }).format(parsedValue);
 };
 
 const normalizeNumberInput = (value: string) => value.replace(/,/g, "");

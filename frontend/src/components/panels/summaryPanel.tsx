@@ -24,6 +24,7 @@ import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 import ChainMetricLineChart from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
+import { formatNumberForDisplay } from "../utils/displayUniform";
 
 const SummaryPanel: React.FC = () => {
   type ResultsSource = "original" | "simulation";
@@ -1074,7 +1075,7 @@ const SummaryPanel: React.FC = () => {
                         {Object.entries(simulationParameters).map(([param, value], i) => (
                           <span key={param}>
                             {i == 0 ? " (" : ""}
-                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {value}
+                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {formatNumberForDisplay(value.toString())}
                             {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
                           </span>
                         ))}
