@@ -115,7 +115,7 @@ export const performJobCreation = async (job:NewJob & { modelsDir?: string }) =>
     }
 
     // Split file into models
-    const modelNumbers = await splitFileIntoModels(job.id, job.original_extension, modelsDir);
+    const modelNumbers = await splitFileIntoModels(job.id, job.metadata, job.original_extension, modelsDir);
     console.log(`Number of models: ${modelNumbers} in job ${job.id}`);
 
     job.metadata.models = modelNumbers;
@@ -191,10 +191,14 @@ const inspectOriginalFileComposition = async (
   return (await inspectResponse.json()) as OriginalFileInspection;
 };
 
-const splitFileIntoModels = async (jobId : UUID, sourceFormat: string, modelsDir = "models") : Promise<number[]> => {
+const splitFileIntoModels = async (jobId : UUID, metadata : Metadata,sourceFormat: string, modelsDir = "models") : Promise<number[]> => {
   const splitResponse = await fetch(`${TOOLS_URL}/split?id=${jobId}&sourceFormat=${sourceFormat}&modelsDir=${modelsDir}`, {
     method: "POST",
   });
+  if (!splitResponse.ok) {
+    handleAnalysisError(jobId, metadata, "Model splitting failed.");
+    return [];
+  }
   const splitResponseJson = ((await splitResponse.json()) as splitModelsResponse);
   const modelNumbers = splitResponseJson.modelNumbers;
   return modelNumbers;
