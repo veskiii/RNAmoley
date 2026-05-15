@@ -127,7 +127,7 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "sim_running") {
-      return { label: "Refinement running...", className: "text-gray-800" };
+      return { label: "Refinement in progress...", className: "text-gray-800" };
     }
 
     if (status === "sim_finished") {
