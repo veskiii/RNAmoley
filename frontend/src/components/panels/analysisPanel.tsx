@@ -572,7 +572,7 @@ const Panel: React.FC = () => {
         [
           ...prev.filter(f => !(f.chainName === chainName && f.name.startsWith("Selection"))),
           ...ranges.map(([start, end]) => ({
-        name: start === end ? `Selection ${start}` : `Selection ${start}-${end}`,
+        name: start === end ? `Chain ${chainName} Selection ${start}` : `Chain ${chainName} Selection ${start}-${end}`,
         chainName,
         residues: Array.from({ length: end - start + 1 }, (_, i) => start + i),
         deselectedResidues: [],
@@ -816,7 +816,7 @@ const Panel: React.FC = () => {
             .filter(nucleotide => nucleotide.original_index >= start && nucleotide.original_index <= end)
             .map(nucleotide => nucleotide.index) || [];
         
-        selectFragment(`Range ${start}-${end}`, selectedChain, selectedNucleotides);
+        selectFragment(`Chain ${selectedChain} Range ${start}-${end}`, selectedChain, selectedNucleotides);
     } else {
         alert("Type valid range on selected chain");
     }
