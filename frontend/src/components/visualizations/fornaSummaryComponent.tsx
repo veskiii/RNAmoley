@@ -218,50 +218,55 @@ const FornacSummaryComponent = ({
    * **Identyfikacja i łączenie łańcuchów hybrydowych**
    */
   const normalizeDotBracket = (structure: string): string => {
-    const openerToCloser: Record<string, string> = {
-      "(": ")",
-      "[": "]",
-      "{": "}",
-      "<": ">",
+      const openerToCloser: Record<string, string> = {
+        "(": ")",
+        "[": "]",
+        "{": "}",
+        "<": ">",
+      };
+      const closerToOpener: Record<string, string> = {
+        ")": "(",
+        "]": "[",
+        "}": "{",
+        ">": "<",
+      };
+
+      const chars = Array.from(structure);
+
+      const stacks: Record<string, number[]> = {};
+      Object.keys(openerToCloser).forEach((op) => (stacks[op] = []));
+
+      for (let idx = 0; idx < chars.length; idx++) {
+        const ch = chars[idx];
+
+        if (openerToCloser[ch]) {
+          stacks[ch].push(idx);
+          continue;
+        }
+
+        const opener = closerToOpener[ch];
+        if (!opener) {
+          continue;
+        }
+
+        const stack = stacks[opener];
+        if (!stack || stack.length === 0) {
+          chars[idx] = ".";
+          continue;
+        }
+
+        stack.pop();
+      }
+
+      Object.values(stacks).forEach((arr) => {
+        while (arr.length > 0) {
+          const pos = arr.pop();
+          if (pos !== undefined) chars[pos] = ".";
+        }
+      });
+
+      return chars.join("");
     };
-    const closerToOpener: Record<string, string> = {
-      ")": "(",
-      "]": "[",
-      "}": "{",
-      ">": "<",
-    };
-
-    const chars = Array.from(structure);
-    const stack: Array<{ char: string; idx: number }> = [];
-
-    chars.forEach((ch, idx) => {
-      if (openerToCloser[ch]) {
-        stack.push({ char: ch, idx });
-        return;
-      }
-
-      if (!closerToOpener[ch]) {
-        return;
-      }
-
-      const top = stack[stack.length - 1];
-      if (!top || top.char !== closerToOpener[ch]) {
-        chars[idx] = ".";
-        return;
-      }
-
-      stack.pop();
-    });
-
-    while (stack.length > 0) {
-      const unmatched = stack.pop();
-      if (unmatched) {
-        chars[unmatched.idx] = ".";
-      }
-    }
-
-    return chars.join("");
-  };
 
 
   const handleHybridChains = (
