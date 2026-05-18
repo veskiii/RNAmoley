@@ -858,7 +858,8 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className={`grid grid-cols-1 ${originalResults.metadata.analyzeNeighborhoods ? 'md:grid-cols-2' : ''} gap-2`}>
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <div className="relative" ref={clashChartRef as any}>
                     <button
                       onClick={() => {
@@ -878,7 +879,8 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.CLASH_SCORE}
                     />
                   </div>
-
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <div className="relative" ref={badBondsChartRef as any}>
                     <button
                       onClick={() => {
@@ -898,7 +900,8 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.BAD_BONDS}
                     />
                   </div>
-
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <div className="relative" ref={badAnglesChartRef as any}>
                     <button
                       onClick={() => {
@@ -918,6 +921,7 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.BAD_ANGLES}
                     />
                   </div>
+                  )}
 
                   <div className="relative" ref={suitenessChartRef as any}>
                     <button
@@ -938,6 +942,12 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.SUITENESS}
                     />
                   </div>
+                  {!originalResults.metadata.analyzeNeighborhoods && (
+                    <p className="">
+                      Local analysis was not enabled. To compute clash scores, bad bonds, and bad angles for residue neighborhoods, 
+                      enable "Local analysis" during submission.
+                    </p>
+                  )}
                 </div>
               </div>
               {/* Local quality map */}
@@ -1057,12 +1067,14 @@ const SummaryPanel: React.FC = () => {
                           disabled={!simulationTabEnabled}
                           className="cursor-pointer disabled:cursor-not-allowed"
                         />
-                        <span className="text-sm">Compare 3D</span>
+                        <span className="text-sm">Show 3D alignment</span>
                       </label>
                     </div>
                   </div>
                 )}
-                <div className="flex flex-row gap-4 my-3">
+                <div className="flex flex-row gap-4 my-3 items-center">
+                  <p>Color by:</p>
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -1074,6 +1086,8 @@ const SummaryPanel: React.FC = () => {
                     />
                     <span className="text-sm">Clash score</span>
                   </label>
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -1085,6 +1099,8 @@ const SummaryPanel: React.FC = () => {
                     />
                     <span className="text-sm">Bad bonds</span>
                   </label>
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -1096,6 +1112,7 @@ const SummaryPanel: React.FC = () => {
                     />
                     <span className="text-sm">Bad angles</span>
                   </label>
+                  )}
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
