@@ -1006,7 +1006,7 @@ const SummaryPanel: React.FC = () => {
                       </span>
                     </span>
                 </div>
-                {hasSimulationStarted && (
+                {hasSimulationStarted && selectedModelStatus !== "sim_failed" && (
                   <div className="my-3">
                     <div className="flex flex-row gap-2">
                       <button
