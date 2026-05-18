@@ -444,6 +444,7 @@ const SummaryPanel: React.FC = () => {
         restraintGlobalForce: values.restraintGlobalForce,
         restraintBasePairsForce: values.restraintBasePairsForce,
         rmsdCutoff: values.rmsdCutoff,
+        simOnlyFragment: values.simOnlyFragment,
       });
 
       setIsSimulationModalOpen(false);
@@ -857,7 +858,8 @@ const SummaryPanel: React.FC = () => {
                     </span>
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className={`grid grid-cols-1 ${originalResults.metadata.analyzeNeighborhoods ? 'md:grid-cols-2' : ''} gap-2`}>
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <div className="relative" ref={clashChartRef as any}>
                     <button
                       onClick={() => {
@@ -877,7 +879,8 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.CLASH_SCORE}
                     />
                   </div>
-
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <div className="relative" ref={badBondsChartRef as any}>
                     <button
                       onClick={() => {
@@ -897,7 +900,8 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.BAD_BONDS}
                     />
                   </div>
-
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <div className="relative" ref={badAnglesChartRef as any}>
                     <button
                       onClick={() => {
@@ -917,6 +921,7 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.BAD_ANGLES}
                     />
                   </div>
+                  )}
 
                   <div className="relative" ref={suitenessChartRef as any}>
                     <button
@@ -937,6 +942,12 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.SUITENESS}
                     />
                   </div>
+                  {!originalResults.metadata.analyzeNeighborhoods && (
+                    <p className="">
+                      Local analysis was not enabled. To compute clash scores, bad bonds, and bad angles for residue neighborhoods, 
+                      enable "Local analysis" during submission.
+                    </p>
+                  )}
                 </div>
               </div>
               {/* Local quality map */}
@@ -995,55 +1006,48 @@ const SummaryPanel: React.FC = () => {
                       </span>
                     </span>
                 </div>
-                {hasSimulationStarted && (
+                {hasSimulationStarted && selectedModelStatus !== "sim_failed" && (
                   <div className="my-3">
-                    <div className="flex flex-row gap-2">
-                      <button
-                        tabIndex={0}
-                        onClick={() => setSelectedResultsSource("original")}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSelectedResultsSource("original");
-                          }
-                        }}
-                        className={`h-auto w-24 px-2 mt-0 rounded-md text-center text-sm transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
-                          selectedResultsSource === "original"
-                            ? "bg-moley-darkGreen text-white"
-                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                        }`}
+                    <div className="flex flex-row gap-4 items-center" role="radiogroup" aria-label="Results source">
+                      <p>Display structure:</p>
+                      <label
+                        className={`flex cursor-pointer items-center justify-center gap-2 rounded-md py-2 text-sm transition`}
                       >
-                        Original
-                      </button>
+                        <input
+                          type="radio"
+                          name="resultsSource"
+                          value="original"
+                          checked={selectedResultsSource === "original"}
+                          onChange={() => setSelectedResultsSource("original")}
+                          className="text-sm"
+                        />
+                        <span>Original</span>
+                      </label>
 
-                      <button
-                        tabIndex={simulationTabEnabled ? 0 : -1}
-                        aria-disabled={!simulationTabEnabled}
-                        onClick={() => {
-                          if (simulationTabEnabled) {
-                            setSelectedResultsSource("simulation");
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (!simulationTabEnabled) return;
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSelectedResultsSource("simulation");
-                          }
-                        }}
-                        className={`w-24 h-auto mt-0 rounded-md px-2 py-1 text-center text-sm transition focus:outline-none focus:ring-2 focus:ring-moley-darkGreen ${
-                          selectedResultsSource === "simulation"
-                            ? "bg-moley-darkGreen text-white"
-                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                        } ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : ""}`}
+                      <label
+                        className={`flex items-center justify-center gap-2 rounded-md py-2 text-sm transition
+                           ${!simulationTabEnabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                       >
+                        <input
+                          type="radio"
+                          name="resultsSource"
+                          value="simulation"
+                          checked={selectedResultsSource === "simulation"}
+                          onChange={() => {
+                            if (simulationTabEnabled) {
+                              setSelectedResultsSource("simulation");
+                            }
+                          }}
+                          disabled={!simulationTabEnabled}
+                          className="text-sm"
+                        />
                         <div className="flex items-center justify-between gap-2">
                           <span className="mr-1">Refined</span>
                           {isSimulationInProgress && (
                             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                           )}
                         </div>
-                      </button>
+                      </label>
                       <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
@@ -1056,12 +1060,14 @@ const SummaryPanel: React.FC = () => {
                           disabled={!simulationTabEnabled}
                           className="cursor-pointer disabled:cursor-not-allowed"
                         />
-                        <span className="text-sm">Compare 3D</span>
+                        <span className="text-sm">Show 3D alignment</span>
                       </label>
                     </div>
                   </div>
                 )}
-                <div className="flex flex-row gap-4 my-3">
+                <div className="flex flex-row gap-4 my-3 items-center">
+                  <p>Color by:</p>
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -1073,6 +1079,8 @@ const SummaryPanel: React.FC = () => {
                     />
                     <span className="text-sm">Clash score</span>
                   </label>
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -1084,6 +1092,8 @@ const SummaryPanel: React.FC = () => {
                     />
                     <span className="text-sm">Bad bonds</span>
                   </label>
+                  )}
+                  {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -1095,6 +1105,7 @@ const SummaryPanel: React.FC = () => {
                     />
                     <span className="text-sm">Bad angles</span>
                   </label>
+                  )}
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"

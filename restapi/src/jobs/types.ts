@@ -95,6 +95,7 @@ export interface SimulationParameters {
   restraintGlobalForce: number;
   restraintBasePairsForce: number;
   rmsdCutoff: number;
+  simOnlyFragment: boolean;
 };
 
 export interface SimulationInfo {

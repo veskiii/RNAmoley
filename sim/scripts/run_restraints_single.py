@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import re
 import shlex
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -86,6 +87,88 @@ def zero_psf_natom_charges(psf_path: Path) -> None:
         lines[line_index] = f"{line[:charge_token.start()]}{charge_value}{line[charge_token.end():]}"
 
     psf_path.write_text("\n".join(lines) + ("\n" if text.endswith("\n") else ""), encoding="utf8")
+
+
+def write_pdb_with_residue_occupancy(pdb_path: Path, residues_json: Path, out_pdb_path: Path) -> None:
+    text = pdb_path.read_text(encoding="utf8")
+    data = json.loads(residues_json.read_text(encoding="utf8"))
+
+    # Build set of (chain, resid) tuples
+    residues = set()
+    for item in data:
+        chain = item.get("chainID")
+        resid = item.get("residueID")
+        try:
+            resid = int(resid)
+        except Exception:
+            continue
+        residues.add((str(chain), resid))
+
+    lines = text.splitlines()
+    out_lines: list[str] = []
+
+    for line in lines:
+        if line.startswith(("ATOM  ", "HETATM")):
+            # Standard PDB columns: chain at 22 (index 21), resseq 23-26 (22:26), occupancy 55-60 (54:60)
+            chain = line[21:22]
+            resseq_s = line[22:26].strip()
+            try:
+                resseq = int(resseq_s)
+            except Exception:
+                out_lines.append(line)
+                continue
+
+            occ = 0.0 if (chain, resseq) in residues else 1.0
+
+            # Ensure line is long enough to replace occupancy field
+            if len(line) < 60:
+                line = line.ljust(60)
+
+            new_line = line[:54] + f"{occ:6.2f}" + line[60:]
+            out_lines.append(new_line)
+        else:
+            out_lines.append(line)
+
+    out_pdb_path.write_text("\n".join(out_lines) + ("\n" if text.endswith("\n") else ""), encoding="utf8")
+
+
+def set_fixed_atoms(text: str, enable: bool, fixed_file: str) -> str:
+    # Remove any existing fixedAtoms / fixedAtomsFile lines to avoid duplicates,
+    # then insert a single pair in the FIXED ATOMS section.
+    lines = text.splitlines()
+
+    # Filter out existing declarations
+    filtered: list[str] = []
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith("fixedAtoms") or stripped.startswith("fixedAtomsFile"):
+            continue
+        filtered.append(line)
+
+    # Find insertion point: after the FIXED ATOMS header block if present,
+    # otherwise before SIMULATION PARAMETERS, otherwise at end.
+    insert_at = None
+    for idx, line in enumerate(filtered):
+        if line.strip().startswith("## FIXED ATOMS"):
+            # Usually header is three lines (hash, title, hash). Insert after that block.
+            insert_at = idx + 2
+            if insert_at > len(filtered):
+                insert_at = len(filtered)
+            break
+
+    if insert_at is None:
+        for idx, line in enumerate(filtered):
+            if line.strip().startswith("## SIMULATION PARAMETERS"):
+                insert_at = idx
+                break
+
+    if insert_at is None:
+        insert_at = len(filtered)
+
+    ins: list[str] = [f"fixedAtoms          {'on' if enable else 'off'}", f"fixedAtomsFile      {fixed_file}"]
+    filtered[insert_at:insert_at] = ins
+
+    return "\n".join(filtered) + ("\n" if text.endswith("\n") else "")
 
 
 def run_command(cmd: list[str], cwd: Path, log_path: Path | None = None) -> None:
@@ -214,6 +297,16 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Number of CPU processes for NAMD (default: single process)",
     )
+    parser.add_argument(
+        "--residues-json",
+        default=None,
+        help="Path to JSON file with residues to set occupancy 0 (list of {chainID,residueID})",
+    )
+    parser.add_argument(
+        "--out-pdb-residues",
+        default=None,
+        help="Output PDB path for occupancy-modified PDB (defaults to <outputname>_residues.pdb)",
+    )
     return parser.parse_args()
 
 
@@ -330,8 +423,30 @@ def main() -> None:
     if generator_log_path.exists():
         generator_log_path.unlink()
 
-    run_namd_script.write_text(replace_outputname(namd_script.read_text(), outputname))
+    namd_template_text = namd_script.read_text()
     run_command(generator_cmd, cwd=workdir, log_path=generator_log_path)
+
+    # If residues JSON is provided, write a PDB with occupancy flags
+    if args.residues_json:
+        residues_json_path = (workdir / args.residues_json).resolve()
+        if not residues_json_path.exists():
+            raise FileNotFoundError(f"Missing residues JSON: {residues_json_path}")
+
+        out_pdb_residues = (
+            (workdir / args.out_pdb_residues).resolve() if args.out_pdb_residues
+            else workdir / f"{outputname}_residues.pdb"
+        )
+
+        print(f"Writing occupancy-modified PDB: {out_pdb_residues.name} from {residues_json_path.name}")
+        write_pdb_with_residue_occupancy((workdir / args.pdb).resolve(), residues_json_path, out_pdb_residues)
+
+        # Update run-specific NAMD script to enable fixedAtoms and point to generated PDB
+        final_script_text = replace_outputname(namd_template_text, outputname)
+        final_script_text = set_fixed_atoms(final_script_text, True, out_pdb_residues.name)
+        run_namd_script.write_text(final_script_text)
+    else:
+        # No residues JSON: just write script with updated outputname
+        run_namd_script.write_text(replace_outputname(namd_template_text, outputname))
 
     psf_path = (workdir / args.psf).resolve()
     if not psf_path.exists():

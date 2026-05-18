@@ -45,12 +45,12 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
 
     if (allResiduesSelected) {
       clickedStructuralNames.forEach((name) => {
-        deselectFragment(name, clickedStructuralNames);
+        deselectFragment(`Chain ${selectedChain} ${name}`, clickedStructuralNames);
       });
     } else {
       clickedStructuralNames.forEach((name) => {
         selectFragment(
-          name,
+          `Chain ${selectedChain} ${name}`,
           selectedChain,
           SEResidues
             .filter((nuc) => nuc.structuralElements.some((el) => el.name === name))

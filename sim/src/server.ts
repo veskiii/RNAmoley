@@ -19,6 +19,7 @@ app.post("/sim-jobs", async (req, res) => {
     restraintGlobalForce,
     restraintBasePairsForce,
     rmsdCutoff,
+    simOnlyFragment,
   } = req.body ?? {};
 
   if (
@@ -61,6 +62,7 @@ app.post("/sim-jobs", async (req, res) => {
     restraintGlobalForce: parsedRestraintGlobalForce,
     restraintBasePairsForce: parsedRestraintBasePairsForce,
     rmsdCutoff: parsedRmsdCutoff,
+    simOnlyFragment: Boolean(simOnlyFragment),
   });
 
   try {
@@ -71,6 +73,7 @@ app.post("/sim-jobs", async (req, res) => {
       restraintGlobalForce: parsedRestraintGlobalForce,
       restraintBasePairsForce: parsedRestraintBasePairsForce,
       rmsdCutoff: parsedRmsdCutoff,
+      simOnlyFragment: Boolean(simOnlyFragment),
     });
 
     res.status(202).json({
