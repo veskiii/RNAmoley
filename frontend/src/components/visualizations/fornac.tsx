@@ -68,33 +68,38 @@ const FornaComponent = ({
       };
 
       const chars = Array.from(structure);
-      const stack: Array<{ char: string; idx: number }> = [];
 
-      chars.forEach((ch, idx) => {
+      const stacks: Record<string, number[]> = {};
+      Object.keys(openerToCloser).forEach((op) => (stacks[op] = []));
+
+      for (let idx = 0; idx < chars.length; idx++) {
+        const ch = chars[idx];
+
         if (openerToCloser[ch]) {
-          stack.push({ char: ch, idx });
-          return;
+          stacks[ch].push(idx);
+          continue;
         }
 
-        if (!closerToOpener[ch]) {
-          return;
+        const opener = closerToOpener[ch];
+        if (!opener) {
+          continue;
         }
 
-        const top = stack[stack.length - 1];
-        if (!top || top.char !== closerToOpener[ch]) {
+        const stack = stacks[opener];
+        if (!stack || stack.length === 0) {
           chars[idx] = ".";
-          return;
+          continue;
         }
 
         stack.pop();
-      });
-
-      while (stack.length > 0) {
-        const unmatched = stack.pop();
-        if (unmatched) {
-          chars[unmatched.idx] = ".";
-        }
       }
+
+      Object.values(stacks).forEach((arr) => {
+        while (arr.length > 0) {
+          const pos = arr.pop();
+          if (pos !== undefined) chars[pos] = ".";
+        }
+      });
 
       return chars.join("");
     };
