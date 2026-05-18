@@ -126,6 +126,7 @@ export type StartSimulationPayload = {
   restraintGlobalForce: number;
   restraintBasePairsForce: number;
   rmsdCutoff: number;
+  simOnlyFragment: boolean;
 };
 
 export async function startSimulation(payload: StartSimulationPayload) {

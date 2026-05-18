@@ -97,6 +97,7 @@ async function performSimulation(
         restraintGlobalForce: simulationParams.restraintGlobalForce,
         restraintBasePairsForce: simulationParams.restraintBasePairsForce,
         rmsdCutoff: simulationParams.rmsdCutoff,
+        simOnlyFragment: Boolean(simulationParams.simOnlyFragment),
       }),
     });
 

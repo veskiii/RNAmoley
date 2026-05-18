@@ -6,6 +6,7 @@ export type SimulationFormValues = {
   restraintGlobalForce: number;
   restraintBasePairsForce: number;
   rmsdCutoff: number;
+  simOnlyFragment: boolean;
 };
 
 type SimulationStartModalProps = {
@@ -38,6 +39,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
   );
   const [rmsdCutoff, setRmsdCutoff] = useState(formatNumberForDisplay("0.4"));
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [refineEntireStructure, setRefineEntireStructure] = useState(false);
 
   if (!isOpen) {
     return null;
@@ -51,11 +53,17 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
       restraintGlobalForce: parseSubmittedNumber(restraintGlobalForce),
       restraintBasePairsForce: parseSubmittedNumber(restraintBasePairsForce),
       rmsdCutoff: parseSubmittedNumber(rmsdCutoff),
+      simOnlyFragment: !refineEntireStructure,
     };
 
-    const hasInvalidValue = Object.values(parsedValues).some(
-      (value) => Number.isNaN(value) || value < 0
-    );
+    const numericValues = [
+      parsedValues.restraintBackboneForce,
+      parsedValues.restraintGlobalForce,
+      parsedValues.restraintBasePairsForce,
+      parsedValues.rmsdCutoff,
+    ];
+
+    const hasInvalidValue = numericValues.some((value) => Number.isNaN(value) || value < 0);
 
     if (hasInvalidValue) {
       setValidationError("All parameters must be numbers >= 0.");
@@ -75,6 +83,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700">
               Backbone restraint force
@@ -163,6 +172,16 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               className="w-full rounded-lg border border-gray-300 px-3 py-2"
               disabled={isSubmitting}
             />
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={refineEntireStructure}
+              onChange={(e) => setRefineEntireStructure(e.target.checked)}
+              disabled={isSubmitting}
+              className="h-4 w-4"
+            />
+            <span>Refine entire structure</span>
           </label>
 
           {(validationError || errorMessage) && (

@@ -529,6 +529,7 @@ export async function startSimulation(req: Request, res: Response) {
   const restraintGlobalForce = Number(req.body.restraintGlobalForce);
   const restraintBasePairsForce = Number(req.body.restraintBasePairsForce);
   const rmsdCutoff = Number(req.body.rmsdCutoff);
+  const simOnlyFragment = Boolean(req.body.simOnlyFragment);
 
   console.log(
     "Starting simulation. id: ",
@@ -603,6 +604,7 @@ export async function startSimulation(req: Request, res: Response) {
     restraintGlobalForce,
     restraintBasePairsForce,
     rmsdCutoff,
+    simOnlyFragment,
   };
 
   console.log("Starting simulation with parameters:", {

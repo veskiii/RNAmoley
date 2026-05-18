@@ -15,6 +15,7 @@ export type SimJobData = {
 	restraintGlobalForce: number;
 	restraintBasePairsForce: number;
 	rmsdCutoff: number;
+	simOnlyFragment?: boolean;
 };
 
 export type SimJobResult = {
@@ -262,6 +263,37 @@ async function getChainNamesFromAnnotation(modelsPath: string, modelNumber: stri
 	}
 }
 
+async function ensureSelectedResidues(modelsPath: string, envPath: string, modelNumber: string) {
+	const selectedPath = path.join(modelsPath, `${modelNumber}_residues.json`);
+
+	try {
+ 		await fs.access(selectedPath);
+ 		return;
+ 	} catch (err) {
+ 		// missing, try to reconstruct from results
+ 	}
+
+ 	const resultsPath = path.join(envPath, `${modelNumber}_results.json`);
+ 	try {
+ 		const resultsRaw = await fs.readFile(resultsPath, "utf-8");
+ 		const results = JSON.parse(resultsRaw) as any;
+ 		const items = Array.isArray(results?.data) ? results.data : [];
+ 		const recovered = items
+ 			.filter((r: any) => r && r.selected)
+ 			.map((r: any) => ({
+ 				chainID: r.chainID ?? r.original_chain_id ?? "A",
+ 				residueID: Number(r.residue_number ?? r.original_index ?? r.index),
+ 			}));
+ 		if (recovered.length > 0) {
+ 			await fs.mkdir(modelsPath, { recursive: true });
+ 			await fs.writeFile(selectedPath, JSON.stringify(recovered, null, 2), "utf-8");
+ 			console.log(`[sim] Recovered selected residues to ${selectedPath}`);
+ 		}
+ 	} catch (err2) {
+ 		// ignore if results file missing or invalid; downstream code will handle absence
+ 	}
+}
+
 type PreparedChain = {
 	segmentName: string;
 	pdbChainId: string;
@@ -361,6 +393,10 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 
 	const sourceModel = path.join(modelsPath, `${data.modelNumber}.pdb`);
 	const sourceModelPairs = path.join(modelsPath, `${data.modelNumber}_pairs.resid`);
+	const sourceModelSelectedResidues = path.join(modelsPath, `${data.modelNumber}_residues.json`);
+
+	// Ensure selected residues JSON exists (recover from results if missing)
+	await ensureSelectedResidues(modelsPath, envPath, data.modelNumber);
 	const sourceModelNtcs = await ensureDnatcoAnalysis(envPath, path.relative(envPath, sourceModel));
 	const chainNames = await getChainNamesFromAnnotation(modelsPath, data.modelNumber);
 	const simModel = path.join(simPath, `${data.modelNumber}.pdb`);
@@ -412,6 +448,8 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 			"/webserver/scripts/base_pair_templates",
 			"--generator-script",
 			"/webserver/scripts/generate_colvars_combined.py",
+			data.simOnlyFragment && "--residues-json",
+			data.simOnlyFragment && sourceModelSelectedResidues,
 			"--pairs",
 			sourceModelPairs,
 			"--csv",

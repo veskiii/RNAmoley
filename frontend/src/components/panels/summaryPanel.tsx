@@ -444,6 +444,7 @@ const SummaryPanel: React.FC = () => {
         restraintGlobalForce: values.restraintGlobalForce,
         restraintBasePairsForce: values.restraintBasePairsForce,
         rmsdCutoff: values.rmsdCutoff,
+        simOnlyFragment: values.simOnlyFragment,
       });
 
       setIsSimulationModalOpen(false);
