@@ -417,7 +417,7 @@ const SummaryPanel: React.FC = () => {
       failureCountRef.current = 0;
       pollIntervalRef.current = 10000;
     };
-  }, [jobId, selectedModel, selectedResultsSource, refreshToken]);
+  }, [jobId, selectedModel, selectedResultsSource, refreshToken, simulationTabEnabled]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
@@ -867,7 +867,7 @@ const SummaryPanel: React.FC = () => {
                           if (!container) return;
                           downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-ClashScore`);
                         }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -888,7 +888,7 @@ const SummaryPanel: React.FC = () => {
                         if (!container) return;
                         downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-BadBonds`);
                       }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -909,7 +909,7 @@ const SummaryPanel: React.FC = () => {
                         if (!container) return;
                         downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-BadAngles`);
                       }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -930,7 +930,7 @@ const SummaryPanel: React.FC = () => {
                         if (!container) return;
                         downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-Suiteness`);
                       }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -1042,7 +1042,7 @@ const SummaryPanel: React.FC = () => {
                           className="text-sm"
                         />
                         <div className="flex items-center justify-between gap-2">
-                          <span className="mr-1">Refined</span>
+                          <span className="mr-1">After refinement</span>
                           {isSimulationInProgress && (
                             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                           )}
