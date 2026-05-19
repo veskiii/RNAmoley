@@ -173,7 +173,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               disabled={isSubmitting}
             />
           </label>
-          <label className="flex items-center gap-2">
+          {/* <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={refineEntireStructure}
@@ -182,7 +182,7 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
               className="h-4 w-4"
             />
             <span>Refine entire structure</span>
-          </label>
+          </label> */}
 
           {(validationError || errorMessage) && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
