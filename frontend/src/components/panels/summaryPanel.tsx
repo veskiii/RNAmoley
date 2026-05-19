@@ -15,7 +15,7 @@ import {
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
 import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
-import { getColor } from "../utils/ColorUtils";
+import { getColor, getColorErrorFocused } from "../utils/ColorUtils";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { fetchMyData, startSimulation } from "../utils/api";
 import TopPanel from "../common/topPanel";
@@ -25,6 +25,7 @@ import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 import ChainMetricLineChart from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 import { formatNumberForDisplay } from "../utils/displayUniform";
+import { get } from "http";
 
 const SummaryPanel: React.FC = () => {
   type ResultsSource = "original" | "simulation";
@@ -205,6 +206,15 @@ const SummaryPanel: React.FC = () => {
     }
   };
 
+  const getColorForForna = (residue: any) => {
+    if (!errorFocusedModeMolstar) {
+      return residue.selected ? getColor(residue, selectedQualityScore) : "#7c7c7c";
+    }
+    else {
+      return residue.selected ? getColorErrorFocused(residue, selectedQualityScore) : "#7c7c7c";
+    }
+  }
+
   const colorGnodes = () => {
     if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
       console.warn("No data in displayedResults.results.data");
@@ -230,7 +240,7 @@ const SummaryPanel: React.FC = () => {
         if (node) {
           node
             .classed("fornac-selectedNode", true)
-            .style("fill", getColor(residue, selectedQualityScore));
+            .style("fill", getColorForForna(residue));
         } else {
           // console.warn(`Node with index ${residue.residue_number} not found`);
         }

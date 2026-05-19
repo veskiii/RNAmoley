@@ -674,7 +674,7 @@ const Molstar = (props) => {
               case QualityScore.BAD_BONDS:
                 return Number(entry.raw?.metrics?.numbadbonds) > 0;
               case QualityScore.SUITENESS:
-                return Number(entry.raw?.residueMetrics?.suiteness) > 0;
+                return Number(entry.raw?.residueMetrics?.suiteness) < 0.01;
               case QualityScore.SUGAR_PUCKER_OUT:
                 return (entry.raw?.residueMetrics?.pucker_outlier_type || "").toString().trim() !== "";
               default:
