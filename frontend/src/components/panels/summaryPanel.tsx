@@ -81,6 +81,7 @@ const SummaryPanel: React.FC = () => {
   const MAX_POLL_INTERVAL = 60000;
   const [showResidueTable, setShowResidueTable] = useState(false);
   const [comparisonModeMolstar, setComparisonModeMolstar] = useState(false);
+  const [errorFocusedModeMolstar, setErrorFocusedModeMolstar] = useState(false);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
   const canStartSimulation =
@@ -1227,6 +1228,31 @@ const SummaryPanel: React.FC = () => {
                   </div>
                 )}
                 <div className="flex flex-row gap-4 my-3 items-center">
+                  <p>Visualization mode:</p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="continuosColoring"
+                      value={"false"}
+                      checked={!errorFocusedModeMolstar}
+                      onChange={(e) => setErrorFocusedModeMolstar(e.target.value === "true")}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Continuos coloring</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="errorFocused"
+                      value={"true"}
+                      checked={errorFocusedModeMolstar}
+                      onChange={(e) => setErrorFocusedModeMolstar(e.target.value === "true")}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">Error-focused highlighting</span>
+                  </label>
+                </div>
+                <div className="flex flex-row gap-4 my-3 items-center">
                   <p>Color by:</p>
                   {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -1427,6 +1453,7 @@ const SummaryPanel: React.FC = () => {
                       resultResidues={comparisonModeMolstar ? originalResults.results.data : displayedResults?.results.data || originalResults.results.data}
                       selectedQualityScore={selectedQualityScore}
                       radius={originalResults.metadata.radius}
+                      errorFocusedMode={!comparisonModeMolstar && errorFocusedModeMolstar}
                       comparisonFile={simulationTabEnabled && simulationResults ? simulationResults.pdb_file_string : undefined}
                       comparisonMode={comparisonModeMolstar}
                     />

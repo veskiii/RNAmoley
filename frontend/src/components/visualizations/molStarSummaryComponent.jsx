@@ -58,9 +58,11 @@ const Molstar = (props) => {
     resultResidues,
     selectedQualityScore,
     radius,
+    errorFocusedMode,
     comparisonFile,
     comparisonMode,
   } = props;
+  const selectedOutlineComponentsRef = useRef([]);
   const parentRef = useRef(null);
   const canvasRef = useRef(null);
   const plugin = useRef(null);
@@ -401,19 +403,19 @@ const Molstar = (props) => {
             const builder = pluginInstance.state.data.build();
             let hadDeletes = false;
             for (const r of reps) {
-              let ref;
-              try {
-                ref = typeof r === "string" ? r : r?.cell?.transform?.ref;
-              } catch (refErr) {
-                console.warn("setBallAndStick: error reading rep ref", r, refErr);
-                ref = undefined;
-              }
-              if (ref) {
-                builder.delete(ref);
-                hadDeletes = true;
-              } else {
-                console.warn("setBallAndStick: Skipping invalid representation ref", r);
-              }
+                let ref = undefined;
+                try {
+                  if (typeof r === "string") ref = r;
+                  else if (r && r.cell && r.cell.transform && typeof r.cell.transform.ref !== "undefined") ref = r.cell.transform.ref;
+                  else if (r && r.transform && typeof r.transform.ref !== "undefined") ref = r.transform.ref;
+                } catch (refErr) {
+                  console.warn("setBallAndStick: error reading rep ref", r, refErr);
+                  ref = undefined;
+                }
+                if (ref) {
+                  builder.delete(ref);
+                  hadDeletes = true;
+                }
             }
             if (hadDeletes) {
               try {
@@ -496,6 +498,30 @@ const Molstar = (props) => {
     const structure = hierarchy?.structures?.[0];
     const data = structure?.cell?.obj?.data;
     const components = structure?.components;
+    // Filter to components that have valid state transform refs required by Mol* helpers
+    const targetComponents = (components || [])
+      .filter((c) => !!c)
+      .filter((c) => {
+        // keep the original component object shape that Mol* helpers expect
+        try {
+          if (c && c.cell && c.cell.transform && typeof c.cell.transform.ref !== "undefined") return true;
+          if (c && c.transform && typeof c.transform.ref !== "undefined") return true;
+        } catch (e) {}
+        return false;
+      });
+
+    const primaryComponent = targetComponents.find((c) => Array.isArray(c?.representations)) || targetComponents[0];
+
+    if (!primaryComponent) {
+      console.debug("changeNucleotideColors: no valid primary component available for overpaint");
+      return;
+    }
+
+    if (!targetComponents || targetComponents.length === 0) {
+      // nothing we can paint safely yet
+      console.debug("changeNucleotideColors: no valid components available for overpaint");
+      return;
+    }
 
     if (!structure || !data || !components || components.length === 0) {
       return;
@@ -512,24 +538,169 @@ const Molstar = (props) => {
       return;
     }
 
-    const residueColors = mapResiduesToColors();
+    // Build residue entries including the original residue for metric checks
+    const residueEntries = (Array.isArray(resultResidues) ? resultResidues : [])
+      .map((residue) => {
+        const metricsResidue = residue?.residueMetrics?.residue;
+        const parsedChain = metricsResidue?.trim()?.split(/\s+/)?.[0];
+        const chainId = residue?.chainID || parsedChain;
+        const authResidueNumber = Number(residue?.original_index);
+        const labelResidueNumber = Number(residue?.residue_number);
 
-    const groupedByColor = {};
+        if (!chainId || Number.isNaN(authResidueNumber)) return null;
 
-    residueColors.forEach((entry) => {
-      if (!groupedByColor[entry.color]) {
-        groupedByColor[entry.color] = [];
+        return {
+          chainId,
+          authResidueNumber,
+          labelResidueNumber,
+          selected: !!residue?.selected,
+          raw: residue,
+        };
+      })
+      .filter(Boolean);
+
+    const selectedEntries = residueEntries.filter((e) => e.selected);
+    const unselectedEntries = residueEntries.filter((e) => !e.selected);
+
+    const greyHex = "#7c7c7c";
+    const safeSetStructureOverpaint = async (componentsToPaint, colorHex, lociGetter) => {
+      try {
+        await setStructureOverpaint(
+          plugin.current,
+          componentsToPaint,
+          Color(parseInt(colorHex.replace("#", ""), 16)),
+          lociGetter
+        );
+      } catch (error) {
+        if (!String(error?.message || error).includes("reading 'ref'")) {
+          console.warn("Failed to apply overpaint", error);
+        }
       }
-      groupedByColor[entry.color].push(entry);
-    });
+    };
 
-    for (const color in groupedByColor) {
-      if (runId !== coloringRunId.current || !plugin.current) {
-        return;
+    // If nothing is selected, paint everything grey
+    if (selectedEntries.length === 0) {
+      const allAtoms = MS.struct.generator.atomGroups({});
+      const selection = Script.getStructureSelection(allAtoms, data);
+      if (selection) {
+        const loci = StructureSelection.toLociWithSourceUnits(selection);
+        if (loci?.elements?.length) {
+          await safeSetStructureOverpaint([primaryComponent], greyHex, async () => loci);
+        }
+      }
+      return;
+    }
+
+    // Paint unselected residues grey
+    if (unselectedEntries.length > 0) {
+      const groupsUnselected = [];
+      for (const entry of unselectedEntries) {
+        const residueByAuth = MS.struct.generator.atomGroups({
+          "chain-test": MS.core.rel.eq([
+            MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+            entry.chainId,
+          ]),
+          "residue-test": MS.core.rel.eq([
+            MolScriptBuilder.struct.atomProperty.macromolecular.auth_seq_id(),
+            entry.authResidueNumber,
+          ]),
+        });
+
+        groupsUnselected.push(
+          Number.isNaN(entry.labelResidueNumber)
+            ? residueByAuth
+            : MS.struct.combinator.merge([
+                residueByAuth,
+                MS.struct.generator.atomGroups({
+                  "chain-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+                    entry.chainId,
+                  ]),
+                  "residue-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.label_seq_id(),
+                    entry.labelResidueNumber,
+                  ]),
+                }),
+              ])
+        );
       }
 
-      const entries = groupedByColor[color];
+      if (groupsUnselected.length > 0) {
+        const selUn = Script.getStructureSelection(MS.struct.combinator.merge(groupsUnselected), data);
+        if (selUn) {
+          const lociUn = StructureSelection.toLociWithSourceUnits(selUn);
+          if (lociUn?.elements?.length) {
+            await safeSetStructureOverpaint([primaryComponent], greyHex, async () => lociUn);
+          }
+        }
+      }
 
+    }
+
+    // Helper to check metric == 0 for an entry
+    const isMetricZero = (res) => {
+      try {
+        switch (selectedQualityScore) {
+          case QualityScore.CLASH_SCORE:
+            return Number(res?.metrics?.clashscore) === 0;
+          case QualityScore.BAD_ANGLES:
+            return Number(res?.metrics?.numbadangles) === 0;
+          case QualityScore.BAD_BONDS:
+            return Number(res?.metrics?.numbadbonds) === 0;
+          case QualityScore.SUITENESS:
+            return Number(res?.residueMetrics?.suiteness) === 0;
+          case QualityScore.SUGAR_PUCKER_OUT:
+            return !(res?.residueMetrics?.pucker_outlier_type || "").toString().trim();
+          default:
+            return false;
+        }
+      } catch (e) {
+        return false;
+      }
+    };
+
+    // Compute colors for selected entries and group by color
+    const selectedGrouped = {};
+    for (const entry of selectedEntries) {
+      let colorHex = "#ffffff";
+      if (errorFocusedMode) {
+        const hasError = (() => {
+          try {
+            switch (selectedQualityScore) {
+              case QualityScore.CLASH_SCORE:
+                return Number(entry.raw?.metrics?.clashscore) > 0;
+              case QualityScore.BAD_ANGLES:
+                return Number(entry.raw?.metrics?.numbadangles) > 0;
+              case QualityScore.BAD_BONDS:
+                return Number(entry.raw?.metrics?.numbadbonds) > 0;
+              case QualityScore.SUITENESS:
+                return Number(entry.raw?.residueMetrics?.suiteness) > 0;
+              case QualityScore.SUGAR_PUCKER_OUT:
+                return (entry.raw?.residueMetrics?.pucker_outlier_type || "").toString().trim() !== "";
+              default:
+                return false;
+            }
+          } catch (e) {
+            return false;
+          }
+        })();
+        colorHex = hasError ? "#ff8c42" : "#ffffff";
+      } else {
+        // Non-error mode: use getColor but force white for metric==0
+        if (isMetricZero(entry.raw)) {
+          colorHex = "#ffffff";
+        } else {
+          colorHex = getColor(entry.raw, selectedQualityScore) || "#ffffff";
+        }
+      }
+
+      if (!selectedGrouped[colorHex]) selectedGrouped[colorHex] = [];
+      selectedGrouped[colorHex].push(entry);
+    }
+
+    for (const color in selectedGrouped) {
+      if (runId !== coloringRunId.current || !plugin.current) return;
+      const entries = selectedGrouped[color];
       const groups = [];
       for (const entry of entries) {
         const residueByAuth = MS.struct.generator.atomGroups({
@@ -563,34 +734,129 @@ const Molstar = (props) => {
       }
 
       if (groups.length === 0) continue;
-
-      const sel = Script.getStructureSelection(
-        MS.struct.combinator.merge(groups),
-        data
-      );
-
+      const sel = Script.getStructureSelection(MS.struct.combinator.merge(groups), data);
       if (!sel) continue;
-
       const loci = StructureSelection.toLociWithSourceUnits(sel);
-
-      if (!loci || !Array.isArray(loci.elements) || loci.elements.length === 0) {
-        continue;
-      }
-
-      const getLoci = async () => loci;
-
+      if (!loci || !Array.isArray(loci.elements) || loci.elements.length === 0) continue;
       try {
-        await setStructureOverpaint(
-          plugin.current,
-          components,
-          Color(parseInt(color.replace("#", ""), 16)),
-          getLoci
-        );
+        await safeSetStructureOverpaint([primaryComponent], color, async () => loci);
       } catch (error) {
         console.warn("Failed to apply overpaint for color", color, error);
       }
-      //   return;
     }
+
+    // Remove previous selected-outline components
+    if (selectedOutlineComponentsRef.current && selectedOutlineComponentsRef.current.length > 0) {
+      try {
+        const builder = plugin.current.state.data.build();
+        let hadDeletes = false;
+        for (const item of selectedOutlineComponentsRef.current) {
+          try {
+            let reprRef = undefined;
+            let compRef = undefined;
+            try {
+              const r = item && item.representation ? item.representation : item;
+              if (typeof r === "string") reprRef = r;
+              else if (r && r.cell && r.cell.transform && typeof r.cell.transform.ref !== "undefined") reprRef = r.cell.transform.ref;
+              else if (r && r.transform && typeof r.transform.ref !== "undefined") reprRef = r.transform.ref;
+            } catch (e) {}
+
+            try {
+              const c = item && item.component ? item.component : item;
+              if (typeof c === "string") compRef = c;
+              else if (c && c.cell && c.cell.transform && typeof c.cell.transform.ref !== "undefined") compRef = c.cell.transform.ref;
+              else if (c && c.transform && typeof c.transform.ref !== "undefined") compRef = c.transform.ref;
+            } catch (e) {}
+
+            if (reprRef) {
+              builder.delete(reprRef);
+              hadDeletes = true;
+            }
+            if (compRef) {
+              builder.delete(compRef);
+              hadDeletes = true;
+            }
+          } catch (e) {
+            // ignore per-item errors
+          }
+        }
+        if (hadDeletes) {
+          await builder.commit();
+        }
+      } catch (e) {
+        console.warn("Failed to remove previous selected outline components", e);
+      }
+      selectedOutlineComponentsRef.current = [];
+    }
+
+    // No additional components tracked here; existing selectedOutlineComponentsRef is used for cleanup
+
+    // In error-focused mode, create black outline representation for selected residues
+    // if (errorFocusedMode) {
+    //   const selectedEntries = residueColors.filter((r) => r.selected);
+    //   if (selectedEntries.length > 0) {
+    //     const groups = [];
+    //     for (const entry of selectedEntries) {
+    //       const residueByAuth = MS.struct.generator.atomGroups({
+    //         "chain-test": MS.core.rel.eq([
+    //           MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+    //           entry.chainId,
+    //         ]),
+    //         "residue-test": MS.core.rel.eq([
+    //           MolScriptBuilder.struct.atomProperty.macromolecular.auth_seq_id(),
+    //           entry.authResidueNumber,
+    //         ]),
+    //       });
+
+    //       groups.push(
+    //         Number.isNaN(entry.labelResidueNumber)
+    //           ? residueByAuth
+    //           : MS.struct.combinator.merge([
+    //               residueByAuth,
+    //               MS.struct.generator.atomGroups({
+    //                 "chain-test": MS.core.rel.eq([
+    //                   MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+    //                   entry.chainId,
+    //                 ]),
+    //                 "residue-test": MS.core.rel.eq([
+    //                   MolScriptBuilder.struct.atomProperty.macromolecular.label_seq_id(),
+    //                   entry.labelResidueNumber,
+    //                 ]),
+    //               }),
+    //             ])
+    //       );
+    //     }
+
+    //     try {
+    //       const merged = MS.struct.combinator.merge(groups);
+    //       const comp = await plugin.current.builders.structure.tryCreateComponentFromExpression(
+    //         structure.cell,
+    //         merged,
+    //         `selected-outline`,
+    //         { label: `Selected Outline` }
+    //       );
+
+    //       if (comp) {
+    //         try {
+    //           const repr = await plugin.current.builders.structure.representation.addRepresentation(
+    //             comp,
+    //             {
+    //               type: "ball-and-stick",
+    //               typeParams: {},
+    //               color: "uniform",
+    //               colorParams: { value: Color(parseInt("000000", 16)) },
+    //             }
+    //           );
+    //           selectedOutlineComponentsRef.current = [{ component: comp, representation: repr }];
+    //         } catch (e) {
+    //           console.warn("Failed to add selected outline representation", e);
+    //         }
+    //       }
+    //     } catch (e) {
+    //       console.warn("Failed to create selected outline component", e);
+    //     }
+    //   }
+    // }
   };
 
   useEffect(() => {
@@ -698,6 +964,14 @@ const Molstar = (props) => {
         return;
       }
 
+      if (C1_PRIME_SPHERES_QUALITY_SCORES.has(selectedQualityScore)) {
+        c1PrimeComponentsRef.current = [];
+        const result = await addC1PrimeSpheres(plugin.current);
+        if (!cancelled && result) {
+          c1PrimeComponentsRef.current = result;
+        }
+      }
+
       await changeNucleotideColors();
 
       if (!cancelled) {
@@ -778,6 +1052,12 @@ const Molstar = (props) => {
           isStructureLoading.current = false;
         }
         if (!cancelled) {
+          if (C1_PRIME_SPHERES_QUALITY_SCORES.has(selectedQualityScore)) {
+            const result = await addC1PrimeSpheres(plugin.current);
+            if (!cancelled && result) {
+              c1PrimeComponentsRef.current = result;
+            }
+          }
           await changeNucleotideColors();
         }
         return;
@@ -795,16 +1075,16 @@ const Molstar = (props) => {
         return;
       }
 
-      await changeNucleotideColors();
+      const result = await addC1PrimeSpheres(plugin.current);
+      if (!cancelled && result) {
+        c1PrimeComponentsRef.current = result;
+      }
 
       if (cancelled) {
         return;
       }
 
-      const result = await addC1PrimeSpheres(plugin.current);
-      if (!cancelled && result) {
-        c1PrimeComponentsRef.current = result;
-      }
+      await changeNucleotideColors();
     })();
 
     return () => {
@@ -881,7 +1161,7 @@ const Molstar = (props) => {
     return () => {
       cancelled = true;
     };
-  }, [comparisonMode, comparisonFile, initialized, pdbId, url, file, selectedQualityScore]);
+  }, [errorFocusedMode,comparisonMode, comparisonFile, initialized, pdbId, url, file, selectedQualityScore]);
 
   const addC1PrimeSpheres = async (pluginInstance) => {
     const structureCell =
@@ -893,10 +1173,76 @@ const Molstar = (props) => {
       return null;
     }
 
-    const coloredResidues = mapResiduesToColors().filter((entry) => {
-      const normalizedColor = String(entry?.color || "").trim().toLowerCase();
-      return normalizedColor !== "#ffffff" && normalizedColor !== "ffffff";
-    });
+    let coloredResidues = mapResiduesToColors();
+    if (errorFocusedMode) {
+      // In error-focused mode produce white or orange for each residue (no scaling)
+      coloredResidues = (Array.isArray(resultResidues) ? resultResidues : []).map((residue) => {
+        const metricsResidue = residue?.residueMetrics?.residue;
+        const parsedChain = metricsResidue?.trim()?.split(/\s+/)?.[0];
+        const chainId = residue?.chainID || parsedChain;
+        const authResidueNumber = Number(residue?.original_index);
+        const labelResidueNumber = Number(residue?.residue_number);
+
+        if (!chainId || Number.isNaN(authResidueNumber)) return null;
+
+        const hasError = (() => {
+          try {
+            switch (selectedQualityScore) {
+              case QualityScore.CLASH_SCORE:
+                return Number(residue?.metrics?.clashscore) > 0;
+              case QualityScore.BAD_ANGLES:
+                return Number(residue?.metrics?.numbadangles) > 0;
+              case QualityScore.BAD_BONDS:
+                return Number(residue?.metrics?.numbadbonds) > 0;
+              case QualityScore.SUITENESS:
+                return Number(residue?.residueMetrics?.suiteness) > 0;
+              case QualityScore.SUGAR_PUCKER_OUT:
+                return (residue?.residueMetrics?.pucker_outlier_type || "").toString().trim() !== "";
+              default:
+                return false;
+            }
+          } catch (e) {
+            return false;
+          }
+        })();
+
+        return {
+          chainId,
+          authResidueNumber,
+          labelResidueNumber,
+          color: hasError ? "#ff8c42" : "#ffffff",
+        };
+      }).filter(Boolean);
+    } else {
+      coloredResidues = coloredResidues.filter((entry) => {
+        const normalizedColor = String(entry?.color || "").trim().toLowerCase();
+        return normalizedColor !== "#ffffff" && normalizedColor !== "ffffff";
+      });
+    }
+
+    // Only keep residues that are selected in the provided resultResidues
+    const isEntrySelected = (entry) => {
+      if (!Array.isArray(resultResidues)) return false;
+      for (const r of resultResidues) {
+        const metricsResidue = r?.residueMetrics?.residue;
+        const parsedChain = metricsResidue?.trim()?.split(/\s+/)?.[0];
+        const chainId = r?.chainID || parsedChain;
+        const authResidueNumber = Number(r?.original_index);
+        const labelResidueNumber = Number(r?.residue_number);
+
+        if (!chainId || Number.isNaN(authResidueNumber)) continue;
+
+        const authMatch = chainId === entry.chainId && authResidueNumber === entry.authResidueNumber;
+        const labelMatch = Number.isNaN(entry.labelResidueNumber) || labelResidueNumber === entry.labelResidueNumber;
+
+        if (authMatch && labelMatch) {
+          return !!r?.selected;
+        }
+      }
+      return false;
+    };
+
+    coloredResidues = coloredResidues.filter(isEntrySelected);
 
     if (coloredResidues.length === 0) {
       return null;
@@ -1177,6 +1523,7 @@ Molstar.propTypes = {
   radius: PropTypes.number,
   comparisonFile: PropTypes.string,
   comparisonMode: PropTypes.bool,
+  errorFocusedMode: PropTypes.bool,
 };
 
 export default Molstar;
