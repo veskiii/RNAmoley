@@ -837,7 +837,53 @@ const SummaryPanel: React.FC = () => {
             <div className={"flex flex-row gap-2 mt-6 items-center"}>
               <DownloadLink />
               <DownloadFile id={jobId} disabled={!canStartSimulation}/>
-              {!canStartSimulation && (
+              <div className="flex flex-row items-center gap-x-4">
+                <button
+                  role="button"
+                  tabIndex={canStartSimulation ? 0 : -1}
+                  disabled={!canStartSimulation}
+                  onClick={() => {
+                    if (!canStartSimulation) return;
+                    setSimulationStartError(null);
+                    setIsSimulationModalOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!canStartSimulation) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSimulationStartError(null);
+                      setIsSimulationModalOpen(true);
+                    }
+                  }}
+                  className="rounded-md mt-0 px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
+                >
+                  Run refinement
+                </button>
+                {hasSimulationStarted && (
+                  <div className="flex items-center gap-2">
+                    <span className={`py-2 ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                      {simulationStatusPresentation.label || "No simulation"}
+                    </span>
+                    {(() => {
+                      const simulationParameters = simulationStatusPresentation.parameters;
+                      if (!simulationParameters) return null;
+                      return (
+                      <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
+                        {Object.entries(simulationParameters).map(([param, value], i) => (
+                          <span key={param}>
+                            {i == 0 ? " (" : ""}
+                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {formatNumberForDisplay(value.toString())}
+                            {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
+                          </span>
+                        ))}
+                      </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+              {!canStartSimulation && !hasSimulationStarted && (
                 <p className="text-sm font-bold">
                   Analysis in progress...
                 </p>
@@ -1106,7 +1152,7 @@ const SummaryPanel: React.FC = () => {
                 )}
               </div>
               {/* Visualizations */}
-              <div className="mt-6">
+              <div className="my-6">
                 <div>
                   <label>Structure visualization (colored by local quality)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
@@ -1387,57 +1433,6 @@ const SummaryPanel: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-            {/* Correct the structure */}
-            <div className="my-6">
-              <div className="flex flex-row items-center gap-x-4">
-                <button
-                  role="button"
-                  tabIndex={canStartSimulation ? 0 : -1}
-                  disabled={!canStartSimulation}
-                  onClick={() => {
-                    if (!canStartSimulation) return;
-                    setSimulationStartError(null);
-                    setIsSimulationModalOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (!canStartSimulation) return;
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSimulationStartError(null);
-                      setIsSimulationModalOpen(true);
-                    }
-                  }}
-                  className="rounded-md mt-0 px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
-                >
-                  Run refinement
-                </button>
-                {hasSimulationStarted && (
-                  <div className="flex items-center gap-2">
-                    <span className={`py-2 ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
-                      {simulationStatusPresentation.label || "No simulation"}
-                    </span>
-                    {(() => {
-                      const simulationParameters = simulationStatusPresentation.parameters;
-                      if (!simulationParameters) return null;
-                      return (
-                      <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
-                        {Object.entries(simulationParameters).map(([param, value], i) => (
-                          <span key={param}>
-                            {i == 0 ? " (" : ""}
-                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {formatNumberForDisplay(value.toString())}
-                            {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
-                          </span>
-                        ))}
-                      </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-
-              
             </div>
           </div>
           <Footer />
