@@ -120,18 +120,127 @@ const Molstar = (props) => {
       if (!structureData) return;
 
       const allAtoms = MS.struct.generator.atomGroups({});
-      const selection = Script.getStructureSelection(allAtoms, structureData);
-      if (!selection) return;
 
-      const loci = StructureSelection.toLociWithSourceUnits(selection);
-      if (!loci?.elements?.length) return;
+      // Build residue entries from resultResidues (chain + auth/label numbers + selected flag)
+      const residueEntries = (Array.isArray(resultResidues) ? resultResidues : [])
+        .map((residue) => {
+          const metricsResidue = residue?.residueMetrics?.residue;
+          const parsedChain = metricsResidue?.trim()?.split(/\s+/)?.[0];
+          const chainId = residue?.chainID || parsedChain;
+          const authResidueNumber = Number(residue?.original_index);
+          const labelResidueNumber = Number(residue?.residue_number);
 
-      await setStructureOverpaint(
-        pluginInstance,
-        [component],
-        Color(parseInt(comparisonColorHex.replace("#", ""), 16)),
-        async () => loci
-      );
+          if (!chainId || Number.isNaN(authResidueNumber)) return null;
+
+          return {
+            chainId,
+            authResidueNumber,
+            labelResidueNumber,
+            selected: !!residue?.selected,
+          };
+        })
+        .filter(Boolean);
+
+      const makeGroups = (entries) => {
+        const groups = [];
+        for (const entry of entries) {
+          const residueByAuth = MS.struct.generator.atomGroups({
+            "chain-test": MS.core.rel.eq([
+              MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+              entry.chainId,
+            ]),
+            "residue-test": MS.core.rel.eq([
+              MolScriptBuilder.struct.atomProperty.macromolecular.auth_seq_id(),
+              entry.authResidueNumber,
+            ]),
+          });
+
+          const group = Number.isNaN(entry.labelResidueNumber)
+            ? residueByAuth
+            : MS.struct.combinator.merge([
+                residueByAuth,
+                MS.struct.generator.atomGroups({
+                  "chain-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+                    entry.chainId,
+                  ]),
+                  "residue-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.label_seq_id(),
+                    entry.labelResidueNumber,
+                  ]),
+                }),
+              ]);
+
+          groups.push(group);
+        }
+        return groups;
+      };
+
+      const selectedEntries = residueEntries.filter((e) => e.selected);
+      const unselectedEntries = residueEntries.filter((e) => !e.selected);
+
+      // Apply grey to unselected residues (or to whole structure if nothing selected)
+      const greyHex = "#cccccc";
+
+      if (selectedEntries.length === 0) {
+        // no selected residues: make everything grey
+        const selection = Script.getStructureSelection(allAtoms, structureData);
+        if (selection) {
+          const loci = StructureSelection.toLociWithSourceUnits(selection);
+          if (loci?.elements?.length) {
+            await setStructureOverpaint(
+              pluginInstance,
+              [component],
+              Color(parseInt(greyHex.replace("#", ""), 16)),
+              async () => loci
+            );
+          }
+        }
+        return;
+      }
+
+      if (unselectedEntries.length > 0) {
+        const groupsUnselected = makeGroups(unselectedEntries);
+        if (groupsUnselected.length > 0) {
+          const selUn = Script.getStructureSelection(
+            MS.struct.combinator.merge(groupsUnselected),
+            structureData
+          );
+          if (selUn) {
+            const lociUn = StructureSelection.toLociWithSourceUnits(selUn);
+            if (lociUn?.elements?.length) {
+              await setStructureOverpaint(
+                pluginInstance,
+                [component],
+                Color(parseInt(greyHex.replace("#", ""), 16)),
+                async () => lociUn
+              );
+            }
+          }
+        }
+      }
+
+      // Apply requested color to selected residues
+      if (selectedEntries.length > 0) {
+        const groupsSelected = makeGroups(selectedEntries);
+        if (groupsSelected.length > 0) {
+          const sel = Script.getStructureSelection(
+            MS.struct.combinator.merge(groupsSelected),
+            structureData
+          );
+          if (sel) {
+            const loci = StructureSelection.toLociWithSourceUnits(sel);
+            if (loci?.elements?.length) {
+              await setStructureOverpaint(
+                pluginInstance,
+                [component],
+                Color(parseInt(comparisonColorHex.replace("#", ""), 16)),
+                async () => loci
+              );
+            }
+          }
+        }
+      }
     } catch (error) {
       console.warn("applyComparisonColor failed", error);
     }
@@ -153,18 +262,124 @@ const Molstar = (props) => {
       if (!structureData) return;
 
       const allAtoms = MS.struct.generator.atomGroups({});
-      const selection = Script.getStructureSelection(allAtoms, structureData);
-      if (!selection) return;
 
-      const loci = StructureSelection.toLociWithSourceUnits(selection);
-      if (!loci?.elements?.length) return;
+      const residueEntries = (Array.isArray(resultResidues) ? resultResidues : [])
+        .map((residue) => {
+          const metricsResidue = residue?.residueMetrics?.residue;
+          const parsedChain = metricsResidue?.trim()?.split(/\s+/)?.[0];
+          const chainId = residue?.chainID || parsedChain;
+          const authResidueNumber = Number(residue?.original_index);
+          const labelResidueNumber = Number(residue?.residue_number);
 
-      await setStructureOverpaint(
-        pluginInstance,
-        [component],
-        Color(parseInt(colorHex.replace("#", ""), 16)),
-        async () => loci
-      );
+          if (!chainId || Number.isNaN(authResidueNumber)) return null;
+
+          return {
+            chainId,
+            authResidueNumber,
+            labelResidueNumber,
+            selected: !!residue?.selected,
+          };
+        })
+        .filter(Boolean);
+
+      const makeGroups = (entries) => {
+        const groups = [];
+        for (const entry of entries) {
+          const residueByAuth = MS.struct.generator.atomGroups({
+            "chain-test": MS.core.rel.eq([
+              MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+              entry.chainId,
+            ]),
+            "residue-test": MS.core.rel.eq([
+              MolScriptBuilder.struct.atomProperty.macromolecular.auth_seq_id(),
+              entry.authResidueNumber,
+            ]),
+          });
+
+          const group = Number.isNaN(entry.labelResidueNumber)
+            ? residueByAuth
+            : MS.struct.combinator.merge([
+                residueByAuth,
+                MS.struct.generator.atomGroups({
+                  "chain-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.auth_asym_id(),
+                    entry.chainId,
+                  ]),
+                  "residue-test": MS.core.rel.eq([
+                    MolScriptBuilder.struct.atomProperty.macromolecular.label_seq_id(),
+                    entry.labelResidueNumber,
+                  ]),
+                }),
+              ]);
+
+          groups.push(group);
+        }
+        return groups;
+      };
+
+      const selectedEntries = residueEntries.filter((e) => e.selected);
+      const unselectedEntries = residueEntries.filter((e) => !e.selected);
+
+      const greyHex = "#cccccc";
+
+      if (selectedEntries.length === 0) {
+        // no selected residues: make everything grey
+        const selection = Script.getStructureSelection(allAtoms, structureData);
+        if (selection) {
+          const loci = StructureSelection.toLociWithSourceUnits(selection);
+          if (loci?.elements?.length) {
+            await setStructureOverpaint(
+              pluginInstance,
+              [component],
+              Color(parseInt(greyHex.replace("#", ""), 16)),
+              async () => loci
+            );
+          }
+        }
+        return;
+      }
+
+      if (unselectedEntries.length > 0) {
+        const groupsUnselected = makeGroups(unselectedEntries);
+        if (groupsUnselected.length > 0) {
+          const selUn = Script.getStructureSelection(
+            MS.struct.combinator.merge(groupsUnselected),
+            structureData
+          );
+          if (selUn) {
+            const lociUn = StructureSelection.toLociWithSourceUnits(selUn);
+            if (lociUn?.elements?.length) {
+              await setStructureOverpaint(
+                pluginInstance,
+                [component],
+                Color(parseInt(greyHex.replace("#", ""), 16)),
+                async () => lociUn
+              );
+            }
+          }
+        }
+      }
+
+      if (selectedEntries.length > 0) {
+        const groupsSelected = makeGroups(selectedEntries);
+        if (groupsSelected.length > 0) {
+          const sel = Script.getStructureSelection(
+            MS.struct.combinator.merge(groupsSelected),
+            structureData
+          );
+          if (sel) {
+            const loci = StructureSelection.toLociWithSourceUnits(sel);
+            if (loci?.elements?.length) {
+              await setStructureOverpaint(
+                pluginInstance,
+                [component],
+                Color(parseInt(colorHex.replace("#", ""), 16)),
+                async () => loci
+              );
+            }
+          }
+        }
+      }
     } catch (error) {
       console.warn("applyUniformColorToStructure failed", error);
     }
