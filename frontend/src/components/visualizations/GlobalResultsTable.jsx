@@ -59,9 +59,9 @@ const renderCombinedMetricValue = (metrics, keys) => {
 const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simModelMetrics, simFragmentMetrics }) => {
     const rows = [
         { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics },
-        simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (refined)`, metrics: simModelMetrics },
+        simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (after refinement)`, metrics: simModelMetrics },
         { label: "Analysed fragment", metrics: fragmentMetrics },
-        simFragmentMetrics && { label: "Analysed fragment (refined)", metrics: simFragmentMetrics },
+        simFragmentMetrics && { label: "Analysed fragment (after refinement)", metrics: simFragmentMetrics },
     ];
 
     return (

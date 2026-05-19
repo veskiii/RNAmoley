@@ -142,6 +142,56 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
   return 0;
 }
 
+// based on residue and quality score, check if this quality score is > 0 and if so return color orange, otherwise return white
+export function getColorErrorFocused(residue: Residue, givenQualityScore: QualityScore): string {
+  if (givenQualityScore === QualityScore.BAD_BONDS) {
+    if(!residue.metrics) return "#ffffff";
+    var qualityScore = parseFloat(residue.metrics.pct_badbonds);
+    if (qualityScore < 0.01) {
+      return "#ffffff";
+      // @ts-ignore
+    } else {
+      return "#ff8c42";
+    }
+  } else if (givenQualityScore == QualityScore.BAD_ANGLES) {
+    if(!residue.metrics) return "#ffffff";
+    var qualityScore = parseFloat(residue.metrics.pct_badangles);
+    if (qualityScore < 0.01) {
+      return "#ffffff";
+      // @ts-ignore
+    } else {
+      return "#ff8c42";
+    }
+  } else if (givenQualityScore == QualityScore.CLASH_SCORE) {
+    if(!residue.metrics) return "#ffffff";
+    var qualityScore = parseFloat(residue.metrics.clashscore);
+    if (qualityScore < 0.01) {
+      return "#ffffff";
+      // @ts-ignore
+    } else {
+      return "#ff8c42";
+    }
+  } else if (givenQualityScore == QualityScore.SUITENESS) {
+    if(!residue.residueMetrics) return "#ffffff";
+    var qualityScore = parseFloat(residue.residueMetrics.suiteness);
+    if (qualityScore < 0.01) {
+      return "#ff8c42";
+      // @ts-ignore
+    } else {
+      return "#ffffff";
+    }
+  } else if (givenQualityScore == QualityScore.SUGAR_PUCKER_OUT) {
+    if(!residue.residueMetrics) return "#ffffff";
+    var sugarPuckerOutlierType = residue.residueMetrics.pucker_outlier_type;
+    if (sugarPuckerOutlierType === "") {
+      return "#ffffff";
+    } else {
+      return "#ff8c42";
+    }
+  }
+  return "#ffffff";
+}
+
 export function getColor(residue: Residue, qualityScore: QualityScore): string {
   var n = getRange(residue, qualityScore);
   return colorMapByRange.get(n) || "#ffffff";

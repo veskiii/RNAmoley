@@ -35,6 +35,7 @@ const FornacSummaryComponent = ({
   setAnimation,
   job,
   colorGnodes,
+  onInitialTransform,
 }: {
   sequences: string[];
   structures: string[];
@@ -51,6 +52,7 @@ const FornacSummaryComponent = ({
   setAnimation: boolean;
   job: SummaryJob;
   colorGnodes: () => void;
+  onInitialTransform?: (transform: string | null) => void;
 }) => {
   const [container, setContainer] = useState(null);
 
@@ -370,7 +372,15 @@ const FornacSummaryComponent = ({
               if (scale > 1) {
                 const dx = (svgRect.width - bbox.width * scale) / 2 - bbox.x * scale;
                 const dy = (svgRect.height - bbox.height * scale) / 2 - bbox.y * scale;
-                g.setAttribute("transform", `translate(${dx},${dy}) scale(${scale})`);
+                const transform = `translate(${dx},${dy}) scale(${scale})`;
+                g.setAttribute("transform", transform);
+                if (typeof onInitialTransform === "function") {
+                  try {
+                    onInitialTransform(transform);
+                  } catch (e) {
+                    // ignore
+                  }
+                }
               }
             } else {
               applyScale(1.4);

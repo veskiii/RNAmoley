@@ -424,7 +424,7 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
-                <span className="text-gray-700">Refined</span>
+                <span className="text-gray-700">After refinement</span>
               </div>
             </div>
           )}
@@ -475,14 +475,6 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
               aria-label={`Line chart for ${getMetricLabel(selectedScore)} in chain ${selectedChain}`}
               className="block"
             >
-              <rect
-                x={0}
-                y={chartPadding.top}
-                width={chartData.contentWidth}
-                height={chartData.innerHeight}
-                rx={12}
-                className="fill-slate-50"
-              />
 
               {chartData.hasNumericValues && (
                 <>

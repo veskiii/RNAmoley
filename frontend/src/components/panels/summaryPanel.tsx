@@ -15,7 +15,7 @@ import {
 import DownloadLink from "../common/downloadLink";
 import DownloadFile from "../common/downloadFile";
 import ErrorPage, { ErrorPageProps } from "../common/ErrorPage";
-import { getColor } from "../utils/ColorUtils";
+import { getColor, getColorErrorFocused } from "../utils/ColorUtils";
 import { transformJobToChains } from "../utils/transformJobToChains";
 import { fetchMyData, startSimulation } from "../utils/api";
 import TopPanel from "../common/topPanel";
@@ -25,6 +25,7 @@ import GlobalResultsTable from "../visualizations/GlobalResultsTable";
 import ChainMetricLineChart from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 import { formatNumberForDisplay } from "../utils/displayUniform";
+import { get } from "http";
 
 const SummaryPanel: React.FC = () => {
   type ResultsSource = "original" | "simulation";
@@ -68,6 +69,7 @@ const SummaryPanel: React.FC = () => {
   const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
+  const fornaInitialTransformRef = useRef<string | null>(null);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
   const clashChartRef = useRef<HTMLDivElement | null>(null);
   const badBondsChartRef = useRef<HTMLDivElement | null>(null);
@@ -80,6 +82,7 @@ const SummaryPanel: React.FC = () => {
   const MAX_POLL_INTERVAL = 60000;
   const [showResidueTable, setShowResidueTable] = useState(false);
   const [comparisonModeMolstar, setComparisonModeMolstar] = useState(false);
+  const [errorFocusedModeMolstar, setErrorFocusedModeMolstar] = useState(false);
 
   const isSimulationStatus = (status: string) => status.startsWith("simulation_");
   const canStartSimulation =
@@ -203,6 +206,15 @@ const SummaryPanel: React.FC = () => {
     }
   };
 
+  const getColorForForna = (residue: any) => {
+    if (!errorFocusedModeMolstar) {
+      return residue.selected ? getColor(residue, selectedQualityScore) : "#7c7c7c";
+    }
+    else {
+      return residue.selected ? getColorErrorFocused(residue, selectedQualityScore) : "#7c7c7c";
+    }
+  }
+
   const colorGnodes = () => {
     if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
       console.warn("No data in displayedResults.results.data");
@@ -228,7 +240,7 @@ const SummaryPanel: React.FC = () => {
         if (node) {
           node
             .classed("fornac-selectedNode", true)
-            .style("fill", getColor(residue, selectedQualityScore));
+            .style("fill", getColorForForna(residue));
         } else {
           // console.warn(`Node with index ${residue.residue_number} not found`);
         }
@@ -417,7 +429,7 @@ const SummaryPanel: React.FC = () => {
       failureCountRef.current = 0;
       pollIntervalRef.current = 10000;
     };
-  }, [jobId, selectedModel, selectedResultsSource, refreshToken]);
+  }, [jobId, selectedModel, selectedResultsSource, refreshToken, simulationTabEnabled]);
 
   const setInitialQualityScore = (data: SummaryJob) => {
     if (data && data.metadata.analyzeNeighborhoods) {
@@ -492,6 +504,128 @@ const SummaryPanel: React.FC = () => {
     }
 
     try {
+      const svg = fornaContainerRef.current.querySelector("#rna_ss svg") as SVGSVGElement | null;
+
+      if (svg) {
+        const clone = svg.cloneNode(true) as SVGSVGElement;
+        const sourceGroup = clone.querySelector("g") as SVGGElement | null;
+        const fallbackWidth = clone.viewBox?.baseVal?.width || clone.width?.baseVal?.value || clone.clientWidth || 800;
+        const fallbackHeight = clone.viewBox?.baseVal?.height || clone.height?.baseVal?.value || clone.clientHeight || 600;
+
+        // Compute bbox from an untransformed copy so pan/zoom transforms don't affect the bounds
+        const temp = clone.cloneNode(true) as SVGSVGElement;
+        // Only remove transform from the top-level group (pan/zoom), keep nested transforms
+        const tempRoot = temp.querySelector("g") as SVGGElement | null;
+        if (tempRoot) {
+          try {
+            tempRoot.removeAttribute("transform");
+          } catch (e) {
+            // ignore
+          }
+        }
+        let box = tempRoot?.getBBox();
+        if (!box || !Number.isFinite(box.x) || !Number.isFinite(box.y) || !Number.isFinite(box.width) || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) {
+          box = { x: 0, y: 0, width: fallbackWidth, height: fallbackHeight } as DOMRect;
+        }
+
+        const padding = 40;
+        const viewBoxWidth = Math.max(1, box.width + padding * 2);
+        const viewBoxHeight = Math.max(1, box.height + padding * 2);
+
+        // Create a fresh wrapper SVG that positions the Forna content at positive coordinates
+        const ns = "http://www.w3.org/2000/svg";
+        const wrapperSvg = document.createElementNS(ns, "svg") as SVGSVGElement;
+        wrapperSvg.setAttribute("xmlns", ns);
+        wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth)}`);
+        wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight)}`);
+        wrapperSvg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+        wrapperSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        wrapperSvg.style.background = "#ffffff";
+
+        const contentGroup = document.createElementNS(ns, "g");
+        // Translate content so that bbox's top-left maps to padding,padding
+        contentGroup.setAttribute("transform", `translate(${ -box.x + padding }, ${ -box.y + padding })`);
+
+        // Remove transform only from the top-level group in the clone (pan/zoom)
+        const cloneRoot = clone.querySelector("g") as SVGGElement | null;
+        if (cloneRoot) {
+          try {
+            cloneRoot.removeAttribute("transform");
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        // Move all children from cloned svg into the content group
+        while (clone.firstChild) {
+          contentGroup.appendChild(clone.firstChild);
+        }
+
+        // If we have an initial transform captured from Forna, apply it as an outer group
+        const initialTransform = fornaInitialTransformRef.current;
+        let outerGroup: SVGGElement | null = null;
+        let appliedScale = 1;
+        if (initialTransform) {
+          outerGroup = document.createElementNS(ns, "g");
+          try {
+            outerGroup.setAttribute("transform", initialTransform);
+            // extract scale from transform string
+            const scaleMatch = /scale\(([-0-9.]+)\)/.exec(initialTransform);
+            if (scaleMatch) {
+              appliedScale = parseFloat(scaleMatch[1]) || 1;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (outerGroup) {
+          outerGroup.appendChild(contentGroup);
+          wrapperSvg.appendChild(outerGroup);
+        } else {
+          wrapperSvg.appendChild(contentGroup);
+        }
+
+        // If an initial scale is applied, reflect that in the exported pixel size
+        if (appliedScale && appliedScale !== 1) {
+          wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth * appliedScale)}`);
+          wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight * appliedScale)}`);
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "fixed";
+        wrapper.style.left = "-10000px";
+        wrapper.style.top = "0";
+        wrapper.style.background = "#ffffff";
+        wrapper.appendChild(wrapperSvg);
+        document.body.appendChild(wrapper);
+
+        try {
+          const exportWidth = Math.max(1, Math.round(viewBoxWidth * (appliedScale || 1)));
+          const exportHeight = Math.max(1, Math.round(viewBoxHeight * (appliedScale || 1)));
+
+          const canvas = await html2canvas(wrapper, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            width: exportWidth,
+            height: exportHeight,
+            windowWidth: exportWidth,
+            windowHeight: exportHeight,
+            scrollX: 0,
+            scrollY: 0,
+          });
+
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `${originalResults.name || "forna-structure"}-m${selectedModel}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`;
+          link.click();
+        } finally {
+          wrapper.remove();
+        }
+        return;
+      }
+
       const canvas = await html2canvas(fornaContainerRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
@@ -507,144 +641,136 @@ const SummaryPanel: React.FC = () => {
     }
   };
 
-  const serializeSvg = (svg: SVGSVGElement) => {
-    const serializer = new XMLSerializer();
-    let source = serializer.serializeToString(svg);
-    if (!source.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)) {
-      source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
-    if (!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www.w3.org\/1999\/xlink"/)) {
-      source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
-    }
-    return source;
-  };
-
-  const downloadSvgFile = (svg: SVGSVGElement, filename: string) => {
-    try {
-      const source = serializeSvg(svg);
-      const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${filename}.svg`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Failed to download SVG:", err);
-    }
-  };
-
-  const downloadSvgAsPng = async (svg: SVGSVGElement, filename: string) => {
-    try {
-      const source = serializeSvg(svg);
-      const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(svgBlob);
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const width = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width ? svg.viewBox.baseVal.width : svg.clientWidth || 800;
-        const height = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.height ? svg.viewBox.baseVal.height : svg.clientHeight || 600;
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-        }
-        URL.revokeObjectURL(url);
-        const pngUrl = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = pngUrl;
-        a.download = `${filename}.png`;
-        a.click();
-      };
-      img.onerror = (err) => {
-        console.error("Failed to render SVG to image:", err);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    } catch (err) {
-      console.error("Failed to download PNG:", err);
-    }
-  };
-
-  const downloadCombinedSvgsAsPng = async (
-    leftSvg: SVGSVGElement | null | undefined,
-    contentSvg: SVGSVGElement | null | undefined,
-    filename: string,
-    scale = 2
-  ) => {
-    try {
-      // If only one SVG is present, fallback to existing method
-      if (!leftSvg && !contentSvg) return;
-      if (!leftSvg || !contentSvg) {
-        const target = leftSvg || contentSvg;
-        if (target) return downloadSvgAsPng(target, filename);
-        return;
-      }
-
-      const leftSource = serializeSvg(leftSvg);
-      const contentSource = serializeSvg(contentSvg);
-
-      const stripOuter = (s: string) => s.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
-      const leftInner = stripOuter(leftSource);
-      const contentInner = stripOuter(contentSource);
-
-      const getSize = (el: SVGSVGElement) => {
-        const vb = el.viewBox && el.viewBox.baseVal;
-        if (vb && vb.width && vb.height) return { w: vb.width, h: vb.height };
-        const w = el.clientWidth || parseFloat(el.getAttribute("width") || "0") || 0;
-        const h = el.clientHeight || parseFloat(el.getAttribute("height") || "0") || 0;
-        return { w, h };
-      };
-
-      const leftSize = getSize(leftSvg);
-      const contentSize = getSize(contentSvg);
-      const totalWidth = Math.max(1, leftSize.w + contentSize.w);
-      const totalHeight = Math.max(leftSize.h || contentSize.h || 1, contentSize.h || leftSize.h || 1);
-
-      const wrapper = `<?xml version="1.0" encoding="utf-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">` +
-        // Ensure background matches browser by adding white rect beneath content
-        `<rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />` +
-        `<g>${leftInner}</g>` +
-        `<g transform="translate(${leftSize.w},0)">${contentInner}</g>` +
-        `</svg>`;
-
-      const blob = new Blob([wrapper], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(totalWidth * scale);
-        canvas.height = Math.round(totalHeight * scale);
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
-        URL.revokeObjectURL(url);
-        const pngUrl = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = pngUrl;
-        a.download = `${filename}.png`;
-        a.click();
-      };
-      img.onerror = (err) => {
-        console.error("Failed to render combined SVG to image:", err);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    } catch (err) {
-      console.error("Failed to download combined PNG:", err);
-    }
-  };
-
   const downloadChartContainerAsPng = async (container: HTMLElement | null | undefined, filename: string, scale = 2) => {
     if (!container) return;
     try {
-      const canvas = await html2canvas(container, { backgroundColor: "#ffffff", scale, useCORS: true });
+      const chartFontFamily = getComputedStyle(container).fontFamily || getComputedStyle(document.body).fontFamily || "sans-serif";
+      const escapeXmlAttr = (value: string) =>
+        value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+      const safeChartFontFamily = escapeXmlAttr(chartFontFamily);
+      const svgElements = Array.from(container.querySelectorAll("svg")) as SVGSVGElement[];
+      const hasComparisonLegend = Array.from(container.querySelectorAll("div")).some((element) => {
+        const text = element.textContent || "";
+        return text.includes("Original") && text.includes("After refinement");
+      });
+
+      const getSvgSize = (svg: SVGSVGElement) => {
+        const viewBox = svg.viewBox?.baseVal;
+        if (viewBox && viewBox.width && viewBox.height) {
+          return { width: viewBox.width, height: viewBox.height };
+        }
+
+        const width = svg.width?.baseVal?.value || svg.clientWidth || parseFloat(svg.getAttribute("width") || "0") || 0;
+        const height = svg.height?.baseVal?.value || svg.clientHeight || parseFloat(svg.getAttribute("height") || "0") || 0;
+        return { width, height };
+      };
+
+      const serializeSvg = (svg: SVGSVGElement) => {
+        const serializer = new XMLSerializer();
+        let source = serializer.serializeToString(svg);
+        if (!source.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)) {
+          source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        if (!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www.w3.org\/1999\/xlink"/)) {
+          source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+        }
+        return source;
+      };
+
+      const stripOuterSvg = (source: string) => source.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+
+      const createPngFromSvg = async (svgMarkup: string, width: number, height: number) => {
+        const blob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        try {
+          const img = new Image();
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error("Failed to load SVG for export"));
+            img.src = url;
+          });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(width * scale);
+          canvas.height = Math.round(height * scale);
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            throw new Error("Canvas 2D context is unavailable");
+          }
+
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const a = document.createElement("a");
+          a.href = canvas.toDataURL("image/png");
+          a.download = `${filename}.png`;
+          a.click();
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+
+      if (svgElements.length >= 2) {
+        const orderedSvgs = svgElements
+          .map((svg) => ({ svg, size: getSvgSize(svg) }))
+          .sort((left, right) => left.size.width - right.size.width);
+
+        const leftSvg = orderedSvgs[0]?.svg;
+        const contentSvg = orderedSvgs[orderedSvgs.length - 1]?.svg;
+
+        if (leftSvg && contentSvg && leftSvg !== contentSvg) {
+          const leftSource = serializeSvg(leftSvg);
+          const contentSource = serializeSvg(contentSvg);
+          const leftInner = stripOuterSvg(leftSource);
+          const contentInner = stripOuterSvg(contentSource);
+          const leftSize = getSvgSize(leftSvg);
+          const contentSize = getSvgSize(contentSvg);
+          const totalWidth = Math.max(1, leftSize.width + contentSize.width);
+          const legendHeight = hasComparisonLegend ? 52 : 0;
+          const totalHeight = Math.max(
+            leftSize.height || contentSize.height || 1,
+            contentSize.height || leftSize.height || 1,
+          ) + legendHeight;
+
+          const legendMarkup = hasComparisonLegend
+            ? `<g transform="translate(${Math.max(totalWidth - 170, 8)},16)"><rect x="0" y="0" width="162" height="34" rx="8" fill="#ffffff" fill-opacity="0.95" stroke="#e5e7eb"/><circle cx="14" cy="12" r="5" fill="#fb923c"/><text x="26" y="16" fill="#374151" font-size="12" font-family="${safeChartFontFamily}">Original</text><circle cx="14" cy="26" r="5" fill="#60a5fa"/><text x="26" y="30" fill="#374151" font-size="12" font-family="${safeChartFontFamily}">After refinement</text></g>`
+            : "";
+
+          const wrapper = `<?xml version="1.0" encoding="utf-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" style="font-family: ${safeChartFontFamily};"><rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" /><g transform="translate(0,${legendHeight})">${leftInner}</g><g transform="translate(${leftSize.width},${legendHeight})">${contentInner}</g>${legendMarkup}</svg>`;
+          await createPngFromSvg(wrapper, totalWidth, totalHeight);
+          return;
+        }
+      }
+
+      if (svgElements.length === 1) {
+        const svg = svgElements[0];
+        const size = getSvgSize(svg);
+        const source = serializeSvg(svg);
+        await createPngFromSvg(source, Math.max(size.width, 1), Math.max(size.height, 1));
+        return;
+      }
+
+      const fullWidth = Math.max(container.scrollWidth, container.clientWidth, 1);
+      const fullHeight = Math.max(container.scrollHeight, container.clientHeight, 1);
+      const canvas = await html2canvas(container, {
+        backgroundColor: "#ffffff",
+        scale,
+        useCORS: true,
+        width: fullWidth,
+        height: fullHeight,
+        windowWidth: fullWidth,
+        windowHeight: fullHeight,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = url;
@@ -722,7 +848,53 @@ const SummaryPanel: React.FC = () => {
             <div className={"flex flex-row gap-2 mt-6 items-center"}>
               <DownloadLink />
               <DownloadFile id={jobId} disabled={!canStartSimulation}/>
-              {!canStartSimulation && (
+              <div className="flex flex-row items-center gap-x-4">
+                <button
+                  role="button"
+                  tabIndex={canStartSimulation ? 0 : -1}
+                  disabled={!canStartSimulation}
+                  onClick={() => {
+                    if (!canStartSimulation) return;
+                    setSimulationStartError(null);
+                    setIsSimulationModalOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!canStartSimulation) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSimulationStartError(null);
+                      setIsSimulationModalOpen(true);
+                    }
+                  }}
+                  className="rounded-md mt-0 px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
+                >
+                  Run refinement
+                </button>
+                {hasSimulationStarted && (
+                  <div className="flex items-center gap-2">
+                    <span className={`py-2 ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
+                      {simulationStatusPresentation.label || "No simulation"}
+                    </span>
+                    {(() => {
+                      const simulationParameters = simulationStatusPresentation.parameters;
+                      if (!simulationParameters) return null;
+                      return (
+                      <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
+                        {Object.entries(simulationParameters).map(([param, value], i) => (
+                          <span key={param}>
+                            {i == 0 ? " (" : ""}
+                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {formatNumberForDisplay(value.toString())}
+                            {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
+                          </span>
+                        ))}
+                      </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+              {!canStartSimulation && !hasSimulationStarted && (
                 <p className="text-sm font-bold">
                   Analysis in progress...
                 </p>
@@ -867,7 +1039,7 @@ const SummaryPanel: React.FC = () => {
                           if (!container) return;
                           downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-ClashScore`);
                         }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -888,7 +1060,7 @@ const SummaryPanel: React.FC = () => {
                         if (!container) return;
                         downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-BadBonds`);
                       }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -909,7 +1081,7 @@ const SummaryPanel: React.FC = () => {
                         if (!container) return;
                         downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-BadAngles`);
                       }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -930,7 +1102,7 @@ const SummaryPanel: React.FC = () => {
                         if (!container) return;
                         downloadChartContainerAsPng(container, `${originalResults.name || "chart"}-m${selectedModel}-Suiteness`);
                       }}
-                      className="absolute top-5 right-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
+                      className="absolute top-5 left-16 z-20 px-2 py-1 bg-white rounded-lg shadow hover:bg-gray-100 transition text-lg w-fit"
                       title="Download chart as PNG"
                     >
                       ⬇️
@@ -991,7 +1163,7 @@ const SummaryPanel: React.FC = () => {
                 )}
               </div>
               {/* Visualizations */}
-              <div className="mt-6">
+              <div className="my-6">
                 <div>
                   <label>Structure visualization (colored by local quality)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
@@ -1042,7 +1214,7 @@ const SummaryPanel: React.FC = () => {
                           className="text-sm"
                         />
                         <div className="flex items-center justify-between gap-2">
-                          <span className="mr-1">Refined</span>
+                          <span className="mr-1">After refinement</span>
                           {isSimulationInProgress && (
                             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                           )}
@@ -1065,6 +1237,57 @@ const SummaryPanel: React.FC = () => {
                     </div>
                   </div>
                 )}
+                <div className="flex flex-row gap-4 my-3 items-center">
+                  <p>Visualization mode:</p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="continuosColoring"
+                      value={"false"}
+                      checked={!errorFocusedModeMolstar}
+                      onChange={(e) => setErrorFocusedModeMolstar(e.target.value === "true")}
+                      className="cursor-pointer"
+                    />
+                    <span>
+                      <span className="text-sm">Continuous coloring</span>
+                      <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                        <span
+                          aria-label="What this field does"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                        >
+                          ?
+                        </span>
+                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                          Shows full range of values across all residues.
+                        </span>
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="errorFocused"
+                      value={"true"}
+                      checked={errorFocusedModeMolstar}
+                      onChange={(e) => setErrorFocusedModeMolstar(e.target.value === "true")}
+                      className="cursor-pointer"
+                    />
+                    <span>
+                      <span className="text-sm">Error-focused highlighting</span>
+                      <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                        <span
+                          aria-label="What this field does"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                        >
+                          ?
+                        </span>
+                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                          Shows only residues/spheres with detected structural issues.
+                        </span>
+                      </span>
+                    </span>
+                  </label>
+                </div>
                 <div className="flex flex-row gap-4 my-3 items-center">
                   <p>Color by:</p>
                   {originalResults.metadata.analyzeNeighborhoods && (
@@ -1249,6 +1472,9 @@ const SummaryPanel: React.FC = () => {
                       setAnimation={animation}
                       job={displayedResults || originalResults}
                       colorGnodes={colorGnodes}
+                      onInitialTransform={(t) => {
+                        fornaInitialTransformRef.current = t;
+                      }}
                     />
                   </div>
                   <div className="w-full md:w-1/2 h-full">
@@ -1263,63 +1489,13 @@ const SummaryPanel: React.FC = () => {
                       resultResidues={comparisonModeMolstar ? originalResults.results.data : displayedResults?.results.data || originalResults.results.data}
                       selectedQualityScore={selectedQualityScore}
                       radius={originalResults.metadata.radius}
+                      errorFocusedMode={!comparisonModeMolstar && errorFocusedModeMolstar}
                       comparisonFile={simulationTabEnabled && simulationResults ? simulationResults.pdb_file_string : undefined}
                       comparisonMode={comparisonModeMolstar}
                     />
                   </div>
                 </div>
               </div>
-            </div>
-            {/* Correct the structure */}
-            <div className="my-6">
-              <div className="flex flex-row items-center gap-x-4">
-                <button
-                  role="button"
-                  tabIndex={canStartSimulation ? 0 : -1}
-                  disabled={!canStartSimulation}
-                  onClick={() => {
-                    if (!canStartSimulation) return;
-                    setSimulationStartError(null);
-                    setIsSimulationModalOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (!canStartSimulation) return;
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSimulationStartError(null);
-                      setIsSimulationModalOpen(true);
-                    }
-                  }}
-                  className="rounded-md mt-0 px-1 py-2 bg-moley-darkGreen text-sm font-semibold text-white shadow-xs hover:bg-moley-green focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  title={canStartSimulation ? "Run a refinement simulation to correct structural geometry based on user-defined parameters." : "Structure correction is available after the analysis is completed."}
-                >
-                  Run refinement
-                </button>
-                {hasSimulationStarted && (
-                  <div className="flex items-center gap-2">
-                    <span className={`py-2 ${simulationStatusPresentation.className || "bg-gray-300 text-black"}`}>
-                      {simulationStatusPresentation.label || "No simulation"}
-                    </span>
-                    {(() => {
-                      const simulationParameters = simulationStatusPresentation.parameters;
-                      if (!simulationParameters) return null;
-                      return (
-                      <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
-                        {Object.entries(simulationParameters).map(([param, value], i) => (
-                          <span key={param}>
-                            {i == 0 ? " (" : ""}
-                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {formatNumberForDisplay(value.toString())}
-                            {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
-                          </span>
-                        ))}
-                      </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-
-              
             </div>
           </div>
           <Footer />
