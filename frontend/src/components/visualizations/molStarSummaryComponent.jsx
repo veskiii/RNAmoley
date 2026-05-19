@@ -103,6 +103,162 @@ const Molstar = (props) => {
       .filter(Boolean);
   };
 
+  const applyComparisonColor = async (pluginInstance, comparisonColorHex) => {
+    if (!pluginInstance || !comparisonColorHex) return;
+    try {
+      const hierarchy = pluginInstance.managers?.structure?.hierarchy?.current;
+      const structures = hierarchy?.structures || [];
+      if (structures.length < 2) return; // need a comparison structure
+
+      const comparison = structures[structures.length - 1];
+      const structureCell = comparison?.cell;
+      const component = comparison?.components?.[0];
+
+      if (!structureCell || !component) return;
+
+      const structureData = structureCell?.obj?.data;
+      if (!structureData) return;
+
+      const allAtoms = MS.struct.generator.atomGroups({});
+      const selection = Script.getStructureSelection(allAtoms, structureData);
+      if (!selection) return;
+
+      const loci = StructureSelection.toLociWithSourceUnits(selection);
+      if (!loci?.elements?.length) return;
+
+      await setStructureOverpaint(
+        pluginInstance,
+        [component],
+        Color(parseInt(comparisonColorHex.replace("#", ""), 16)),
+        async () => loci
+      );
+    } catch (error) {
+      console.warn("applyComparisonColor failed", error);
+    }
+  };
+
+  const applyUniformColorToStructure = async (pluginInstance, structureIndex, colorHex) => {
+    if (!pluginInstance || !colorHex) return;
+    try {
+      const hierarchy = pluginInstance.managers?.structure?.hierarchy?.current;
+      const structures = hierarchy?.structures || [];
+      if (structureIndex < 0 || structureIndex >= structures.length) return;
+
+      const targetStruct = structures[structureIndex];
+      const structureCell = targetStruct?.cell;
+      const component = targetStruct?.components?.[0];
+      if (!structureCell || !component) return;
+
+      const structureData = structureCell?.obj?.data;
+      if (!structureData) return;
+
+      const allAtoms = MS.struct.generator.atomGroups({});
+      const selection = Script.getStructureSelection(allAtoms, structureData);
+      if (!selection) return;
+
+      const loci = StructureSelection.toLociWithSourceUnits(selection);
+      if (!loci?.elements?.length) return;
+
+      await setStructureOverpaint(
+        pluginInstance,
+        [component],
+        Color(parseInt(colorHex.replace("#", ""), 16)),
+        async () => loci
+      );
+    } catch (error) {
+      console.warn("applyUniformColorToStructure failed", error);
+    }
+  };
+
+  const setBallAndStickForAllStructures = async (pluginInstance) => {
+    if (!pluginInstance) return;
+    const hierarchy = pluginInstance.managers?.structure?.hierarchy?.current;
+    const structures = hierarchy?.structures || [];
+
+    for (const s of structures) {
+      const components = s?.components || [];
+      for (const comp of components) {
+        try {
+
+          // remove existing representations for this component
+          const reps = comp?.representations || [];
+          if (reps.length > 0) {
+            const builder = pluginInstance.state.data.build();
+            let hadDeletes = false;
+            for (const r of reps) {
+              let ref;
+              try {
+                ref = typeof r === "string" ? r : r?.cell?.transform?.ref;
+              } catch (refErr) {
+                console.warn("setBallAndStick: error reading rep ref", r, refErr);
+                ref = undefined;
+              }
+              if (ref) {
+                builder.delete(ref);
+                hadDeletes = true;
+              } else {
+                console.warn("setBallAndStick: Skipping invalid representation ref", r);
+              }
+            }
+            if (hadDeletes) {
+              try {
+                await builder.commit();
+              } catch (commitErr) {
+                console.warn("setBallAndStick: commit failed", commitErr);
+              }
+            }
+          }
+
+          // add Ball & Stick representation
+          const reprType = pluginInstance.representation.structure.registry.get(
+            "ball-and-stick"
+          );
+          if (reprType) {
+            try {
+              const target = comp?.cell ? comp.cell : comp;
+              if (!target) {
+                console.warn("setBallAndStick: no valid target found for addRepresentation", { comp });
+              } else {
+                // Prefer manager API which handles representation creation for components
+                const compManager = pluginInstance.managers?.structure?.component;
+                if (compManager && typeof compManager.addRepresentation === "function") {
+                  try {
+                    await compManager.addRepresentation([comp], "ball-and-stick");
+                  } catch (mgrErr) {
+                    console.warn("setBallAndStick: component manager addRepresentation failed", mgrErr, { comp });
+                    // fallback to builders API
+                    await pluginInstance.builders.structure.representation.addRepresentation(
+                      target,
+                      {
+                        type: reprType,
+                        typeParams: {},
+                      }
+                    );
+                  }
+                } else {
+                  // direct fallback
+                  await pluginInstance.builders.structure.representation.addRepresentation(
+                    target,
+                    {
+                      type: reprType,
+                      typeParams: {},
+                    }
+                  );
+                }
+              }
+            } catch (addErr) {
+              console.warn("setBallAndStick: addRepresentation failed", addErr, { comp });
+            }
+          } else {
+            console.warn("setBallAndStick: Ball-and-stick representation type not found in registry.");
+          }
+        } catch (err) {
+          console.warn("Failed to set ball-and-stick for component", err, { comp });
+        }
+      }
+    }
+  };
+
   const changeNucleotideColors = async () => {
     if (!plugin.current) {
       console.warn("Plugin not initialized.");
@@ -460,6 +616,25 @@ const Molstar = (props) => {
           // Load second structure in orange
           await loadStructure(null, null, comparisonFile, plugin.current, true, "#ff8c42");
           isStructureLoading.current = false;
+          if (!cancelled) {
+            try {
+              await setBallAndStickForAllStructures(plugin.current);
+            } catch (err) {
+              console.warn("setBallAndStickForAllStructures failed", err);
+            }
+            // Apply comparison uniform color after representations changed
+            try {
+              await applyComparisonColor(plugin.current, "#60a5fa");
+            } catch (err) {
+              console.warn("applyComparisonColor failed", err);
+            }
+            // Apply uniform green to primary (index 0)
+            try {
+              await applyUniformColorToStructure(plugin.current, 0, "#fb923c");
+            } catch (err) {
+              console.warn("applyUniformColorToStructure failed", err);
+            }
+          }
         } else {
           isStructureLoading.current = true;
           // Return to normal mode - reload primary structure
@@ -682,34 +857,7 @@ const Molstar = (props) => {
           );
           await plugin.builders.structure.hierarchy.applyPreset(traj, "default");
 
-          // Apply color to comparison structure
-          if (isComparison && comparisonColorHex) {
-            const structureCell = plugin?.managers?.structure?.hierarchy?.current?.structures?.[plugin?.managers?.structure?.hierarchy?.current?.structures?.length - 1]?.cell;
-            if (structureCell) {
-              comparisonStructureCell.current = structureCell;
-              const structureData = structureCell?.obj?.data;
-              if (structureData) {
-                const allAtoms = MS.struct.generator.atomGroups({});
-                const selection = Script.getStructureSelection(allAtoms, structureData);
-                if (selection) {
-                  const loci = StructureSelection.toLociWithSourceUnits(selection);
-                  const component = plugin?.managers?.structure?.hierarchy?.current?.structures?.[plugin?.managers?.structure?.hierarchy?.current?.structures?.length - 1]?.components?.[0];
-                  if (component && loci?.elements?.length > 0) {
-                    try {
-                      await setStructureOverpaint(
-                        plugin,
-                        [component],
-                        Color(parseInt(comparisonColorHex.replace("#", ""), 16)),
-                        async () => loci
-                      );
-                    } catch (error) {
-                      console.warn("Failed to apply comparison color", error);
-                    }
-                  }
-                }
-              }
-            }
-          }
+          // Comparison coloring moved to after representations are set
         } catch (error) {
           console.warn("Failed to load structure with detected format", format, error);
 
