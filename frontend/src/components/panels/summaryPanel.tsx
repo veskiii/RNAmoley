@@ -68,6 +68,7 @@ const SummaryPanel: React.FC = () => {
   const [simulationStartError, setSimulationStartError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const hasStoppedLoading = useRef(false);
+  const fornaInitialTransformRef = useRef<string | null>(null);
   const fornaContainerRef = useRef<HTMLDivElement>(null);
   const clashChartRef = useRef<HTMLDivElement | null>(null);
   const badBondsChartRef = useRef<HTMLDivElement | null>(null);
@@ -492,6 +493,128 @@ const SummaryPanel: React.FC = () => {
     }
 
     try {
+      const svg = fornaContainerRef.current.querySelector("#rna_ss svg") as SVGSVGElement | null;
+
+      if (svg) {
+        const clone = svg.cloneNode(true) as SVGSVGElement;
+        const sourceGroup = clone.querySelector("g") as SVGGElement | null;
+        const fallbackWidth = clone.viewBox?.baseVal?.width || clone.width?.baseVal?.value || clone.clientWidth || 800;
+        const fallbackHeight = clone.viewBox?.baseVal?.height || clone.height?.baseVal?.value || clone.clientHeight || 600;
+
+        // Compute bbox from an untransformed copy so pan/zoom transforms don't affect the bounds
+        const temp = clone.cloneNode(true) as SVGSVGElement;
+        // Only remove transform from the top-level group (pan/zoom), keep nested transforms
+        const tempRoot = temp.querySelector("g") as SVGGElement | null;
+        if (tempRoot) {
+          try {
+            tempRoot.removeAttribute("transform");
+          } catch (e) {
+            // ignore
+          }
+        }
+        let box = tempRoot?.getBBox();
+        if (!box || !Number.isFinite(box.x) || !Number.isFinite(box.y) || !Number.isFinite(box.width) || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) {
+          box = { x: 0, y: 0, width: fallbackWidth, height: fallbackHeight } as DOMRect;
+        }
+
+        const padding = 40;
+        const viewBoxWidth = Math.max(1, box.width + padding * 2);
+        const viewBoxHeight = Math.max(1, box.height + padding * 2);
+
+        // Create a fresh wrapper SVG that positions the Forna content at positive coordinates
+        const ns = "http://www.w3.org/2000/svg";
+        const wrapperSvg = document.createElementNS(ns, "svg") as SVGSVGElement;
+        wrapperSvg.setAttribute("xmlns", ns);
+        wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth)}`);
+        wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight)}`);
+        wrapperSvg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+        wrapperSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        wrapperSvg.style.background = "#ffffff";
+
+        const contentGroup = document.createElementNS(ns, "g");
+        // Translate content so that bbox's top-left maps to padding,padding
+        contentGroup.setAttribute("transform", `translate(${ -box.x + padding }, ${ -box.y + padding })`);
+
+        // Remove transform only from the top-level group in the clone (pan/zoom)
+        const cloneRoot = clone.querySelector("g") as SVGGElement | null;
+        if (cloneRoot) {
+          try {
+            cloneRoot.removeAttribute("transform");
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        // Move all children from cloned svg into the content group
+        while (clone.firstChild) {
+          contentGroup.appendChild(clone.firstChild);
+        }
+
+        // If we have an initial transform captured from Forna, apply it as an outer group
+        const initialTransform = fornaInitialTransformRef.current;
+        let outerGroup: SVGGElement | null = null;
+        let appliedScale = 1;
+        if (initialTransform) {
+          outerGroup = document.createElementNS(ns, "g");
+          try {
+            outerGroup.setAttribute("transform", initialTransform);
+            // extract scale from transform string
+            const scaleMatch = /scale\(([-0-9.]+)\)/.exec(initialTransform);
+            if (scaleMatch) {
+              appliedScale = parseFloat(scaleMatch[1]) || 1;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (outerGroup) {
+          outerGroup.appendChild(contentGroup);
+          wrapperSvg.appendChild(outerGroup);
+        } else {
+          wrapperSvg.appendChild(contentGroup);
+        }
+
+        // If an initial scale is applied, reflect that in the exported pixel size
+        if (appliedScale && appliedScale !== 1) {
+          wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth * appliedScale)}`);
+          wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight * appliedScale)}`);
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "fixed";
+        wrapper.style.left = "-10000px";
+        wrapper.style.top = "0";
+        wrapper.style.background = "#ffffff";
+        wrapper.appendChild(wrapperSvg);
+        document.body.appendChild(wrapper);
+
+        try {
+          const exportWidth = Math.max(1, Math.round(viewBoxWidth * (appliedScale || 1)));
+          const exportHeight = Math.max(1, Math.round(viewBoxHeight * (appliedScale || 1)));
+
+          const canvas = await html2canvas(wrapper, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            width: exportWidth,
+            height: exportHeight,
+            windowWidth: exportWidth,
+            windowHeight: exportHeight,
+            scrollX: 0,
+            scrollY: 0,
+          });
+
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `${originalResults.name || "forna-structure"}-m${selectedModel}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`;
+          link.click();
+        } finally {
+          wrapper.remove();
+        }
+        return;
+      }
+
       const canvas = await html2canvas(fornaContainerRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
@@ -1241,6 +1364,9 @@ const SummaryPanel: React.FC = () => {
                       setAnimation={animation}
                       job={displayedResults || originalResults}
                       colorGnodes={colorGnodes}
+                      onInitialTransform={(t) => {
+                        fornaInitialTransformRef.current = t;
+                      }}
                     />
                   </div>
                   <div className="w-full md:w-1/2 h-full">
