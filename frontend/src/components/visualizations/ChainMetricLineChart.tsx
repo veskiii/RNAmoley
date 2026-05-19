@@ -475,14 +475,6 @@ const ChainMetricLineChart: React.FC<ChainMetricLineChartProps> = ({
               aria-label={`Line chart for ${getMetricLabel(selectedScore)} in chain ${selectedChain}`}
               className="block"
             >
-              <rect
-                x={0}
-                y={chartPadding.top}
-                width={chartData.contentWidth}
-                height={chartData.innerHeight}
-                rx={12}
-                className="fill-slate-50"
-              />
 
               {chartData.hasNumericValues && (
                 <>

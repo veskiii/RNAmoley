@@ -507,144 +507,136 @@ const SummaryPanel: React.FC = () => {
     }
   };
 
-  const serializeSvg = (svg: SVGSVGElement) => {
-    const serializer = new XMLSerializer();
-    let source = serializer.serializeToString(svg);
-    if (!source.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)) {
-      source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
-    if (!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www.w3.org\/1999\/xlink"/)) {
-      source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
-    }
-    return source;
-  };
-
-  const downloadSvgFile = (svg: SVGSVGElement, filename: string) => {
-    try {
-      const source = serializeSvg(svg);
-      const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${filename}.svg`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Failed to download SVG:", err);
-    }
-  };
-
-  const downloadSvgAsPng = async (svg: SVGSVGElement, filename: string) => {
-    try {
-      const source = serializeSvg(svg);
-      const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(svgBlob);
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const width = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width ? svg.viewBox.baseVal.width : svg.clientWidth || 800;
-        const height = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.height ? svg.viewBox.baseVal.height : svg.clientHeight || 600;
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-        }
-        URL.revokeObjectURL(url);
-        const pngUrl = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = pngUrl;
-        a.download = `${filename}.png`;
-        a.click();
-      };
-      img.onerror = (err) => {
-        console.error("Failed to render SVG to image:", err);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    } catch (err) {
-      console.error("Failed to download PNG:", err);
-    }
-  };
-
-  const downloadCombinedSvgsAsPng = async (
-    leftSvg: SVGSVGElement | null | undefined,
-    contentSvg: SVGSVGElement | null | undefined,
-    filename: string,
-    scale = 2
-  ) => {
-    try {
-      // If only one SVG is present, fallback to existing method
-      if (!leftSvg && !contentSvg) return;
-      if (!leftSvg || !contentSvg) {
-        const target = leftSvg || contentSvg;
-        if (target) return downloadSvgAsPng(target, filename);
-        return;
-      }
-
-      const leftSource = serializeSvg(leftSvg);
-      const contentSource = serializeSvg(contentSvg);
-
-      const stripOuter = (s: string) => s.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
-      const leftInner = stripOuter(leftSource);
-      const contentInner = stripOuter(contentSource);
-
-      const getSize = (el: SVGSVGElement) => {
-        const vb = el.viewBox && el.viewBox.baseVal;
-        if (vb && vb.width && vb.height) return { w: vb.width, h: vb.height };
-        const w = el.clientWidth || parseFloat(el.getAttribute("width") || "0") || 0;
-        const h = el.clientHeight || parseFloat(el.getAttribute("height") || "0") || 0;
-        return { w, h };
-      };
-
-      const leftSize = getSize(leftSvg);
-      const contentSize = getSize(contentSvg);
-      const totalWidth = Math.max(1, leftSize.w + contentSize.w);
-      const totalHeight = Math.max(leftSize.h || contentSize.h || 1, contentSize.h || leftSize.h || 1);
-
-      const wrapper = `<?xml version="1.0" encoding="utf-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">` +
-        // Ensure background matches browser by adding white rect beneath content
-        `<rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />` +
-        `<g>${leftInner}</g>` +
-        `<g transform="translate(${leftSize.w},0)">${contentInner}</g>` +
-        `</svg>`;
-
-      const blob = new Blob([wrapper], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(totalWidth * scale);
-        canvas.height = Math.round(totalHeight * scale);
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
-        URL.revokeObjectURL(url);
-        const pngUrl = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = pngUrl;
-        a.download = `${filename}.png`;
-        a.click();
-      };
-      img.onerror = (err) => {
-        console.error("Failed to render combined SVG to image:", err);
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    } catch (err) {
-      console.error("Failed to download combined PNG:", err);
-    }
-  };
-
   const downloadChartContainerAsPng = async (container: HTMLElement | null | undefined, filename: string, scale = 2) => {
     if (!container) return;
     try {
-      const canvas = await html2canvas(container, { backgroundColor: "#ffffff", scale, useCORS: true });
+      const chartFontFamily = getComputedStyle(container).fontFamily || getComputedStyle(document.body).fontFamily || "sans-serif";
+      const escapeXmlAttr = (value: string) =>
+        value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+      const safeChartFontFamily = escapeXmlAttr(chartFontFamily);
+      const svgElements = Array.from(container.querySelectorAll("svg")) as SVGSVGElement[];
+      const hasComparisonLegend = Array.from(container.querySelectorAll("div")).some((element) => {
+        const text = element.textContent || "";
+        return text.includes("Original") && text.includes("After refinement");
+      });
+
+      const getSvgSize = (svg: SVGSVGElement) => {
+        const viewBox = svg.viewBox?.baseVal;
+        if (viewBox && viewBox.width && viewBox.height) {
+          return { width: viewBox.width, height: viewBox.height };
+        }
+
+        const width = svg.width?.baseVal?.value || svg.clientWidth || parseFloat(svg.getAttribute("width") || "0") || 0;
+        const height = svg.height?.baseVal?.value || svg.clientHeight || parseFloat(svg.getAttribute("height") || "0") || 0;
+        return { width, height };
+      };
+
+      const serializeSvg = (svg: SVGSVGElement) => {
+        const serializer = new XMLSerializer();
+        let source = serializer.serializeToString(svg);
+        if (!source.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)) {
+          source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        if (!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www.w3.org\/1999\/xlink"/)) {
+          source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+        }
+        return source;
+      };
+
+      const stripOuterSvg = (source: string) => source.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+
+      const createPngFromSvg = async (svgMarkup: string, width: number, height: number) => {
+        const blob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        try {
+          const img = new Image();
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error("Failed to load SVG for export"));
+            img.src = url;
+          });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(width * scale);
+          canvas.height = Math.round(height * scale);
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            throw new Error("Canvas 2D context is unavailable");
+          }
+
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const a = document.createElement("a");
+          a.href = canvas.toDataURL("image/png");
+          a.download = `${filename}.png`;
+          a.click();
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+
+      if (svgElements.length >= 2) {
+        const orderedSvgs = svgElements
+          .map((svg) => ({ svg, size: getSvgSize(svg) }))
+          .sort((left, right) => left.size.width - right.size.width);
+
+        const leftSvg = orderedSvgs[0]?.svg;
+        const contentSvg = orderedSvgs[orderedSvgs.length - 1]?.svg;
+
+        if (leftSvg && contentSvg && leftSvg !== contentSvg) {
+          const leftSource = serializeSvg(leftSvg);
+          const contentSource = serializeSvg(contentSvg);
+          const leftInner = stripOuterSvg(leftSource);
+          const contentInner = stripOuterSvg(contentSource);
+          const leftSize = getSvgSize(leftSvg);
+          const contentSize = getSvgSize(contentSvg);
+          const totalWidth = Math.max(1, leftSize.width + contentSize.width);
+          const legendHeight = hasComparisonLegend ? 52 : 0;
+          const totalHeight = Math.max(
+            leftSize.height || contentSize.height || 1,
+            contentSize.height || leftSize.height || 1,
+          ) + legendHeight;
+
+          const legendMarkup = hasComparisonLegend
+            ? `<g transform="translate(${Math.max(totalWidth - 170, 8)},16)"><rect x="0" y="0" width="162" height="34" rx="8" fill="#ffffff" fill-opacity="0.95" stroke="#e5e7eb"/><circle cx="14" cy="12" r="5" fill="#fb923c"/><text x="26" y="16" fill="#374151" font-size="12" font-family="${safeChartFontFamily}">Original</text><circle cx="14" cy="26" r="5" fill="#60a5fa"/><text x="26" y="30" fill="#374151" font-size="12" font-family="${safeChartFontFamily}">After refinement</text></g>`
+            : "";
+
+          const wrapper = `<?xml version="1.0" encoding="utf-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" style="font-family: ${safeChartFontFamily};"><rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" /><g transform="translate(0,${legendHeight})">${leftInner}</g><g transform="translate(${leftSize.width},${legendHeight})">${contentInner}</g>${legendMarkup}</svg>`;
+          await createPngFromSvg(wrapper, totalWidth, totalHeight);
+          return;
+        }
+      }
+
+      if (svgElements.length === 1) {
+        const svg = svgElements[0];
+        const size = getSvgSize(svg);
+        const source = serializeSvg(svg);
+        await createPngFromSvg(source, Math.max(size.width, 1), Math.max(size.height, 1));
+        return;
+      }
+
+      const fullWidth = Math.max(container.scrollWidth, container.clientWidth, 1);
+      const fullHeight = Math.max(container.scrollHeight, container.clientHeight, 1);
+      const canvas = await html2canvas(container, {
+        backgroundColor: "#ffffff",
+        scale,
+        useCORS: true,
+        width: fullWidth,
+        height: fullHeight,
+        windowWidth: fullWidth,
+        windowHeight: fullHeight,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = url;
