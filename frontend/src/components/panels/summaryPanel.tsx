@@ -1232,7 +1232,20 @@ const SummaryPanel: React.FC = () => {
                           disabled={!simulationTabEnabled}
                           className="cursor-pointer disabled:cursor-not-allowed"
                         />
-                        <span className="text-sm">Show 3D alignment</span>
+                        <span>
+                          <span className="text-sm">Show 3D alignment</span>
+                          <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                            <span
+                              aria-label="What this field does"
+                              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                            >
+                              ?
+                            </span>
+                            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                              Display the aligned original (orange) and post-refinement (blue) structures in the 3D view.
+                            </span>
+                          </span>
+                        </span>
                       </label>
                     </div>
                   </div>
