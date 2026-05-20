@@ -552,7 +552,7 @@ const Panel: React.FC = () => {
       );
     } else {
       const selectionFragments = selectedFragments
-        .filter(f => f.chainName === chainName && f.name.startsWith("Selection"));
+        .filter(f => f.chainName === chainName && f.name.startsWith(`Chain ${chainName} Selection`));
 
       let allResidues = [
         ...selectionFragments.flatMap(f => f.residues.filter(id => !f.deselectedResidues?.includes(id))),
@@ -576,7 +576,7 @@ const Panel: React.FC = () => {
 
       setSelectedFragments(prev =>
         [
-          ...prev.filter(f => !(f.chainName === chainName && f.name.startsWith("Selection"))),
+          ...prev.filter(f => !(f.chainName === chainName && f.name.startsWith(`Chain ${chainName} Selection`))),
           ...ranges.map(([start, end]) => ({
         name: start === end ? `Chain ${chainName} Selection ${start}` : `Chain ${chainName} Selection ${start}-${end}`,
         chainName,
