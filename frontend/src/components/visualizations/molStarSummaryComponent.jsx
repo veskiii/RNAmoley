@@ -1223,6 +1223,7 @@ const Molstar = (props) => {
     // Only keep residues that are selected in the provided resultResidues
     const isEntrySelected = (entry) => {
       if (!Array.isArray(resultResidues)) return false;
+      if (entry.color === "#ffffff" || entry.color === "white") return false;
       for (const r of resultResidues) {
         const metricsResidue = r?.residueMetrics?.residue;
         const parsedChain = metricsResidue?.trim()?.split(/\s+/)?.[0];

@@ -144,6 +144,36 @@ const getMetricValue = (residue: Residue, selectedScore: QualityScore): MetricVa
   return { value: null, displayValue: "-" };
 };
 
+export const hasChainMetricLineChartValues = (
+  data: Residue[],
+  data2: Residue[] | undefined,
+  selectedChain: string,
+  selectedScore: QualityScore,
+) => {
+  if (!selectedChain) {
+    return false;
+  }
+
+  const chainResidues = data.filter((residue) => residue.chainID === selectedChain);
+  const chainResidues2 = data2 ? data2.filter((residue) => residue.chainID === selectedChain) : [];
+
+  const residue2Map = new Map(chainResidues2.map((residue) => [residue.original_index, residue]));
+
+  return chainResidues.some((residue) => {
+    const metric = getMetricValue(residue, selectedScore);
+    const isSelected = residue.selected !== false;
+    if (isSelected && metric.value !== null) {
+      return true;
+    }
+
+    const residue2 = residue2Map.get(residue.original_index);
+    const metric2 = residue2 ? getMetricValue(residue2, selectedScore) : { value: null, displayValue: "-" };
+    const isSelected2 = residue2?.selected !== false;
+
+    return Boolean(data2 && isSelected2 && metric2.value !== null);
+  });
+};
+
 const buildSegmentPaths = (
   points: Array<{ x: number; y: number | null; y2: number | null; value: number | null; value2: number | null }>
 ) => {
