@@ -22,7 +22,7 @@ import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
-import ChainMetricLineChart from "../visualizations/ChainMetricLineChart";
+import ChainMetricLineChart, { hasChainMetricLineChartValues } from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 import { formatNumberForDisplay } from "../utils/displayUniform";
 import { get } from "http";
@@ -802,6 +802,16 @@ const SummaryPanel: React.FC = () => {
 
   // Available chains for the currently selected model (used in JSX below)
   const availableChains: string[] | undefined = originalResults?.metadata?.resultsStatus?.[selectedModel?.toString() || ""]?.chains;
+  const showClashChart =
+    !!originalResults?.metadata.analyzeNeighborhoods &&
+    hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.CLASH_SCORE);
+  const showBadBondsChart =
+    !!originalResults?.metadata.analyzeNeighborhoods &&
+    hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.BAD_BONDS);
+  const showBadAnglesChart =
+    !!originalResults?.metadata.analyzeNeighborhoods &&
+    hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.BAD_ANGLES);
+  const showSuitenessChart = hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.SUITENESS);
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
@@ -1031,7 +1041,7 @@ const SummaryPanel: React.FC = () => {
                   </span>
                 </div>
                 <div className={`grid grid-cols-1 ${originalResults.metadata.analyzeNeighborhoods ? 'md:grid-cols-2' : ''} gap-2`}>
-                  {originalResults.metadata.analyzeNeighborhoods && (
+                  {showClashChart && (
                   <div className="relative" ref={clashChartRef as any}>
                     <button
                       onClick={() => {
@@ -1052,7 +1062,7 @@ const SummaryPanel: React.FC = () => {
                     />
                   </div>
                   )}
-                  {originalResults.metadata.analyzeNeighborhoods && (
+                  {showBadBondsChart && (
                   <div className="relative" ref={badBondsChartRef as any}>
                     <button
                       onClick={() => {
@@ -1073,7 +1083,7 @@ const SummaryPanel: React.FC = () => {
                     />
                   </div>
                   )}
-                  {originalResults.metadata.analyzeNeighborhoods && (
+                  {showBadAnglesChart && (
                   <div className="relative" ref={badAnglesChartRef as any}>
                     <button
                       onClick={() => {
@@ -1095,6 +1105,7 @@ const SummaryPanel: React.FC = () => {
                   </div>
                   )}
 
+                  {showSuitenessChart && (
                   <div className="relative" ref={suitenessChartRef as any}>
                     <button
                       onClick={() => {
@@ -1114,6 +1125,7 @@ const SummaryPanel: React.FC = () => {
                       selectedScore={QualityScore.SUITENESS}
                     />
                   </div>
+                  )}
                   {!originalResults.metadata.analyzeNeighborhoods && (
                     <p className="">
                       Local analysis was not enabled. To compute clash scores, bad bonds, and bad angles for residue neighborhoods, 
