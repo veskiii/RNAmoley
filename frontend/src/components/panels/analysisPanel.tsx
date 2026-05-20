@@ -336,7 +336,11 @@ const Panel: React.FC = () => {
     });
   }, [chainsState, selectedChain]);
 
-  async function loadData(jobID: string | undefined, model: number = 1) {
+  async function loadData(
+    jobID: string | undefined,
+    model: number = 1,
+    preloadConfiguredSelections = false
+  ) {
     try {
       const data = await fetchJobData(jobID, model);
       setMyData(data);
@@ -345,18 +349,20 @@ const Panel: React.FC = () => {
       const configuredSelection = applyConfiguredSelections(data.name, model, chains);
       setChainsState(configuredSelection.chains);
       setSelectedFragments(configuredSelection.selectedFragments);
-      void preloadConfiguredModelSelections(jobID, data.name, data.metadata.models, model).then(
-        (preloadedSelections) => {
-          if (Object.keys(preloadedSelections).length === 0) {
-            return;
-          }
+      if (preloadConfiguredSelections) {
+        void preloadConfiguredModelSelections(jobID, data.name, data.metadata.models, model).then(
+          (preloadedSelections) => {
+            if (Object.keys(preloadedSelections).length === 0) {
+              return;
+            }
 
-          setModelSelections((prev) => ({
-            ...prev,
-            ...preloadedSelections,
-          }));
-        }
-      );
+            setModelSelections((prev) => ({
+              ...prev,
+              ...preloadedSelections,
+            }));
+          }
+        );
+      }
       /* If user selected model or there is only one model, select this model */
       // if ( selectedModel !== 0 || data.metadata.model_count === 1 ) {
         setSelectedModel(model);
@@ -546,7 +552,7 @@ const Panel: React.FC = () => {
       );
     } else {
       const selectionFragments = selectedFragments
-        .filter(f => f.chainName === chainName && f.name.startsWith("Selection"));
+        .filter(f => f.chainName === chainName && f.name.startsWith(`Chain ${chainName} Selection`));
 
       let allResidues = [
         ...selectionFragments.flatMap(f => f.residues.filter(id => !f.deselectedResidues?.includes(id))),
@@ -570,7 +576,7 @@ const Panel: React.FC = () => {
 
       setSelectedFragments(prev =>
         [
-          ...prev.filter(f => !(f.chainName === chainName && f.name.startsWith("Selection"))),
+          ...prev.filter(f => !(f.chainName === chainName && f.name.startsWith(`Chain ${chainName} Selection`))),
           ...ranges.map(([start, end]) => ({
         name: start === end ? `Chain ${chainName} Selection ${start}` : `Chain ${chainName} Selection ${start}-${end}`,
         chainName,
@@ -866,7 +872,7 @@ const Panel: React.FC = () => {
 
   useEffect(() => {
     if (!jobID) return;
-    loadData(jobID, 1);
+    loadData(jobID, 1, true);
   }, [jobID]);
 
   if (error) return <ErrorPage errorMessage={error} />;
