@@ -686,12 +686,7 @@ const Molstar = (props) => {
         })();
         colorHex = hasError ? "#ff8c42" : "#ffffff";
       } else {
-        // Non-error mode: use getColor but force white for metric==0
-        if (isMetricZero(entry.raw)) {
-          colorHex = "#ffffff";
-        } else {
-          colorHex = getColor(entry.raw, selectedQualityScore) || "#ffffff";
-        }
+        colorHex = getColor(entry.raw, selectedQualityScore) || "#ffffff";
       }
 
       if (!selectedGrouped[colorHex]) selectedGrouped[colorHex] = [];

@@ -60,12 +60,12 @@ const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simM
     const rows = [
         { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics },
         simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (after refinement)`, metrics: simModelMetrics },
-        { label: "Analysed fragment", metrics: fragmentMetrics },
-        simFragmentMetrics && { label: "Analysed fragment (after refinement)", metrics: simFragmentMetrics },
+        { label: "Analysed region", metrics: fragmentMetrics },
+        simFragmentMetrics && { label: "Analysed region (after refinement)", metrics: simFragmentMetrics },
     ];
 
     return (
-        <table className="min-w-full border-t border-gray-300 rounded-lg">
+        <table className="min-w-full rounded-lg">
             <thead>
                 <tr>
                     <th className="px-4 py-2 border-b border-gray-300 text-left font-semibold"></th>
