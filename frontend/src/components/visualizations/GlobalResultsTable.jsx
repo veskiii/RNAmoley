@@ -65,7 +65,7 @@ const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simM
     ];
 
     return (
-        <table className="min-w-full border-t border-gray-300 rounded-lg">
+        <table className="min-w-full rounded-lg">
             <thead>
                 <tr>
                     <th className="px-4 py-2 border-b border-gray-300 text-left font-semibold"></th>

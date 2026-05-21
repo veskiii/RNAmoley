@@ -981,7 +981,7 @@ const SummaryPanel: React.FC = () => {
                   </div>
                 </div>
                 {/* Global and fragment results */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border border-gray-100 shadow-md rounded p-2">
                   <GlobalResultsTable
                     selectedModel={selectedModel}
                     modelMetrics={originalResults.results.modelMetrics} 
@@ -1025,9 +1025,9 @@ const SummaryPanel: React.FC = () => {
                 </div>
               </div>
               {/* Line plots of chain quality */}
-              <div className="mt-6">
+              <div className="mt-6 border border-gray-100 shadow-md rounded p-4">
                 <div>
-                  <label>Local quality line charts (per residue)</label>
+                  <label className="font-medium">Local quality line charts (per residue)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                     <span
                       aria-label="What this field does"
@@ -1144,9 +1144,9 @@ const SummaryPanel: React.FC = () => {
                   {showResidueTable ? "Hide local quality table ▲" : "Show local quality table ▼"}
                 </button>
                 {showResidueTable && (
+                  <div className="border border-gray-100 shadow-md p-4">
                   <div>
-                    <div>
-                      <label>Local quality table (per residue)</label>
+                      <label className="font-medium">Local quality table (per residue)</label>
                       <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                         <span
                           aria-label="What this field does"
@@ -1175,9 +1175,9 @@ const SummaryPanel: React.FC = () => {
                 )}
               </div>
               {/* Visualizations */}
-              <div className="my-6">
+              <div className="my-6 border border-gray-100 shadow-md rounded p-4">
                 <div>
-                  <label>Structure visualization (colored by local quality)</label>
+                  <label className="font-medium">Structure visualization (colored by local quality)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                       <span
                         aria-label="What this field does"
