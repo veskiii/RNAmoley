@@ -12,8 +12,7 @@ const CiteUsPage = () => {
       </div>
       <div className="flex flex-1 flex-col items-center pb-16 pt-6">
         <div
-          className="shadow-[0_5px_10px_rgba(0,0,0,0.1)] rounded-2xl w-[80vw] h-[auto] p-8 overflow-y-auto"
-          style={{ background: Colors.backgroundBeige }}
+          className="border border-gray-100 shadow-md rounded w-[80vw] h-[auto] p-8 overflow-y-auto"
         >
           <h2
             className="text-2xl font-bold mb-4"
