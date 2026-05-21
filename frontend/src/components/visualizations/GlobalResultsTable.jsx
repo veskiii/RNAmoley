@@ -60,8 +60,8 @@ const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simM
     const rows = [
         { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics },
         simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (after refinement)`, metrics: simModelMetrics },
-        { label: "Analysed fragment", metrics: fragmentMetrics },
-        simFragmentMetrics && { label: "Analysed fragment (after refinement)", metrics: simFragmentMetrics },
+        { label: "Analysed region", metrics: fragmentMetrics },
+        simFragmentMetrics && { label: "Analysed region (after refinement)", metrics: simFragmentMetrics },
     ];
 
     return (

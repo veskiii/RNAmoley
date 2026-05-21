@@ -1099,7 +1099,7 @@ const Panel: React.FC = () => {
               {/* Region selection */}
               <div>
                 <div>
-                  <label className="mt-4">Select region(s) of model {selectedModel || "<X>"}.chain {selectedChain || "<Y>"}</label>
+                  <label className="mt-4">Select region of model {selectedModel || "<X>"}.chain {selectedChain || "<Y>"}</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                     <span
                       aria-label="What this field does"
@@ -1147,7 +1147,7 @@ const Panel: React.FC = () => {
                   </button>
                 </div>
                 <div className="mt-2">
-                  <label>Selected regions are highlighted below. Click residues to add or remove them from the selection.</label>
+                  <label>Selected region is highlighted below. Click residues to add or remove them from the selection.</label>
                   <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                     <ResidueTable
                       data={chainsState}
