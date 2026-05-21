@@ -411,7 +411,7 @@ export async function analyzeStructure(req: Request, res: Response) {
       return;
     }
 
-    const demoResult = getPreCalculatedDemoResult(result.rows[0].name, Number(radius), Number(interval), models);
+    const demoResult = await getPreCalculatedDemoResult(result.rows[0].name, Number(radius), Number(interval), models);
     if (demoResult) {
       // Ensure metadata.resultsStatus["1"] contains chain list from provided models
       try {

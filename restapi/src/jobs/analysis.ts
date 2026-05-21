@@ -25,16 +25,35 @@ import {
 import { Queue, Worker } from "bullmq";
 
 const PRE_CALCULATED_RESULTS: Record<string, { filename: string; radius: number; interval: number; selection: string }> = {
-  "Example 1": {"filename" : "example_1.json", "radius": 15, "interval": 5, "selection": "(1:A:1-90)"},
+  "Example 1": {"filename" : "example_1.json", "radius": 15, "interval": 1, "selection": "(1:A:1-90)"},
   "Example 2": {"filename" : "example_2.json", "radius": 5, "interval": 1, "selection": "(1:A:11-36)"},
   "Example 3": {"filename" : "example_3.json", "radius": 5, "interval": 1, "selection": "(1:A:8-12),(1:A:44-49)"},
   "Example 4": {"filename" : "example_4.json", "radius": 5, "interval": 1, "selection": "(1:A:42-83)"},
-  "Example 5": {"filename" : "example_5.json", "radius": 8, "interval": 2, "selection": "(1:A:1-39),(1:A:83-90)"},
+  "Example 5": {"filename" : "example_5.json", "radius": 8, "interval": 1, "selection": "(1:A:1-39),(1:A:83-90)"},
   "Example 6": {"filename" : "example_6_<model_number>.json", "radius": 5, "interval": 1, "selection": "(1:0:1-30),(3:0:1-30),(5:0:1-30)"},
 }
 
 function normalizeSelection(selection: string) {
   return selection.replace(/\s+/g, "");
+}
+
+async function hasPreCalculatedDemoFiles(
+  demoResult: { filename: string; radius: number; interval: number; selection: string }
+): Promise<boolean> {
+  const placeholder = "<model_number>";
+
+  if (!demoResult.filename.includes(placeholder)) {
+    try {
+      await fs.access(join(DEMO_FILES_DIR, demoResult.filename));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const [prefix = "", suffix = ""] = demoResult.filename.split(placeholder);
+  const demoFiles = await fs.readdir(DEMO_FILES_DIR);
+  return demoFiles.some((fileName) => fileName.startsWith(prefix) && fileName.endsWith(suffix));
 }
 
 function buildSelectionSignature(models: Record<number, ChainElement[]>) {
@@ -105,7 +124,7 @@ function buildSelectionSignature(models: Record<number, ChainElement[]>) {
   return selectionParts.join(",");
 }
 
-export function getPreCalculatedDemoResult(
+export async function getPreCalculatedDemoResult(
   jobName: string,
   radius: number,
   interval: number,
@@ -118,6 +137,14 @@ export function getPreCalculatedDemoResult(
   const demoResult = PRE_CALCULATED_RESULTS[jobName];
   if (!demoResult) {
     console.info(`[PreCalculatedDemo] No configured demo result for job="${jobName}"`);
+    return null;
+  }
+
+  const demoFilesExist = await hasPreCalculatedDemoFiles(demoResult);
+  if (!demoFilesExist) {
+    console.info(
+      `[PreCalculatedDemo] Demo result file does not exist for job="${jobName}": pattern="${demoResult.filename}"`
+    );
     return null;
   }
 
@@ -364,6 +391,7 @@ export async function analyzeStructure(
 
   const modelMetrics = await fetchModelMetrics(jobID, modelNumber, modelsDir);
   const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber, modelsDir);
+  // TODO - calculate median suiteness for model and fragment
   console.log(`[Job ${jobID}, Model ${modelNumber}] residueAnalysisArray length: ${residueAnalysisArray?.length || 0}. First few items:`, residueAnalysisArray?.slice(0, 3));
 
   const numeration = await fetchNumeration(jobID, modelNumber, modelsDir);
