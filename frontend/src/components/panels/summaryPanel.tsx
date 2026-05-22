@@ -63,19 +63,22 @@ const getColorLegendEntries = (qualityScore: QualityScore, errorFocusedMode: boo
 
   const legendLabel = qualityScoreLegendLabels[qualityScore];
   const ranges = legendLabel ? rangeMap.get(legendLabel)?.ranges ?? [] : [];
+  const isSuiteness = qualityScore === QualityScore.SUITENESS;
 
   if (ranges.length === 5) {
     return ranges.map((range, index) => ({
       label: formatRangeLabel(range),
-      color: colorMapByRange.get(index + 1) || "#ffffff",
+      color: colorMapByRange.get(isSuiteness ? 5 - index : index + 1) || "#ffffff",
       borderClassName: index === 0 ? "border-gray-300" : undefined,
     }));
   }
 
   if (ranges.length === 3) {
+    const colorOrder = isSuiteness ? [5, 3, 1] : [1, 3, 5];
+
     return [0, 2, 4].map((colorIndex, index) => ({
       label: formatRangeLabel(ranges[index]),
-      color: colorMapByRange.get(colorIndex + 1) || "#ffffff",
+      color: colorMapByRange.get(colorOrder[index]) || "#ffffff",
       borderClassName: index === 0 ? "border-gray-300" : undefined,
     }));
   }
