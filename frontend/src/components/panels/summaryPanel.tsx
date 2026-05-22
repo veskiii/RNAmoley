@@ -26,6 +26,62 @@ import ChainMetricLineChart, { hasChainMetricLineChartValues } from "../visualiz
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 import { formatNumberForDisplay } from "../utils/displayUniform";
 import { get } from "http";
+import { colorMapByRange, rangeMap } from "../utils/ColorUtils";
+
+type ColorLegendEntry = {
+  label: string;
+  color: string;
+  borderClassName?: string;
+};
+
+const qualityScoreLegendLabels: Partial<Record<QualityScore, string>> = {
+  [QualityScore.CLASH_SCORE]: "Clash Score",
+  [QualityScore.BAD_BONDS]: "Bad Bonds",
+  [QualityScore.BAD_ANGLES]: "Bad Angles",
+  [QualityScore.SUITENESS]: "Suiteness",
+};
+
+const formatLegendBound = (value: number) => (value === Infinity ? "∞" : `${value}`);
+
+const formatRangeLabel = ([start, end]: [number, number]) =>
+  end === Infinity ? `${formatLegendBound(start)}+` : `${formatLegendBound(start)} - ${formatLegendBound(end)}`;
+
+const getColorLegendEntries = (qualityScore: QualityScore, errorFocusedMode: boolean): ColorLegendEntry[] => {
+  if (errorFocusedMode) {
+    return [
+      { label: "Serious error", color: "#ff8c42" },
+      { label: "No serious error", color: "#ffffff", borderClassName: "border-gray-300" },
+    ];
+  }
+
+  if (qualityScore === QualityScore.SUGAR_PUCKER_OUT) {
+    return [
+      { label: "No outlier", color: colorMapByRange.get(1) || "#ffffff" },
+      { label: "Outlier", color: colorMapByRange.get(5) || "#ffffff" },
+    ];
+  }
+
+  const legendLabel = qualityScoreLegendLabels[qualityScore];
+  const ranges = legendLabel ? rangeMap.get(legendLabel)?.ranges ?? [] : [];
+
+  if (ranges.length === 5) {
+    return ranges.map((range, index) => ({
+      label: formatRangeLabel(range),
+      color: colorMapByRange.get(index + 1) || "#ffffff",
+      borderClassName: index === 0 ? "border-gray-300" : undefined,
+    }));
+  }
+
+  if (ranges.length === 3) {
+    return [0, 2, 4].map((colorIndex, index) => ({
+      label: formatRangeLabel(ranges[index]),
+      color: colorMapByRange.get(colorIndex + 1) || "#ffffff",
+      borderClassName: index === 0 ? "border-gray-300" : undefined,
+    }));
+  }
+
+  return [];
+};
 
 const SummaryPanel: React.FC = () => {
   type ResultsSource = "original" | "simulation";
@@ -1376,6 +1432,22 @@ const SummaryPanel: React.FC = () => {
                     />
                     <span className="text-sm">Sugar pucker outlier</span>
                   </label>
+                </div>
+                <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                  <span className="font-medium text-gray-700">Legend:</span>
+                  {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
+                    <span
+                      key={entry.label}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-gray-200"
+                    >
+                      <span
+                        className={`h-3 w-3 rounded-full border ${entry.borderClassName || "border-transparent"}`}
+                        style={{ backgroundColor: entry.color }}
+                        aria-hidden="true"
+                      />
+                      <span>{entry.label}</span>
+                    </span>
+                  ))}
                 </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
                   <div className="w-full md:w-1/2 h-full relative border border-gray-300" ref={fornaContainerRef}>
