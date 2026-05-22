@@ -1283,7 +1283,7 @@ const SummaryPanel: React.FC = () => {
                           ?
                         </span>
                         <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                          Shows full range of values across all residues.
+                          Colors analyzed residues using a continuous green-to-red scale based on the selected metric values. Non-analyzed residues are shown in dark gray.
                         </span>
                       </span>
                     </span>
@@ -1307,7 +1307,7 @@ const SummaryPanel: React.FC = () => {
                           ?
                         </span>
                         <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                          Shows only residues/spheres with detected structural issues.
+                          Highlights analyzed residues with serious structural issues in orange for the selected metric. Non-analyzed residues are dark gray; residues without serious issues are white.
                         </span>
                       </span>
                     </span>
