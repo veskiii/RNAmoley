@@ -1433,8 +1433,8 @@ const SummaryPanel: React.FC = () => {
                     <span className="text-sm">Sugar pucker outlier</span>
                   </label>
                 </div>
-                <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-gray-600">
-                  <span className="font-medium text-gray-700">Legend:</span>
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <span>Legend:</span>
                   {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
                     <span
                       key={entry.label}
@@ -1445,7 +1445,7 @@ const SummaryPanel: React.FC = () => {
                         style={{ backgroundColor: entry.color }}
                         aria-hidden="true"
                       />
-                      <span>{entry.label}</span>
+                      <span className="text-xs">{entry.label}</span>
                     </span>
                   ))}
                 </div>
