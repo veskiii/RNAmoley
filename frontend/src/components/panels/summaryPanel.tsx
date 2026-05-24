@@ -162,54 +162,54 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "created") {
-      return { label: "Created", className: "text-gray-800" };
+      return { label: "Created", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "starting") {
-      return { label: "Starting", className: "text-gray-800" };
+      return { label: "Starting", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "running") {
       return {
         label: "Running",
-        className: "text-gray-800",
+        className: "text-sm font-bold text-gray-800",
       };
     }
 
     if (status === "completed") {
-      return { label: "Completed", className: "text-gray-800" };
+      return { label: "Completed", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "failed") {
-      return { label: "Failed", className: "text-red-600" };
+      return { label: "Failed", className: "text-sm font-bold text-red-600" };
     }
 
     if (status === "sim_starting") {
-      return { label: "Refinement starting...", className: "text-gray-800" };
+      return { label: "Refinement starting...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_running") {
-      return { label: "Refinement in progress...", className: "text-gray-800" };
+      return { label: "Refinement in progress...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_finished") {
-      return { label: "Refinement done...", className: "text-gray-800" };
+      return { label: "Refinement done...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_analyzing") {
-      return { label: "Analyzing results...", className: "text-gray-800" };
+      return { label: "Refinement in progress...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_completed") {
       const simParams = simulationResults?.metadata.simulations?.[selectedModel]?.parameters;
-      return { label: `Refinement completed`, className: "text-gray-800", parameters: simParams };
+      return { label: `Refinement completed`, className: "text-sm font-bold text-gray-800", parameters: simParams };
     }
 
     if (status === "sim_failed") {
-      return { label: "Refinement failed", className: "text-red-500" };
+      return { label: "Refinement failed", className: "text-sm font-bold text-red-500" };
     }
 
-    return { label: status, className: "text-gray-800" };
+    return { label: status, className: "text-sm font-bold text-gray-800" };
   };
 
   const getLabelForSimulationParameter = (paramName: string) => {
