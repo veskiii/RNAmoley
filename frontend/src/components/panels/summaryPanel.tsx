@@ -1200,29 +1200,31 @@ const SummaryPanel: React.FC = () => {
               </div>
               {/* Local quality map */}
               <div className="mt-6">
-                <button
-                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
-                  onClick={() => setShowResidueTable(!showResidueTable)}
-                  title={"Show or hide local quality table."}
-                >
-                  {showResidueTable ? "Hide local quality table ▲" : "Show local quality table ▼"}
-                </button>
-                {showResidueTable && (
                   <div className="border border-gray-100 shadow-md p-4">
-                  <div>
-                      <label className="font-medium">Local quality table (per residue)</label>
-                      <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
-                        <span
-                          aria-label="What this field does"
-                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
-                        >
-                          ?
+                    <div className="flex justify-between">
+                      <div>
+                        <label className="font-medium">Local quality table (per residue)</label>
+                        <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                          <span
+                            aria-label="What this field does"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                          >
+                            ?
+                          </span>
+                          <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                            Displays local quality score for each residue's neighborhood.
+                          </span>
                         </span>
-                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                          Displays local quality score for each residue's neighborhood.
-                        </span>
-                      </span>
+                      </div>
+                      <div
+                        onClick={() => setShowResidueTable(!showResidueTable)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
+                      >
+                        {showResidueTable ? "▲ Hide" : "▼ Show" }
+                      </div>
                     </div>
+                    
+                {showResidueTable && (
                     <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                       <ResultsResidueTable
                       key={`residue-table-${selectedModel}`}
@@ -1235,8 +1237,9 @@ const SummaryPanel: React.FC = () => {
                       selectedChain={selectedChain}
                       />
                     </div>
-                  </div>
+                    
                 )}
+                  </div>
               </div>
               {/* Visualizations */}
               <div className="my-6 border border-gray-100 shadow-md rounded p-4">

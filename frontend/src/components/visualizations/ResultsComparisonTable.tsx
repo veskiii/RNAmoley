@@ -449,6 +449,8 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   simulationParameters,
   className = "",
 }) => {
+  const [showComparison, setShowComparison] = React.useState(true);
+
   const summaries = useMemo(() => {
     if (!referenceData || !comparisonData) {
       return [] as MetricSummary[];
@@ -497,157 +499,167 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   return (
     <div className={`rounded border border-gray-100 bg-white p-4 shadow-md ${className}`}>
       
-      <div className="mb-4">
+      <div className="flex justify-between">
         <h2 className="text-base font-semibold text-gray-800">Comparison summary</h2>
+        <div
+          onClick={() => setShowComparison(!showComparison)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
+        >
+          {showComparison ? "▼ Show" : "▲ Hide" }
+        </div>
       </div>
 
-      <div className="mb-6">
-        <p>
-          <span className="font-semibold">Analysed region: </span>{selectedResiduesCount} / {totalResiduesCount} nt
-        </p>
-      </div>
-
-      <div className="mb-10">
-        <h3 className="text-sm font-semibold text-gray-800">Refinement parameters</h3>
-        {simulationParameters && simulationParameters.length > 0 && (
-          <div className="mt-2 overflow-x-auto">
-            <table className="border-separate border-spacing-0 text-sm text-gray-600">
-              <thead>
-                <tr>
-                  {simulationParameters.filter((p): p is { label: string; value: string } => !!p.label).map((parameter) => (
-                    <th
-                      key={parameter.label}
-                      className="whitespace-nowrap border-y border-gray-200 px-3 py-1 text-left font-semibold text-gray-700"
-                    >
-                      {parameter.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  {simulationParameters.filter((p): p is { label: string; value: string } => !!p.label).map((parameter) => (
-                    <td
-                      key={parameter.label}
-                      className="whitespace-nowrap border-y border-gray-100 px-3 py-1 text-left"
-                    >
-                      {formatSimulationParameterValue(parameter.value)}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+      {!showComparison && (
+        <div className="mt-4">
+          <div className="mb-6">
+            <p>
+              <span className="font-semibold">Analysed region: </span>{selectedResiduesCount} / {totalResiduesCount} nt
+            </p>
           </div>
-        )}
-      </div>
 
-      <div className="mb-10">
-        <h3 className="text-sm font-semibold text-gray-800">Analysed region metrics</h3>
-        <div className="mt-2 max-w-6xl overflow-x-auto">
-          <table className="w-fit border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds / all bonds (%)</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad bonds (%)</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles / all angles (%)</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad angles (%)</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
-              </tr>
-            </thead>
-            <tbody>
-              {["Original structure (a)", "After refinement (b)", "Change: Δ = b - a"].map((rowLabel, rowIndex) => (
-                <tr key={rowLabel} className={rowIndex % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
-                  <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{rowLabel}</td>
-                  {regionMetricRows.map((row) => {
-                    const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
-                    return (
-                      <td key={`${row.key}-${rowLabel}`} className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
-                        {rowIndex === 2 ? formatDelta(value) : formatValue(value)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          <div className="mb-10">
+            <h3 className="text-sm font-semibold text-gray-800">Refinement parameters</h3>
+            {simulationParameters && simulationParameters.length > 0 && (
+              <div className="mt-2 overflow-x-auto">
+                <table className="border-separate border-spacing-0 text-sm text-gray-600">
+                  <thead>
+                    <tr>
+                      {simulationParameters.filter((p): p is { label: string; value: string } => !!p.label).map((parameter) => (
+                        <th
+                          key={parameter.label}
+                          className="whitespace-nowrap border-y border-gray-200 px-3 py-1 text-left font-semibold text-gray-700"
+                        >
+                          {parameter.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      {simulationParameters.filter((p): p is { label: string; value: string } => !!p.label).map((parameter) => (
+                        <td
+                          key={parameter.label}
+                          className="whitespace-nowrap border-y border-gray-100 px-3 py-1 text-left"
+                        >
+                          {formatSimulationParameterValue(parameter.value)}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
 
-      <div className="mb-10">
-        <h3 className="text-sm font-semibold text-gray-800">Refinement impact on the analysed region</h3>
-        <div className="mt-2 max-w-7xl overflow-x-auto">
-          <table className="w-fit border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suiteness</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
-                <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Sugar Pucker Outliers</th>
-              </tr>
-            </thead>
-            <tbody>
-              {impactRows.map((row, index) => (
-                <tr key={row.label} className={index % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
-                  <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{row.label}</td>
-                  {row.cells.map((cell) => (
-                    <td key={`${row.label}-${cell.metricKey}`} className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
-                      {cell.value}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-gray-800">Detailed refinement metrics for the analysed region</h3>
-        <div className="mt-2 max-w-4xl overflow-x-auto">
-          <table className="w-fit border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                <th className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
-                <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
-                <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds</th>
-                <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles</th>
-                <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suiteness</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detailSections.map((section, sectionIndex) => (
-                <React.Fragment key={section.title}>
+          <div className="mb-10">
+            <h3 className="text-sm font-semibold text-gray-800">Analysed region metrics</h3>
+            <div className="mt-2 max-w-6xl overflow-x-auto">
+              <table className="w-fit border-separate border-spacing-0 text-sm">
+                <thead>
                   <tr>
-                    <td className="border-b border-gray-100 bg-gray-100 px-3 py-2 font-semibold text-gray-800" colSpan={5}>
-                      {section.title}
-                    </td>
+                    <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds / all bonds (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad bonds (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles / all angles (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad angles (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
                   </tr>
-                  {section.rows.map((row, rowIndex) => (
-                    <tr
-                      key={`${section.title}-${row.label}`}
-                      className={(sectionIndex + rowIndex) % 2 === 0 ? "bg-gray-50/70" : "bg-white"}
-                    >
-                      <td className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">
-                        {row.label}
-                      </td>
-                      {row.values.map((value, valueIndex) => (
-                        <td key={`${section.title}-${row.label}-${detailedMetricKeys[valueIndex]}`} className="border-b border-gray-100 px-3 py-2 text-gray-700">
-                          {renderSummaryCell(value)}
+                </thead>
+                <tbody>
+                  {["Original structure (a)", "After refinement (b)", "Change: Δ = b - a"].map((rowLabel, rowIndex) => (
+                    <tr key={rowLabel} className={rowIndex % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
+                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{rowLabel}</td>
+                      {regionMetricRows.map((row) => {
+                        const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
+                        return (
+                          <td key={`${row.key}-${rowLabel}`} className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
+                            {rowIndex === 2 ? formatDelta(value) : formatValue(value)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mb-10">
+            <h3 className="text-sm font-semibold text-gray-800">Refinement impact on the analysed region</h3>
+            <div className="mt-2 max-w-7xl overflow-x-auto">
+              <table className="w-fit border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suiteness</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Sugar Pucker Outliers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {impactRows.map((row, index) => (
+                    <tr key={row.label} className={index % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
+                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{row.label}</td>
+                      {row.cells.map((cell) => (
+                        <td key={`${row.label}-${cell.metricKey}`} className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
+                          {cell.value}
                         </td>
                       ))}
                     </tr>
                   ))}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-gray-800">Detailed refinement metrics for the analysed region</h3>
+            <div className="mt-2 max-w-4xl overflow-x-auto">
+              <table className="w-fit border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
+                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
+                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds</th>
+                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles</th>
+                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suiteness</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailSections.map((section, sectionIndex) => (
+                    <React.Fragment key={section.title}>
+                      <tr>
+                        <td className="border-b border-gray-100 bg-gray-100 px-3 py-2 font-semibold text-gray-800" colSpan={5}>
+                          {section.title}
+                        </td>
+                      </tr>
+                      {section.rows.map((row, rowIndex) => (
+                        <tr
+                          key={`${section.title}-${row.label}`}
+                          className={(sectionIndex + rowIndex) % 2 === 0 ? "bg-gray-50/70" : "bg-white"}
+                        >
+                          <td className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">
+                            {row.label}
+                          </td>
+                          {row.values.map((value, valueIndex) => (
+                            <td key={`${section.title}-${row.label}-${detailedMetricKeys[valueIndex]}`} className="border-b border-gray-100 px-3 py-2 text-gray-700">
+                              {renderSummaryCell(value)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
