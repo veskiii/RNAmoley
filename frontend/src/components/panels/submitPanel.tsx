@@ -49,7 +49,7 @@ const Dashboard: React.FC = () => {
       label: "1",
       file: "Xiao model 04 submitted to PZ39",
       useWalkingSphere: true,
-      sphereRadius: 15,
+      sphereRadius: 5,
       sphereInterval: 1,
     },
     {
