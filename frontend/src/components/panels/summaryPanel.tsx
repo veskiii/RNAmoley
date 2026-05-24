@@ -22,6 +22,7 @@ import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
+import ResultsComparisonTable from "../visualizations/ResultsComparisonTable";
 import ChainMetricLineChart, { hasChainMetricLineChartValues } from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 import { formatNumberForDisplay } from "../utils/displayUniform";
@@ -223,7 +224,7 @@ const SummaryPanel: React.FC = () => {
       case "rmsdCutoff":
         return "RMSD cutoff";
       default:
-        return paramName;
+        return null;
     }
   };
 
@@ -948,17 +949,7 @@ const SummaryPanel: React.FC = () => {
                     {(() => {
                       const simulationParameters = simulationStatusPresentation.parameters;
                       if (!simulationParameters) return null;
-                      return (
-                      <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
-                        {Object.entries(simulationParameters).map(([param, value], i) => (
-                          <span key={param}>
-                            {i == 0 ? " (" : ""}
-                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {formatNumberForDisplay(value.toString())}
-                            {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
-                          </span>
-                        ))}
-                      </div>
-                      );
+                      return null;
                     })()}
                   </div>
                 )}
@@ -1049,6 +1040,20 @@ const SummaryPanel: React.FC = () => {
                     simFragmentMetrics={simulationResults?.results.fragmentMetrics}
                   />
                 </div>
+                {simulationResults && (
+                  <div className="mt-4">
+                    <ResultsComparisonTable
+                      referenceData={originalResults}
+                      comparisonData={simulationResults}
+                      simulationParameters={simulationStatusPresentation.parameters
+                        ? Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => ({
+                            label: getLabelForSimulationParameter(param),
+                            value,
+                          }))
+                        : undefined}
+                    />
+                  </div>
+                )}
               </div>
               {/* Chain selection */}
               <div className="mt-6">
