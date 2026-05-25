@@ -242,6 +242,7 @@ export async function applyPreCalculatedDemoResult(
       status: "completed",
       error_message: undefined,
       chains: metadata.resultsStatus[modelNumber]?.chains || [],
+      selectedFragments: metadata.resultsStatus[modelNumber]?.selectedFragments || {},
     };
   }
 
