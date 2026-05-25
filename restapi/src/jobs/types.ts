@@ -75,6 +75,7 @@ export interface ModelStatus {
   status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_finished` | `sim_analyzing` | `sim_completed` | `sim_failed`;
   error_message?: string;
   chains?: string[];
+  selectedFragments?: Record<string, string>;
 }
 
 export interface Metadata {

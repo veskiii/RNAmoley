@@ -12,6 +12,7 @@ type ResultsComparisonTableProps = {
     value: string | number | null | undefined;
   }>;
   className?: string;
+  selectedFragments?: Record<string, string>;
 };
 
 type MetricDefinition = {
@@ -448,6 +449,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   comparisonData,
   simulationParameters,
   className = "",
+  selectedFragments,
 }) => {
   const [showComparison, setShowComparison] = React.useState(true);
 
@@ -513,7 +515,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
         <div className="mt-4">
           <div className="mb-6">
             <p>
-              <span className="font-semibold">Analysed region: </span>{selectedResiduesCount} / {totalResiduesCount} nt
+              <span className="font-semibold">Analysed region: </span>{selectedResiduesCount} / {totalResiduesCount} nt ({selectedFragments ? Object.entries(selectedFragments).map(([chain, region]) => `${chain}: ${region}`).join("; ") : "—"})
             </p>
           </div>
 
