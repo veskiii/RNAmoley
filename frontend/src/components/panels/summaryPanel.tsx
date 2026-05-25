@@ -1040,21 +1040,56 @@ const SummaryPanel: React.FC = () => {
                     simFragmentMetrics={simulationResults?.results.fragmentMetrics}
                   />
                 </div>
-                {simulationResults && (
-                  <div className="mt-4">
-                    <ResultsComparisonTable
-                      referenceData={originalResults}
-                      comparisonData={simulationResults}
-                      simulationParameters={simulationStatusPresentation.parameters
-                        ? Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => ({
-                            label: getLabelForSimulationParameter(param),
-                            value,
-                          }))
-                        : undefined}
-                    />
-                  </div>
-                )}
               </div>
+              {/* Chain selection */}
+              <div className="mt-6">
+                <div>
+                  <label>Processed chain(s) of model {selectedModel || "<x>"}:</label>
+                  <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                    <span
+                      aria-label="What this field does"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                    >
+                      ?
+                    </span>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      Select a chain to view analysis results for the selected regions.
+                    </span>
+                  </span>
+                </div>
+                <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
+                  {chainsState
+                    .filter((chain) => !availableChains || availableChains.includes(chain.name))
+                    .map((chain) => (
+                      <div
+                        key={"chain" + chain.name}
+                        className={`p-2 bg-white rounded shadow transition-all w-12 flex-shrink-0 flex items-center justify-center
+                          ${selectedModel === 0 ? "border border-transparent bg-gray-200 cursor-not-allowed" :
+                            "cursor-pointer " +(selectedChain === chain.name ? "border-2 border-moley-darkGreen" : "border border-transparent")} 
+                          `}
+                        onClick={() => selectedModel !== 0 && setSelectedChain(chain.name)}
+                      >
+                        <span>{chain.original_name}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+              {/* Simulation results comparison table */}
+              {simulationResults && (
+                <div className="mt-4">
+                  <ResultsComparisonTable
+                    referenceData={originalResults}
+                    comparisonData={simulationResults}
+                    simulationParameters={simulationStatusPresentation.parameters
+                      ? Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => ({
+                          label: getLabelForSimulationParameter(param),
+                          value,
+                        }))
+                      : undefined}
+                  />
+                </div>
+              )}
+              {/* Residue results table */}
               <div className="mt-6">
                   <div className="border border-gray-100 shadow-md p-4">
                     <div className="flex justify-between">
@@ -1096,39 +1131,6 @@ const SummaryPanel: React.FC = () => {
                     
                 )}
                   </div>
-              </div>
-              {/* Chain selection */}
-              <div className="mt-6">
-                <div>
-                  <label>Processed chain(s) of model {selectedModel || "<x>"}:</label>
-                  <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
-                    <span
-                      aria-label="What this field does"
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
-                    >
-                      ?
-                    </span>
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                      Select a chain to view analysis results for the selected regions.
-                    </span>
-                  </span>
-                </div>
-                <div className="flex flex-row overflow-x-auto gap-2 py-2" style={{ scrollbarWidth: "thin" }}>
-                  {chainsState
-                    .filter((chain) => !availableChains || availableChains.includes(chain.name))
-                    .map((chain) => (
-                      <div
-                        key={"chain" + chain.name}
-                        className={`p-2 bg-white rounded shadow transition-all w-12 flex-shrink-0 flex items-center justify-center
-                          ${selectedModel === 0 ? "border border-transparent bg-gray-200 cursor-not-allowed" :
-                            "cursor-pointer " +(selectedChain === chain.name ? "border-2 border-moley-darkGreen" : "border border-transparent")} 
-                          `}
-                        onClick={() => selectedModel !== 0 && setSelectedChain(chain.name)}
-                      >
-                        <span>{chain.original_name}</span>
-                      </div>
-                    ))}
-                </div>
               </div>
               {/* Line plots of chain quality */}
               <div className="mt-6 border border-gray-100 shadow-md rounded p-4">
@@ -1445,22 +1447,6 @@ const SummaryPanel: React.FC = () => {
                     <span className="text-sm">Sugar pucker outlier</span>
                   </label>
                 </div>
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <span>Legend:</span>
-                  {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
-                    <span
-                      key={entry.label}
-                      className="inline-flex items-center gap-2 rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-gray-200"
-                    >
-                      <span
-                        className={`h-3 w-3 rounded-full border ${entry.borderClassName || "border-transparent"}`}
-                        style={{ backgroundColor: entry.color }}
-                        aria-hidden="true"
-                      />
-                      <span className="text-xs">{entry.label}</span>
-                    </span>
-                  ))}
-                </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
                   <div className="w-full md:w-1/2 h-full relative border border-gray-300" ref={fornaContainerRef}>
                     {/* Gear icon button */}
@@ -1603,6 +1589,22 @@ const SummaryPanel: React.FC = () => {
                       comparisonMode={comparisonModeMolstar}
                     />
                   </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <span>Legend:</span>
+                  {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
+                    <span
+                      key={entry.label}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-gray-200"
+                    >
+                      <span
+                        className={`h-3 w-3 rounded-full border ${entry.borderClassName || "border-transparent"}`}
+                        style={{ backgroundColor: entry.color }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-xs">{entry.label}</span>
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
