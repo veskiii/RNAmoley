@@ -540,7 +540,7 @@ const SummaryPanel: React.FC = () => {
   }
 
   if (isLoading) {
-    return <Loading  message="Preparing data and computing initial analysis..."/>;
+    return <Loading  message="Preparing data and running initial analysis..."/>;
   }
 
   if (!originalResults || !originalResults.results || !originalResults.results.data ) {
@@ -1591,7 +1591,7 @@ const SummaryPanel: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <span>Legend:</span>
+                  <span>Color legend:</span>
                   {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
                     <span
                       key={entry.label}
