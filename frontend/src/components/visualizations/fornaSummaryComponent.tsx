@@ -194,7 +194,7 @@ const FornacSummaryComponent = ({
             d3.select(`circle.fornac-node[node_num="${index + 1}"]`)
               .select("title")
               .text(
-                `Residue number: ${nucleotide.index}\n${
+                `Residue: ${nucleotide.base}_${nucleotide.index}\n${
                   job.results.data[index].metrics
                     ? `Clash score: ${job.results.data[index].metrics.clashscore}\nBad angles: ${job.results.data[index].metrics.pct_badangles}\nBad bonds: ${job.results.data[index].metrics.pct_badbonds}`
                     : ""

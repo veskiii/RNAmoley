@@ -540,7 +540,7 @@ const SummaryPanel: React.FC = () => {
   }
 
   if (isLoading) {
-    return <Loading  message="Preparing data and computing initial analysis..."/>;
+    return <Loading  message="Preparing data and running initial analysis..."/>;
   }
 
   if (!originalResults || !originalResults.results || !originalResults.results.data ) {
@@ -1040,20 +1040,6 @@ const SummaryPanel: React.FC = () => {
                     simFragmentMetrics={simulationResults?.results.fragmentMetrics}
                   />
                 </div>
-                {simulationResults && (
-                  <div className="mt-4">
-                    <ResultsComparisonTable
-                      referenceData={originalResults}
-                      comparisonData={simulationResults}
-                      simulationParameters={simulationStatusPresentation.parameters
-                        ? Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => ({
-                            label: getLabelForSimulationParameter(param),
-                            value,
-                          }))
-                        : undefined}
-                    />
-                  </div>
-                )}
               </div>
               {/* Chain selection */}
               <div className="mt-6">
@@ -1087,6 +1073,64 @@ const SummaryPanel: React.FC = () => {
                       </div>
                     ))}
                 </div>
+              </div>
+              {/* Simulation results comparison table */}
+              {simulationResults && (
+                <div className="mt-4">
+                  <ResultsComparisonTable
+                    referenceData={originalResults}
+                    comparisonData={simulationResults}
+                    simulationParameters={simulationStatusPresentation.parameters
+                      ? Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => ({
+                          label: getLabelForSimulationParameter(param),
+                          value,
+                        }))
+                      : undefined}
+                  />
+                </div>
+              )}
+              {/* Residue results table */}
+              <div className="mt-6">
+                  <div className="border border-gray-100 shadow-md p-4">
+                    <div className="flex justify-between">
+                      <div>
+                        <label className="font-medium">Local quality table (per residue)</label>
+                        <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                          <span
+                            aria-label="What this field does"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                          >
+                            ?
+                          </span>
+                          <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                            Displays local quality score for each residue's neighborhood.
+                          </span>
+                        </span>
+                      </div>
+                      <div
+                        onClick={() => setShowResidueTable(!showResidueTable)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
+                      >
+                        {showResidueTable ? "▲ Hide" : "▼ Show" }
+                      </div>
+                    </div>
+                    
+                {showResidueTable && (
+                    <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+                      <ResultsResidueTable
+                      key={`residue-table-${selectedModel}`}
+                      data={originalResults.results.data}
+                      simData={simulationResults?.results.data}
+                      analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
+                      selectedScore={selectedQualityScoreInResidueTable}
+                      setSelectedScore={setQualityScoreInResidueTable}
+                      modelStatus={selectedModelStatus}
+                      selectedChain={selectedChain}
+                      />
+                    </div>
+                    
+                )}
+                  </div>
               </div>
               {/* Line plots of chain quality */}
               <div className="mt-6 border border-gray-100 shadow-md rounded p-4">
@@ -1199,48 +1243,7 @@ const SummaryPanel: React.FC = () => {
                 </div>
               </div>
               {/* Local quality map */}
-              <div className="mt-6">
-                  <div className="border border-gray-100 shadow-md p-4">
-                    <div className="flex justify-between">
-                      <div>
-                        <label className="font-medium">Local quality table (per residue)</label>
-                        <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
-                          <span
-                            aria-label="What this field does"
-                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
-                          >
-                            ?
-                          </span>
-                          <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                            Displays local quality score for each residue's neighborhood.
-                          </span>
-                        </span>
-                      </div>
-                      <div
-                        onClick={() => setShowResidueTable(!showResidueTable)}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
-                      >
-                        {showResidueTable ? "▲ Hide" : "▼ Show" }
-                      </div>
-                    </div>
-                    
-                {showResidueTable && (
-                    <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
-                      <ResultsResidueTable
-                      key={`residue-table-${selectedModel}`}
-                      data={originalResults.results.data}
-                      simData={simulationResults?.results.data}
-                      analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
-                      selectedScore={selectedQualityScoreInResidueTable}
-                      setSelectedScore={setQualityScoreInResidueTable}
-                      modelStatus={selectedModelStatus}
-                      selectedChain={selectedChain}
-                      />
-                    </div>
-                    
-                )}
-                  </div>
-              </div>
+              
               {/* Visualizations */}
               <div className="my-6 border border-gray-100 shadow-md rounded p-4">
                 <div>
@@ -1444,22 +1447,6 @@ const SummaryPanel: React.FC = () => {
                     <span className="text-sm">Sugar pucker outlier</span>
                   </label>
                 </div>
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <span>Legend:</span>
-                  {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
-                    <span
-                      key={entry.label}
-                      className="inline-flex items-center gap-2 rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-gray-200"
-                    >
-                      <span
-                        className={`h-3 w-3 rounded-full border ${entry.borderClassName || "border-transparent"}`}
-                        style={{ backgroundColor: entry.color }}
-                        aria-hidden="true"
-                      />
-                      <span className="text-xs">{entry.label}</span>
-                    </span>
-                  ))}
-                </div>
                 <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
                   <div className="w-full md:w-1/2 h-full relative border border-gray-300" ref={fornaContainerRef}>
                     {/* Gear icon button */}
@@ -1602,6 +1589,22 @@ const SummaryPanel: React.FC = () => {
                       comparisonMode={comparisonModeMolstar}
                     />
                   </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <span>Color legend:</span>
+                  {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
+                    <span
+                      key={entry.label}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-gray-200"
+                    >
+                      <span
+                        className={`h-3 w-3 rounded-full border ${entry.borderClassName || "border-transparent"}`}
+                        style={{ backgroundColor: entry.color }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-xs">{entry.label}</span>
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
