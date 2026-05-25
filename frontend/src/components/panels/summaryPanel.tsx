@@ -22,6 +22,7 @@ import TopPanel from "../common/topPanel";
 import Footer from "../common/footerComponent";
 import ResultsResidueTable from "../visualizations/ResultsResidueTable";
 import GlobalResultsTable from "../visualizations/GlobalResultsTable";
+import ResultsComparisonTable from "../visualizations/ResultsComparisonTable";
 import ChainMetricLineChart, { hasChainMetricLineChartValues } from "../visualizations/ChainMetricLineChart";
 import SimulationStartModal, { SimulationFormValues } from "./SimulationStartModal";
 import { formatNumberForDisplay } from "../utils/displayUniform";
@@ -162,54 +163,54 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "created") {
-      return { label: "Created", className: "text-gray-800" };
+      return { label: "Created", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "starting") {
-      return { label: "Starting", className: "text-gray-800" };
+      return { label: "Starting", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "running") {
       return {
         label: "Running",
-        className: "text-gray-800",
+        className: "text-sm font-bold text-gray-800",
       };
     }
 
     if (status === "completed") {
-      return { label: "Completed", className: "text-gray-800" };
+      return { label: "Completed", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "failed") {
-      return { label: "Failed", className: "text-red-600" };
+      return { label: "Failed", className: "text-sm font-bold text-red-600" };
     }
 
     if (status === "sim_starting") {
-      return { label: "Refinement starting...", className: "text-gray-800" };
+      return { label: "Refinement starting...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_running") {
-      return { label: "Refinement in progress...", className: "text-gray-800" };
+      return { label: "Refinement in progress...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_finished") {
-      return { label: "Refinement done...", className: "text-gray-800" };
+      return { label: "Refinement done...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_analyzing") {
-      return { label: "Analyzing results...", className: "text-gray-800" };
+      return { label: "Analyzing results...", className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_completed") {
       const simParams = simulationResults?.metadata.simulations?.[selectedModel]?.parameters;
-      return { label: `Refinement completed`, className: "text-gray-800", parameters: simParams };
+      return { label: `Refinement completed`, className: "text-sm font-bold text-gray-800", parameters: simParams };
     }
 
     if (status === "sim_failed") {
-      return { label: "Refinement failed", className: "text-red-500" };
+      return { label: "Refinement failed", className: "text-sm font-bold text-red-500" };
     }
 
-    return { label: status, className: "text-gray-800" };
+    return { label: status, className: "text-sm font-bold text-gray-800" };
   };
 
   const getLabelForSimulationParameter = (paramName: string) => {
@@ -223,7 +224,7 @@ const SummaryPanel: React.FC = () => {
       case "rmsdCutoff":
         return "RMSD cutoff";
       default:
-        return paramName;
+        return null;
     }
   };
 
@@ -948,17 +949,7 @@ const SummaryPanel: React.FC = () => {
                     {(() => {
                       const simulationParameters = simulationStatusPresentation.parameters;
                       if (!simulationParameters) return null;
-                      return (
-                      <div className="flex flex-row flex-wrap items-center gap-3 text-sm text-gray-600">
-                        {Object.entries(simulationParameters).map(([param, value], i) => (
-                          <span key={param}>
-                            {i == 0 ? " (" : ""}
-                            <span className="font-semibold">{getLabelForSimulationParameter(param)}:</span> {formatNumberForDisplay(value.toString())}
-                            {i === Object.entries(simulationParameters).length - 1 ? ")" : ";"}
-                          </span>
-                        ))}
-                      </div>
-                      );
+                      return null;
                     })()}
                   </div>
                 )}
@@ -1049,6 +1040,20 @@ const SummaryPanel: React.FC = () => {
                     simFragmentMetrics={simulationResults?.results.fragmentMetrics}
                   />
                 </div>
+                {simulationResults && (
+                  <div className="mt-4">
+                    <ResultsComparisonTable
+                      referenceData={originalResults}
+                      comparisonData={simulationResults}
+                      simulationParameters={simulationStatusPresentation.parameters
+                        ? Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => ({
+                            label: getLabelForSimulationParameter(param),
+                            value,
+                          }))
+                        : undefined}
+                    />
+                  </div>
+                )}
               </div>
               {/* Chain selection */}
               <div className="mt-6">
@@ -1195,29 +1200,31 @@ const SummaryPanel: React.FC = () => {
               </div>
               {/* Local quality map */}
               <div className="mt-6">
-                <button
-                  className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
-                  onClick={() => setShowResidueTable(!showResidueTable)}
-                  title={"Show or hide local quality table."}
-                >
-                  {showResidueTable ? "Hide local quality table ▲" : "Show local quality table ▼"}
-                </button>
-                {showResidueTable && (
                   <div className="border border-gray-100 shadow-md p-4">
-                  <div>
-                      <label className="font-medium">Local quality table (per residue)</label>
-                      <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
-                        <span
-                          aria-label="What this field does"
-                          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
-                        >
-                          ?
+                    <div className="flex justify-between">
+                      <div>
+                        <label className="font-medium">Local quality table (per residue)</label>
+                        <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                          <span
+                            aria-label="What this field does"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                          >
+                            ?
+                          </span>
+                          <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                            Displays local quality score for each residue's neighborhood.
+                          </span>
                         </span>
-                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
-                          Displays local quality score for each residue's neighborhood.
-                        </span>
-                      </span>
+                      </div>
+                      <div
+                        onClick={() => setShowResidueTable(!showResidueTable)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
+                      >
+                        {showResidueTable ? "▲ Hide" : "▼ Show" }
+                      </div>
                     </div>
+                    
+                {showResidueTable && (
                     <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                       <ResultsResidueTable
                       key={`residue-table-${selectedModel}`}
@@ -1230,8 +1237,9 @@ const SummaryPanel: React.FC = () => {
                       selectedChain={selectedChain}
                       />
                     </div>
-                  </div>
+                    
                 )}
+                  </div>
               </div>
               {/* Visualizations */}
               <div className="my-6 border border-gray-100 shadow-md rounded p-4">
