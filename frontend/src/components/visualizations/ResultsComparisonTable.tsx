@@ -500,7 +500,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
     <div className={`rounded border border-gray-100 bg-white p-4 shadow-md ${className}`}>
       
       <div className="flex justify-between">
-        <h2 className="text-base font-semibold text-gray-800">Comparison summary</h2>
+        <h2 className="text-base font-semibold text-gray-800">Refinement statistics</h2>
         <div
           onClick={() => setShowComparison(!showComparison)}
           className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
