@@ -888,13 +888,13 @@ const SummaryPanel: React.FC = () => {
               <p>Input data</p>
               <div className="mt-2 space-y-0">
                 <p><span>Structure:</span><i className="ml-2">{originalResults.name || "Unnamed job"}</i></p>
-                <p><span>Analysed models (chains): </span>
+                <p><span>Analysed models (chains: region): </span>
                 {originalResults.metadata.resultsStatus && Object.keys(originalResults.metadata.resultsStatus).length > 0 ? (
                     (() => {
                       const entries = Object.entries(originalResults.metadata.resultsStatus);
                       return entries.map(([modelNum, modelStatus], idx) => (
                         <span key={modelNum}>
-                          {modelNum} ({modelStatus.chains?.join(", ") || ""}){idx < entries.length - 1 ? ", " : ""}
+                          {modelNum} ({modelStatus.chains?.map(chain => `${chain}: ${modelStatus.selectedFragments?.[chain] || ""}`).join("; ") || ""}){idx < entries.length - 1 ? ", " : ""}
                         </span>
                       ));
                     })()

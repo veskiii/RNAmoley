@@ -169,6 +169,7 @@ export interface ModelStatus {
     | `sim_failed`;
   error_message?: string;
   chains?: string[];
+  selectedFragments?: Record<string, string>;
 }
 
 export interface Metadata {

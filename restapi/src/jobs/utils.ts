@@ -15,6 +15,7 @@ import type {
   residueMetrics,
   StructuralElement,
   RangeOfResidues,
+  ChainElement,
 } from "./types.js";
 import archiver from "archiver";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
@@ -59,6 +60,56 @@ export async function uploadFile(
   const buffer = new Uint8Array(arrayBuffer);
 
   await fs.writeFile(`${JOBS_DIR}/${jobID}/${newName}`, buffer);
+}
+
+function formatResidueRanges(residueIds: number[]) {
+  const sortedResidues = Array.from(
+    new Set(residueIds.filter((residueId) => Number.isFinite(residueId))),
+  ).sort((left, right) => left - right);
+
+  if (sortedResidues.length === 0) {
+    return "";
+  }
+
+  const ranges: Array<[number, number]> = [];
+  const firstResidue = sortedResidues[0]!;
+  let start: number = firstResidue;
+  let previous: number = firstResidue;
+
+  for (const residueId of sortedResidues.slice(1)) {
+    if (residueId === previous + 1) {
+      previous = residueId;
+      continue;
+    }
+
+    ranges.push([start, previous]);
+    start = residueId;
+    previous = residueId;
+  }
+
+  ranges.push([start, previous]);
+
+  return ranges
+    .map(([rangeStart, rangeEnd]) => (rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`))
+    .join(",");
+}
+
+export function buildSelectedFragmentsByChain(modelElements: ChainElement[]) {
+  const fragmentsByChain = new Map<string, number[]>();
+
+  for (const element of modelElements) {
+    if (!element?.chainID || !Number.isFinite(element.residueID)) {
+      continue;
+    }
+
+    const residueIds = fragmentsByChain.get(element.chainID) || [];
+    residueIds.push(element.residueID);
+    fragmentsByChain.set(element.chainID, residueIds);
+  }
+
+  return Object.fromEntries(
+    Array.from(fragmentsByChain.entries()).map(([chainID, residueIds]) => [chainID, formatResidueRanges(residueIds)]),
+  );
 }
 
 export async function getDemoFiles(name: string) {
@@ -136,11 +187,18 @@ export function updateModelMetadata(
   metadata: Metadata, 
   modelNumber: string, 
   status: `created` | `starting` | `running` | `completed` | `failed` | `sim_starting` | `sim_running` | `sim_finished` | `sim_analyzing` | `sim_completed` | `sim_failed`,
-  errorMessage?: string) {
+  errorMessage?: string,
+  selectedFragments?: Record<string, string>) {
   if (!metadata.resultsStatus) {
     metadata.resultsStatus = {};
   }
-  metadata.resultsStatus[modelNumber] = { modelNumber, status, error_message: errorMessage, chains: metadata.resultsStatus[modelNumber]?.chains || [] };
+  metadata.resultsStatus[modelNumber] = {
+    modelNumber,
+    status,
+    error_message: errorMessage,
+    chains: metadata.resultsStatus[modelNumber]?.chains || [],
+    selectedFragments: selectedFragments || metadata.resultsStatus[modelNumber]?.selectedFragments || {},
+  };
   return metadata;
 }
 

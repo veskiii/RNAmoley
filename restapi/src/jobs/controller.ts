@@ -22,6 +22,7 @@ import {
   createZip,
   getDemoFiles,
   JOBS_DIR,
+  buildSelectedFragmentsByChain,
 } from "./utils.js";
 import fetch from "node-fetch";
 import type { UUID } from "crypto";
@@ -415,9 +416,11 @@ export async function analyzeStructure(req: Request, res: Response) {
     if (demoResult) {
       // Ensure metadata.resultsStatus["1"] contains chain list from provided models
       try {
-        const chainsForModel1 = Array.from(new Set((models[1] || models["1"] || [])
+        const model1Elements = models[1] || models["1"] || [];
+        const chainsForModel1 = Array.from(new Set(model1Elements
           .map((el) => el.chainID)
           .filter(Boolean)));
+        const selectedFragmentsForModel1 = buildSelectedFragmentsByChain(model1Elements);
         if (!metadata.resultsStatus) {
           metadata.resultsStatus = {};
         }
@@ -428,9 +431,11 @@ export async function analyzeStructure(req: Request, res: Response) {
             status: existingStatus || "created",
             error_message: undefined,
             chains: chainsForModel1,
+            selectedFragments: selectedFragmentsForModel1,
           };
         } else {
           metadata.resultsStatus["1"].chains = chainsForModel1;
+          metadata.resultsStatus["1"].selectedFragments = selectedFragmentsForModel1;
         }
 
         await applyPreCalculatedDemoResult(id, metadata, demoResult);
@@ -457,10 +462,12 @@ export async function analyzeStructure(req: Request, res: Response) {
       metadata.resultsStatus = {};
     }
     for (let modelNumber in models) {
+      const modelElements = models[modelNumber] || [];
       metadata.resultsStatus[modelNumber] = {
         modelNumber: modelNumber,
         status: "starting",
-        chains: Array.from(new Set(models[modelNumber]?.map((el) => el.chainID).filter(Boolean) || [])),
+        chains: Array.from(new Set(modelElements.map((el) => el.chainID).filter(Boolean) || [])),
+        selectedFragments: buildSelectedFragmentsByChain(modelElements),
       };
     }
     await saveMetadata(id, metadata);
@@ -622,6 +629,7 @@ export async function startSimulation(req: Request, res: Response) {
     status: "sim_starting",
     error_message: undefined,
     chains: metadata.resultsStatus[modelNumber]?.chains || [],
+    selectedFragments: metadata.resultsStatus[modelNumber]?.selectedFragments || {},
   };
   if (metadata.simulations === undefined) {
     metadata.simulations = {};
