@@ -1086,6 +1086,7 @@ const SummaryPanel: React.FC = () => {
                           value,
                         }))
                       : undefined}
+                    selectedFragments={originalResults.metadata.resultsStatus?.[selectedModel?.toString() || ""]?.selectedFragments}
                   />
                 </div>
               )}
