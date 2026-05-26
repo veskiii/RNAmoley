@@ -310,6 +310,48 @@ const SummaryPanel: React.FC = () => {
     });
   };
 
+  const recolorFornaForMetric = (metric: QualityScore) => {
+    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+      console.warn("No data in displayedResults.results.data for recolorFornaForMetric");
+      return;
+    }
+
+    const nodes = Array.from(document.querySelectorAll("circle.fornac-node")) as SVGElement[];
+    nodes.forEach((n) => {
+      try {
+        n.setAttribute("fill", "white");
+        n.classList.remove("fornac-selectedNode");
+      } catch (e) {
+        // ignore
+      }
+    });
+
+    const nodeByNumber = new Map<number, SVGElement>();
+    nodes.forEach((n) => {
+      const nodeNum = parseInt(n.getAttribute("node_num") || "", 10);
+      if (!Number.isNaN(nodeNum)) {
+        nodeByNumber.set(nodeNum, n);
+      }
+    });
+
+    displayedResults.results.data.forEach((residue) => {
+      try {
+        const node = nodeByNumber.get(residue.residue_number);
+        if (node) {
+          const color = !errorFocusedModeMolstar ? getColor(residue, metric) : getColorErrorFocused(residue, metric);
+          node.classList.add("fornac-selectedNode");
+          try {
+            node.setAttribute("fill", color);
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (error) {
+        console.error("Failed to select node for recolor:", error);
+      }
+    });
+  };
+
   useEffect(() => {
     colorGnodes();
   }, [
@@ -855,15 +897,35 @@ const SummaryPanel: React.FC = () => {
     const files: Array<{ path: string; blob: Blob }> = [];
     const baseName = `${originalResults.name || "structure"}-m${selectedModel}`;
 
-    try {
-      const fornaBlob = await getFornaPngBlob();
-      files.push({
-        path: `images/${baseName}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`,
-        blob: fornaBlob,
-      });
-    } catch (error) {
-      console.error("Failed to include Forna image in ZIP:", error);
+    // Generate Forna PNGs for all available metrics
+    const availableMetrics: QualityScore[] = [];
+    if (originalResults.metadata.analyzeNeighborhoods) {
+      availableMetrics.push(QualityScore.CLASH_SCORE, QualityScore.BAD_BONDS, QualityScore.BAD_ANGLES);
     }
+    // Always include suiteness and sugar pucker
+    availableMetrics.push(QualityScore.SUITENESS, QualityScore.SUGAR_PUCKER_OUT);
+
+    const prevSelected = selectedQualityScore;
+    for (const metric of availableMetrics) {
+      try {
+        // Temporarily set selected metric so Forna coloring functions reflect it
+        setQualityScore(metric);
+        // force recolor synchronously
+        recolorFornaForMetric(metric);
+        // small delay to let DOM updates apply (html2canvas deals with paint timing)
+        await new Promise((r) => setTimeout(r, 60));
+        const blob = await getFornaPngBlob();
+        files.push({
+          path: `images/${baseName}-2D-${nameForQualityScore[metric] || metric}.png`,
+          blob,
+        });
+      } catch (error) {
+        console.error(`Failed to include Forna image for metric ${metric} in ZIP:`, error);
+      }
+    }
+    // restore previous selection and recolor
+    setQualityScore(prevSelected);
+    recolorFornaForMetric(prevSelected);
 
     const chartCandidates: Array<{ enabled: boolean; ref: React.RefObject<HTMLDivElement | null>; filename: string }> = [
       { enabled: showClashChart, ref: clashChartRef, filename: `${baseName}-ClashScore.png` },
