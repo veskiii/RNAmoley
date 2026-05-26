@@ -24,6 +24,20 @@ export const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ["pdb", "cif", "mmcif"];
 export const JOBS_DIR = "public/jobs";
 export const DEMO_FILES_DIR = "public/demo_files";
+export let ZIP_FILE_PATH_PATTERNS: string[] = [
+  "*_results.json", 
+  "models/*.pdb", 
+  "*_sim/output.psf",
+  "*_sim/output.pdb",
+  "*_sim/namd_sim.script", 
+  "*_sim/sim.dcd",
+  "*_sim/single_sim.log",
+  "*_sim/*_sim.pdb",
+];
+
+export function setZipFilePathPatterns(patterns: string[]) {
+  ZIP_FILE_PATH_PATTERNS = patterns;
+}
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -464,6 +478,74 @@ export async function saveOriginalNumeration(
   return numeration;
 }
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function globPatternToRegExp(pattern: string) {
+  const normalizedPattern = pattern.replace(/\\/g, "/");
+  let regex = "^";
+
+  for (let index = 0; index < normalizedPattern.length; index++) {
+    const character = normalizedPattern[index]!;
+
+    if (character === "*") {
+      if (normalizedPattern[index + 1] === "*") {
+        const nextCharacter = normalizedPattern[index + 2];
+        regex += ".*";
+        index += 1;
+
+        if (nextCharacter === "/") {
+          index += 1;
+        }
+
+        continue;
+      }
+
+      regex += "[^/]*";
+      continue;
+    }
+
+    if (character === "?") {
+      regex += "[^/]";
+      continue;
+    }
+
+    regex += escapeRegex(character);
+  }
+
+  regex += "$";
+  return new RegExp(regex);
+}
+
+function isPathIncludedInZip(relativePath: string, patterns: string[]) {
+  if (patterns.length === 0) {
+    return true;
+  }
+
+  const normalizedPath = relativePath.replace(/\\/g, "/");
+  return patterns.some((pattern) => globPatternToRegExp(pattern).test(normalizedPath));
+}
+
+async function collectZipEntries(directoryPath: string, relativePath = "") {
+  const directoryEntries = await fs.readdir(directoryPath, { withFileTypes: true });
+  const collectedEntries: Array<{ fullPath: string; relativePath: string }> = [];
+
+  for (const entry of directoryEntries) {
+    const nextRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+    const fullPath = `${directoryPath}/${entry.name}`;
+
+    if (entry.isDirectory()) {
+      collectedEntries.push(...(await collectZipEntries(fullPath, nextRelativePath)));
+      continue;
+    }
+
+    collectedEntries.push({ fullPath, relativePath: nextRelativePath });
+  }
+
+  return collectedEntries;
+}
+
 // zip whole job directory and return a blob
 export async function createZip(jobID: UUID) {
   const zipPath = `${JOBS_DIR}/${jobID}.zip`;
@@ -499,7 +581,15 @@ export async function createZip(jobID: UUID) {
   });
 
   archive.pipe(output);
-  archive.directory(`${JOBS_DIR}/${jobID}`, false);
+  const zipEntries = await collectZipEntries(`${JOBS_DIR}/${jobID}`);
+
+  for (const entry of zipEntries) {
+    if (!isPathIncludedInZip(entry.relativePath, ZIP_FILE_PATH_PATTERNS)) {
+      continue;
+    }
+
+    archive.file(entry.fullPath, { name: entry.relativePath });
+  }
 
   // Wait for the archive to finish writing
   // https://github.com/archiverjs/node-archiver/issues/476#issuecomment-1792896115
