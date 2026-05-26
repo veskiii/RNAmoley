@@ -1031,12 +1031,15 @@ const SummaryPanel: React.FC = () => {
                   </div>
                 </div>
                 {/* Global and fragment results */}
-                <div className="overflow-x-auto border border-gray-100 shadow-md rounded p-2">
-                  <GlobalResultsTable
-                    selectedModel={selectedModel}
-                    modelMetrics={originalResults.results.modelMetrics} 
-                    fragmentMetrics={originalResults.results.fragmentMetrics}
-                  />
+                <div className="border border-gray-100 shadow-md rounded p-4">
+                  <label className="font-medium">Global quality summary (input structure)</label>
+                  <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+                    <GlobalResultsTable
+                      selectedModel={selectedModel}
+                      modelMetrics={originalResults.results.modelMetrics} 
+                      fragmentMetrics={originalResults.results.fragmentMetrics}
+                    />
+                  </div>
                 </div>
               </div>
               {/* Chain selection */}
