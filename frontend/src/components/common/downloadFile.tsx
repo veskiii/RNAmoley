@@ -5,11 +5,35 @@ import JSZip from "jszip";
 
 type DownloadButtonProps = {
   id?: string; // Definiujemy, że id musi być stringiem
+  jobName?: string;
   disabled: boolean;
   getAdditionalFiles?: () => Promise<Array<{ path: string; blob: Blob }>>;
 };
 
-const DownloadButton: React.FC<DownloadButtonProps> = ({ id, disabled, getAdditionalFiles }) => {
+const formatZipTimestamp = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${year}${month}${day}${hour}${minute}`;
+};
+
+const sanitizeFilenamePart = (value: string) =>
+  value
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/-+/g, "-");
+
+const buildDownloadFilename = (jobName?: string) => {
+  const safeJobName = sanitizeFilenamePart(jobName || "job") || "job";
+  const timestamp = formatZipTimestamp(new Date());
+  return `RNAmoley-results-${safeJobName}-${timestamp}.zip`;
+};
+
+const DownloadButton: React.FC<DownloadButtonProps> = ({ id, jobName, disabled, getAdditionalFiles }) => {
   const handleDownload = async () => {
     try {
       const response = await fetch(`${API_URL}/jobs/${id}/download`, {
@@ -22,6 +46,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id, disabled, getAdditi
       if (!response.ok) {
         throw new Error(`Download error! status: ${response.status}`);
       }
+      const downloadFilename = buildDownloadFilename(jobName);
 
       let downloadButton = document.getElementById(
         "downloadButton"
@@ -47,7 +72,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id, disabled, getAdditi
       const url = window.URL.createObjectURL(zipBlobToDownload);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${id}.zip`;
+      a.download = downloadFilename;
       document.body.appendChild(a);
       a.click();
       a.remove();

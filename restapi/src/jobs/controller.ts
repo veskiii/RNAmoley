@@ -51,6 +51,24 @@ const MODEL_SIMULATION_IN_PROGRESS_STATUSES = new Set([
   "sim_analyzing",
 ]);
 
+function formatDateForZipFilename(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}${month}${day}${hours}${minutes}`;
+}
+
+function sanitizeFilenamePart(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/-+/g, "-");
+}
+
 async function clearPreviousSimulationArtifacts(id: UUID, modelNumber: string) {
   const jobDir = join(JOBS_DIR, id);
   const simDir = join(jobDir, `${modelNumber}_sim`);
@@ -325,6 +343,7 @@ export async function createJob(req: Request, res: Response) {
 
   const metadata: Metadata = {
     status: "creating",
+    jobName: jobname,
     models: [],
     analyzeNeighborhoods: req.body.useWalkingSphere === "true" ? true : false,
     radius: req.body.useWalkingSphere === "true" ? Number(req.body.sphereRadius) : undefined,
@@ -518,7 +537,12 @@ export async function downloadJobFiles(req: Request, res: Response) {
     return;
   }
 
-  res.download(zipFilePath, (err) => {
+  const rawJobName = metadata.jobName || "job";
+  const safeJobName = sanitizeFilenamePart(rawJobName) || "job";
+  const timestamp = formatDateForZipFilename(new Date());
+  const downloadFilename = `RNAmoley-results-${safeJobName}-${timestamp}.zip`;
+
+  res.download(zipFilePath, downloadFilename, (err) => {
     if (err) {
       console.error(err);
       res.status(500).send({ error: "Error downloading zip file." });

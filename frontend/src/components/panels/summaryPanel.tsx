@@ -966,7 +966,12 @@ const SummaryPanel: React.FC = () => {
             {/* Copy link and download buttons */}
             <div className={"flex flex-row gap-2 mt-6 items-center"}>
               <DownloadLink />
-              <DownloadFile id={jobId} disabled={!canStartSimulation} getAdditionalFiles={getAdditionalZipFiles} />
+              <DownloadFile
+                id={jobId}
+                jobName={originalResults.name}
+                disabled={!canStartSimulation}
+                getAdditionalFiles={getAdditionalZipFiles}
+              />
               <div className="flex flex-row items-center gap-x-4">
                 <button
                   role="button"
