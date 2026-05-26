@@ -56,7 +56,7 @@ const renderCombinedMetricValue = (metrics, keys) => {
     return values.map((value) => formatNumberForDisplay(value.toString())).join(" / ");
 };
 
-const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simModelMetrics, simFragmentMetrics }) => {
+const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simModelMetrics = null, simFragmentMetrics = null }) => {
     const rows = [
         { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics },
         simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (after refinement)`, metrics: simModelMetrics },

@@ -1,13 +1,15 @@
 import React from "react";
 import { Colors } from "./colors";
 import { API_URL } from "../../App";
+import JSZip from "jszip";
 
 type DownloadButtonProps = {
   id?: string; // Definiujemy, że id musi być stringiem
   disabled: boolean;
+  getAdditionalFiles?: () => Promise<Array<{ path: string; blob: Blob }>>;
 };
 
-const DownloadButton: React.FC<DownloadButtonProps> = ({ id, disabled }) => {
+const DownloadButton: React.FC<DownloadButtonProps> = ({ id, disabled, getAdditionalFiles }) => {
   const handleDownload = async () => {
     try {
       const response = await fetch(`${API_URL}/jobs/${id}/download`, {
@@ -28,8 +30,21 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id, disabled }) => {
       downloadButton.style.color = "#000000";
       downloadButton.style.backgroundColor = Colors.beige;
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const backendZipBlob = await response.blob();
+      let zipBlobToDownload = backendZipBlob;
+
+      if (getAdditionalFiles) {
+        const additionalFiles = await getAdditionalFiles();
+        if (additionalFiles.length > 0) {
+          const zip = await JSZip.loadAsync(backendZipBlob);
+          additionalFiles.forEach((file) => {
+            zip.file(file.path, file.blob);
+          });
+          zipBlobToDownload = await zip.generateAsync({ type: "blob" });
+        }
+      }
+
+      const url = window.URL.createObjectURL(zipBlobToDownload);
       const a = document.createElement("a");
       a.href = url;
       a.download = `${id}.zip`;
