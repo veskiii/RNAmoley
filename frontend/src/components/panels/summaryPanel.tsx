@@ -222,7 +222,7 @@ const SummaryPanel: React.FC = () => {
       case "restraintBasePairsForce":
         return "Base pairs restraint force";
       case "rmsdCutoff":
-        return "RMSD cutoff";
+        return "RMSD cutoff [Å]";
       default:
         return null;
     }
@@ -1035,9 +1035,7 @@ const SummaryPanel: React.FC = () => {
                   <GlobalResultsTable
                     selectedModel={selectedModel}
                     modelMetrics={originalResults.results.modelMetrics} 
-                    fragmentMetrics={originalResults.results.fragmentMetrics} 
-                    simModelMetrics={simulationResults?.results.modelMetrics}
-                    simFragmentMetrics={simulationResults?.results.fragmentMetrics}
+                    fragmentMetrics={originalResults.results.fragmentMetrics}
                   />
                 </div>
               </div>

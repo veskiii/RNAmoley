@@ -45,6 +45,7 @@ type MetricSummary = {
 type AggregateMetricDefinition = {
   key: string;
   label: string;
+  displayValue?: (metrics: unknown) => string;
 };
 
 type AggregateMetricRow = {
@@ -53,6 +54,8 @@ type AggregateMetricRow = {
   referenceValue: number | null;
   comparisonValue: number | null;
   deltaValue: number | null;
+  referenceDisplay?: string;
+  comparisonDisplay?: string;
 };
 
 type MetricCell = {
@@ -78,9 +81,17 @@ const EPSILON = 1e-9;
 
 const analyzedRegionMetricDefinitions: AggregateMetricDefinition[] = [
   { key: "clashscore", label: "Clash score" },
-  { key: "pct_badbonds", label: "Bad bonds / all bonds (%)" },
+  {
+    key: "pct_badbonds",
+    label: "Bad bonds / all bonds (%)",
+    displayValue: (metrics) => formatCountAndPercent(metrics, "numbadbonds", "numbonds", "pct_badbonds"),
+  },
   { key: "pct_resbadbonds", label: "Residues with bad bonds (%)" },
-  { key: "pct_badangles", label: "Bad angles / all angles (%)" },
+  {
+    key: "pct_badangles",
+    label: "Bad angles / all angles (%)",
+    displayValue: (metrics) => formatCountAndPercent(metrics, "numbadangles", "numangles", "pct_badangles"),
+  },
   { key: "pct_resbadangles", label: "Residues with bad angles (%)" },
   { key: "numSuiteOutliers", label: "Suite outliers" },
 ];
@@ -153,6 +164,30 @@ const parseMetricNumber = (value: unknown) => {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 };
 
+const formatCountAndPercent = (metrics: unknown, countKey: string, totalKey: string, percentKey: string) => {
+  const record = (metrics || {}) as Record<string, unknown>;
+  const count = parseMetricNumber(record[countKey]);
+  const total = parseMetricNumber(record[totalKey]);
+  const percent = parseMetricNumber(record[percentKey]);
+
+  if (count === null && total === null && percent === null) {
+    return "—";
+  }
+
+  const resolvedTotal =
+    total !== null
+      ? total
+      : count !== null && percent !== null && Math.abs(percent) > EPSILON
+        ? (count * 100) / percent
+        : null;
+
+  const countText = count !== null ? formatNumberWithOptionalDecimals(count) : "—";
+  const totalText = resolvedTotal !== null ? formatNumberWithOptionalDecimals(resolvedTotal) : "—";
+  const percentText = percent !== null ? formatNumberWithOptionalDecimals(percent) : "—";
+
+  return `${countText} / ${totalText} (${percentText}%)`;
+};
+
 const buildAggregateMetricRows = (
   referenceMetrics: unknown,
   comparisonMetrics: unknown,
@@ -172,6 +207,8 @@ const buildAggregateMetricRows = (
       referenceValue,
       comparisonValue,
       deltaValue,
+      referenceDisplay: metric.displayValue?.(referenceRecord),
+      comparisonDisplay: metric.displayValue?.(comparisonRecord),
     };
   });
 };
@@ -220,7 +257,7 @@ const buildImpactRows = (summaries: MetricSummary[]): ImpactRow[] => {
         return {
           metricKey,
           label: summary?.label ?? metricKey,
-          value: summary ? formatValue(summary.meanSignedChange) : "—",
+          value: summary ? formatDelta(summary.meanSignedChange) : "—",
         };
       }),
     },
@@ -237,7 +274,7 @@ const buildDetailedSections = (summaries: MetricSummary[]): DetailSection[] => {
 
   return [
     {
-      title: "Improvement (↓):",
+      title: "Improvement:",
       rows: [
         {
           label: "Largest",
@@ -258,7 +295,7 @@ const buildDetailedSections = (summaries: MetricSummary[]): DetailSection[] => {
       ],
     },
     {
-      title: "Deterioration (↑):",
+      title: "Deterioration:",
       rows: [
         {
           label: "Largest",
@@ -574,9 +611,10 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                       <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{rowLabel}</td>
                       {regionMetricRows.map((row) => {
                         const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
+                        const displayValue = rowIndex === 0 ? row.referenceDisplay : rowIndex === 1 ? row.comparisonDisplay : null;
                         return (
                           <td key={`${row.key}-${rowLabel}`} className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
-                            {rowIndex === 2 ? formatDelta(value) : formatValue(value)}
+                            {rowIndex === 2 ? formatDelta(value) : displayValue ?? formatValue(value)}
                           </td>
                         );
                       })}
