@@ -500,6 +500,17 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
     );
   }, [comparisonData, referenceData]);
 
+  const modelMetricRows = useMemo(() => {
+    if (!referenceData || !comparisonData) {
+      return [] as AggregateMetricRow[];
+    }
+
+    return buildAggregateMetricRows(
+      referenceData.results.modelMetrics, 
+      comparisonData.results.modelMetrics
+    );
+  }, [comparisonData, referenceData]);
+
   const regionMetricRows = useMemo(() => {
     if (!referenceData || !comparisonData) {
       return [] as AggregateMetricRow[];
@@ -588,6 +599,41 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                 </table>
               </div>
             )}
+          </div>
+
+          <div className="mb-10">
+            <h3 className="text-sm font-semibold text-gray-800">Entire model metrics</h3>
+            <div className="mt-2 max-w-6xl overflow-x-auto">
+              <table className="w-fit border-separate border-spacing-0 text-sm">
+               <thead>
+                  <tr>
+                    <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds / all bonds (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad bonds (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles / all angles (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad angles (%)</th>
+                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {["Original structure (a)", "After refinement (b)", "Change: Δ = b - a"].map((rowLabel, rowIndex) => (
+                    <tr key={rowLabel} className={rowIndex % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
+                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{rowLabel}</td>
+                      {modelMetricRows.map((row) => {
+                        const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
+                        const displayValue = rowIndex === 0 ? row.referenceDisplay : rowIndex === 1 ? row.comparisonDisplay : null;
+                        return (
+                          <td key={`${row.key}-${rowLabel}`} className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
+                            {rowIndex === 2 ? formatDelta(value) : displayValue ?? formatValue(value)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="mb-10">
