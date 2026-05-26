@@ -547,162 +547,174 @@ const SummaryPanel: React.FC = () => {
     return <ErrorPage />;
   }
 
+  const nameForQualityScore =
+  {
+    [QualityScore.CLASH_SCORE]: "ClashScore",
+    [QualityScore.BAD_ANGLES]: "BadAngles",
+    [QualityScore.BAD_BONDS]: "BadBonds",
+    [QualityScore.SUITENESS]: "Suiteness",
+    [QualityScore.SUGAR_PUCKER_OUT]: "SugarPucker",
+  };
 
-  const handleDownloadFornaView = async () => {
+  const downloadBlobAsFile = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const canvasToPngBlob = (canvas: HTMLCanvasElement) =>
+    new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("Failed to create PNG blob from canvas"));
+          return;
+        }
+
+        resolve(blob);
+      }, "image/png");
+    });
+
+  const getFornaPngBlob = async () => {
     if (!fornaContainerRef.current) {
-      console.error("Forna container not found");
-      return;
+      throw new Error("Forna container not found");
     }
 
-    const nameForQualityScore =
-    {
-      [QualityScore.CLASH_SCORE]: "ClashScore",
-      [QualityScore.BAD_ANGLES]: "BadAngles",
-      [QualityScore.BAD_BONDS]: "BadBonds",
-      [QualityScore.SUITENESS]: "Suiteness",
-      [QualityScore.SUGAR_PUCKER_OUT]: "SugarPucker",
-    }
+    const svg = fornaContainerRef.current.querySelector("#rna_ss svg") as SVGSVGElement | null;
 
-    try {
-      const svg = fornaContainerRef.current.querySelector("#rna_ss svg") as SVGSVGElement | null;
+    if (svg) {
+      const clone = svg.cloneNode(true) as SVGSVGElement;
+      const fallbackWidth = clone.viewBox?.baseVal?.width || clone.width?.baseVal?.value || clone.clientWidth || 800;
+      const fallbackHeight = clone.viewBox?.baseVal?.height || clone.height?.baseVal?.value || clone.clientHeight || 600;
 
-      if (svg) {
-        const clone = svg.cloneNode(true) as SVGSVGElement;
-        const sourceGroup = clone.querySelector("g") as SVGGElement | null;
-        const fallbackWidth = clone.viewBox?.baseVal?.width || clone.width?.baseVal?.value || clone.clientWidth || 800;
-        const fallbackHeight = clone.viewBox?.baseVal?.height || clone.height?.baseVal?.value || clone.clientHeight || 600;
-
-        // Compute bbox from an untransformed copy so pan/zoom transforms don't affect the bounds
-        const temp = clone.cloneNode(true) as SVGSVGElement;
-        // Only remove transform from the top-level group (pan/zoom), keep nested transforms
-        const tempRoot = temp.querySelector("g") as SVGGElement | null;
-        if (tempRoot) {
-          try {
-            tempRoot.removeAttribute("transform");
-          } catch (e) {
-            // ignore
-          }
-        }
-        let box = tempRoot?.getBBox();
-        if (!box || !Number.isFinite(box.x) || !Number.isFinite(box.y) || !Number.isFinite(box.width) || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) {
-          box = { x: 0, y: 0, width: fallbackWidth, height: fallbackHeight } as DOMRect;
-        }
-
-        const padding = 40;
-        const viewBoxWidth = Math.max(1, box.width + padding * 2);
-        const viewBoxHeight = Math.max(1, box.height + padding * 2);
-
-        // Create a fresh wrapper SVG that positions the Forna content at positive coordinates
-        const ns = "http://www.w3.org/2000/svg";
-        const wrapperSvg = document.createElementNS(ns, "svg") as SVGSVGElement;
-        wrapperSvg.setAttribute("xmlns", ns);
-        wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth)}`);
-        wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight)}`);
-        wrapperSvg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
-        wrapperSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        wrapperSvg.style.background = "#ffffff";
-
-        const contentGroup = document.createElementNS(ns, "g");
-        // Translate content so that bbox's top-left maps to padding,padding
-        contentGroup.setAttribute("transform", `translate(${ -box.x + padding }, ${ -box.y + padding })`);
-
-        // Remove transform only from the top-level group in the clone (pan/zoom)
-        const cloneRoot = clone.querySelector("g") as SVGGElement | null;
-        if (cloneRoot) {
-          try {
-            cloneRoot.removeAttribute("transform");
-          } catch (e) {
-            // ignore
-          }
-        }
-
-        // Move all children from cloned svg into the content group
-        while (clone.firstChild) {
-          contentGroup.appendChild(clone.firstChild);
-        }
-
-        // If we have an initial transform captured from Forna, apply it as an outer group
-        const initialTransform = fornaInitialTransformRef.current;
-        let outerGroup: SVGGElement | null = null;
-        let appliedScale = 1;
-        if (initialTransform) {
-          outerGroup = document.createElementNS(ns, "g");
-          try {
-            outerGroup.setAttribute("transform", initialTransform);
-            // extract scale from transform string
-            const scaleMatch = /scale\(([-0-9.]+)\)/.exec(initialTransform);
-            if (scaleMatch) {
-              appliedScale = parseFloat(scaleMatch[1]) || 1;
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
-
-        if (outerGroup) {
-          outerGroup.appendChild(contentGroup);
-          wrapperSvg.appendChild(outerGroup);
-        } else {
-          wrapperSvg.appendChild(contentGroup);
-        }
-
-        // If an initial scale is applied, reflect that in the exported pixel size
-        if (appliedScale && appliedScale !== 1) {
-          wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth * appliedScale)}`);
-          wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight * appliedScale)}`);
-        }
-
-        const wrapper = document.createElement("div");
-        wrapper.style.position = "fixed";
-        wrapper.style.left = "-10000px";
-        wrapper.style.top = "0";
-        wrapper.style.background = "#ffffff";
-        wrapper.appendChild(wrapperSvg);
-        document.body.appendChild(wrapper);
-
+      const temp = clone.cloneNode(true) as SVGSVGElement;
+      const tempRoot = temp.querySelector("g") as SVGGElement | null;
+      if (tempRoot) {
         try {
-          const exportWidth = Math.max(1, Math.round(viewBoxWidth * (appliedScale || 1)));
-          const exportHeight = Math.max(1, Math.round(viewBoxHeight * (appliedScale || 1)));
-
-          const canvas = await html2canvas(wrapper, {
-            backgroundColor: "#ffffff",
-            scale: 2,
-            useCORS: true,
-            width: exportWidth,
-            height: exportHeight,
-            windowWidth: exportWidth,
-            windowHeight: exportHeight,
-            scrollX: 0,
-            scrollY: 0,
-          });
-
-          const link = document.createElement("a");
-          link.href = canvas.toDataURL("image/png");
-          link.download = `${originalResults.name || "forna-structure"}-m${selectedModel}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`;
-          link.click();
-        } finally {
-          wrapper.remove();
+          tempRoot.removeAttribute("transform");
+        } catch (e) {
+          // ignore
         }
-        return;
       }
 
-      const canvas = await html2canvas(fornaContainerRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-      });
+      let box = tempRoot?.getBBox();
+      if (!box || !Number.isFinite(box.x) || !Number.isFinite(box.y) || !Number.isFinite(box.width) || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) {
+        box = { x: 0, y: 0, width: fallbackWidth, height: fallbackHeight } as DOMRect;
+      }
 
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `${originalResults.name || "forna-structure"}-m${selectedModel}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`;
-      link.click();
+      const padding = 40;
+      const viewBoxWidth = Math.max(1, box.width + padding * 2);
+      const viewBoxHeight = Math.max(1, box.height + padding * 2);
+
+      const ns = "http://www.w3.org/2000/svg";
+      const wrapperSvg = document.createElementNS(ns, "svg") as SVGSVGElement;
+      wrapperSvg.setAttribute("xmlns", ns);
+      wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth)}`);
+      wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight)}`);
+      wrapperSvg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+      wrapperSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      wrapperSvg.style.background = "#ffffff";
+
+      const contentGroup = document.createElementNS(ns, "g");
+      contentGroup.setAttribute("transform", `translate(${-box.x + padding}, ${-box.y + padding})`);
+
+      const cloneRoot = clone.querySelector("g") as SVGGElement | null;
+      if (cloneRoot) {
+        try {
+          cloneRoot.removeAttribute("transform");
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      while (clone.firstChild) {
+        contentGroup.appendChild(clone.firstChild);
+      }
+
+      const initialTransform = fornaInitialTransformRef.current;
+      let outerGroup: SVGGElement | null = null;
+      let appliedScale = 1;
+      if (initialTransform) {
+        outerGroup = document.createElementNS(ns, "g");
+        try {
+          outerGroup.setAttribute("transform", initialTransform);
+          const scaleMatch = /scale\(([-0-9.]+)\)/.exec(initialTransform);
+          if (scaleMatch) {
+            appliedScale = parseFloat(scaleMatch[1]) || 1;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      if (outerGroup) {
+        outerGroup.appendChild(contentGroup);
+        wrapperSvg.appendChild(outerGroup);
+      } else {
+        wrapperSvg.appendChild(contentGroup);
+      }
+
+      if (appliedScale && appliedScale !== 1) {
+        wrapperSvg.setAttribute("width", `${Math.round(viewBoxWidth * appliedScale)}`);
+        wrapperSvg.setAttribute("height", `${Math.round(viewBoxHeight * appliedScale)}`);
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "fixed";
+      wrapper.style.left = "-10000px";
+      wrapper.style.top = "0";
+      wrapper.style.background = "#ffffff";
+      wrapper.appendChild(wrapperSvg);
+      document.body.appendChild(wrapper);
+
+      try {
+        const exportWidth = Math.max(1, Math.round(viewBoxWidth * (appliedScale || 1)));
+        const exportHeight = Math.max(1, Math.round(viewBoxHeight * (appliedScale || 1)));
+
+        const canvas = await html2canvas(wrapper, {
+          backgroundColor: "#ffffff",
+          scale: 2,
+          useCORS: true,
+          width: exportWidth,
+          height: exportHeight,
+          windowWidth: exportWidth,
+          windowHeight: exportHeight,
+          scrollX: 0,
+          scrollY: 0,
+        });
+
+        return await canvasToPngBlob(canvas);
+      } finally {
+        wrapper.remove();
+      }
+    }
+
+    const canvas = await html2canvas(fornaContainerRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+    });
+
+    return await canvasToPngBlob(canvas);
+  };
+
+
+  const handleDownloadFornaView = async () => {
+    try {
+      const blob = await getFornaPngBlob();
+      downloadBlobAsFile(
+        blob,
+        `${originalResults.name || "forna-structure"}-m${selectedModel}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`,
+      );
     } catch (error) {
       console.error("Failed to download Forna view:", error);
     }
   };
 
-  const downloadChartContainerAsPng = async (container: HTMLElement | null | undefined, filename: string, scale = 2) => {
-    if (!container) return;
+  const getChartContainerPngBlob = async (container: HTMLElement | null | undefined, scale = 2): Promise<Blob | null> => {
+    if (!container) return null;
     try {
       const chartFontFamily = getComputedStyle(container).fontFamily || getComputedStyle(document.body).fontFamily || "sans-serif";
       const escapeXmlAttr = (value: string) =>
@@ -767,11 +779,7 @@ const SummaryPanel: React.FC = () => {
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          const a = document.createElement("a");
-          a.href = canvas.toDataURL("image/png");
-          a.download = `${filename}.png`;
-          a.click();
+          return await canvasToPngBlob(canvas);
         } finally {
           URL.revokeObjectURL(url);
         }
@@ -804,8 +812,7 @@ const SummaryPanel: React.FC = () => {
             : "";
 
           const wrapper = `<?xml version="1.0" encoding="utf-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" style="font-family: ${safeChartFontFamily};"><rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" /><g transform="translate(0,${legendHeight})">${leftInner}</g><g transform="translate(${leftSize.width},${legendHeight})">${contentInner}</g>${legendMarkup}</svg>`;
-          await createPngFromSvg(wrapper, totalWidth, totalHeight);
-          return;
+          return await createPngFromSvg(wrapper, totalWidth, totalHeight);
         }
       }
 
@@ -813,8 +820,7 @@ const SummaryPanel: React.FC = () => {
         const svg = svgElements[0];
         const size = getSvgSize(svg);
         const source = serializeSvg(svg);
-        await createPngFromSvg(source, Math.max(size.width, 1), Math.max(size.height, 1));
-        return;
+        return await createPngFromSvg(source, Math.max(size.width, 1), Math.max(size.height, 1));
       }
 
       const fullWidth = Math.max(container.scrollWidth, container.clientWidth, 1);
@@ -831,15 +837,58 @@ const SummaryPanel: React.FC = () => {
         scrollY: 0,
       });
 
-      const url = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${filename}.png`;
-      a.click();
+      return await canvasToPngBlob(canvas);
     } catch (err) {
       console.error("html2canvas failed for chart container:", err);
-      // fallback to SVG combination if available
+      return null;
     }
+  };
+
+  const downloadChartContainerAsPng = async (container: HTMLElement | null | undefined, filename: string, scale = 2) => {
+    const blob = await getChartContainerPngBlob(container, scale);
+    if (!blob) return;
+
+    downloadBlobAsFile(blob, `${filename}.png`);
+  };
+
+  const getAdditionalZipFiles = async (): Promise<Array<{ path: string; blob: Blob }>> => {
+    const files: Array<{ path: string; blob: Blob }> = [];
+    const baseName = `${originalResults.name || "structure"}-m${selectedModel}`;
+
+    try {
+      const fornaBlob = await getFornaPngBlob();
+      files.push({
+        path: `images/${baseName}-2D-${nameForQualityScore[selectedQualityScore] || selectedQualityScore}.png`,
+        blob: fornaBlob,
+      });
+    } catch (error) {
+      console.error("Failed to include Forna image in ZIP:", error);
+    }
+
+    const chartCandidates: Array<{ enabled: boolean; ref: React.RefObject<HTMLDivElement | null>; filename: string }> = [
+      { enabled: showClashChart, ref: clashChartRef, filename: `${baseName}-ClashScore.png` },
+      { enabled: showBadBondsChart, ref: badBondsChartRef, filename: `${baseName}-BadBonds.png` },
+      { enabled: showBadAnglesChart, ref: badAnglesChartRef, filename: `${baseName}-BadAngles.png` },
+      { enabled: showSuitenessChart, ref: suitenessChartRef, filename: `${baseName}-Suiteness.png` },
+    ];
+
+    for (const candidate of chartCandidates) {
+      if (!candidate.enabled || !candidate.ref.current) {
+        continue;
+      }
+
+      const chartBlob = await getChartContainerPngBlob(candidate.ref.current);
+      if (!chartBlob) {
+        continue;
+      }
+
+      files.push({
+        path: `images/${candidate.filename}`,
+        blob: chartBlob,
+      });
+    }
+
+    return files;
   };
 
     const changeModel = (modelNum: number) => {
@@ -917,7 +966,7 @@ const SummaryPanel: React.FC = () => {
             {/* Copy link and download buttons */}
             <div className={"flex flex-row gap-2 mt-6 items-center"}>
               <DownloadLink />
-              <DownloadFile id={jobId} disabled={!canStartSimulation}/>
+              <DownloadFile id={jobId} disabled={!canStartSimulation} getAdditionalFiles={getAdditionalZipFiles} />
               <div className="flex flex-row items-center gap-x-4">
                 <button
                   role="button"
