@@ -942,14 +942,29 @@ const Panel: React.FC = () => {
                   })}
                 </div>
                 {/* 2D and 3D view */}
-                <div>
-                  <button
-                    className="h-auto w-auto px-2 my-2 border text-gray-800 bg-gray-100 text-sm/6 rounded hover:bg-gray-200 hover:text-gray-800"
-                    onClick={() => setShowVisualization(!showVisualization)}
-                    title={"Show or hide the structure visualization. The selected region is highlighted in green for easy identification."}
-                  >
-                    {showVisualization ? "Hide model visualization ▲" : "Show model visualization ▼"}
-                  </button>
+                <div className={`mb-6 border border-gray-100 shadow-md p-4 rounded`}>
+                  <div className={`flex justify-between gap-4 items-center`}>
+                      <div>
+                        <label className="font-medium">Model visualization</label>
+                        <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                          <span
+                            aria-label="What this field does"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                          >
+                            ?
+                          </span>
+                          <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                            Show or hide the structure visualization. The selected region is highlighted in green for easy identification.
+                          </span>
+                        </span>
+                      </div>
+                      <div
+                        onClick={() => setShowVisualization(!showVisualization)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
+                      >
+                        {showVisualization ? "▲ Hide" : "▼ Show" }
+                      </div>
+                    </div>
                   {showVisualization && (
                   <div className="flex flex-col md:flex-row h-[60vh] min-h-[400px]">
                     <div className="w-full md:w-1/2 h-full relative border border-gray-300">

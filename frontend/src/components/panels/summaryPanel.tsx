@@ -893,6 +893,534 @@ const SummaryPanel: React.FC = () => {
     downloadBlobAsFile(blob, `${filename}.png`);
   };
 
+  const csvEscape = (value: string) => {
+    if (/["]|,|\n|\r/.test(value)) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+
+    return value;
+  };
+
+  const csvRow = (values: Array<string | number | null | undefined>) =>
+    values.map((value) => csvEscape(value === null || value === undefined ? "" : String(value))).join(",");
+
+  const formatCsvNumber = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) {
+      return "—";
+    }
+
+    return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+  };
+
+  const formatCsvDelta = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) {
+      return "—";
+    }
+
+    const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+    return `${sign}${formatCsvNumber(Math.abs(value))}`;
+  };
+
+  const formatCountAndPercentCsv = (metrics: Record<string, unknown>, countKey: string, totalKey: string, percentKey: string) => {
+    const parseMetricNumber = (value: unknown) => {
+      if (value === undefined || value === null || value === "") {
+        return null;
+      }
+
+      const parsedValue = Number.parseFloat(String(value));
+      return Number.isFinite(parsedValue) ? parsedValue : null;
+    };
+
+    const count = parseMetricNumber(metrics[countKey]);
+    const total = parseMetricNumber(metrics[totalKey]);
+    const percent = parseMetricNumber(metrics[percentKey]);
+
+    if (count === null && total === null && percent === null) {
+      return "—";
+    }
+
+    const resolvedTotal =
+      total !== null
+        ? total
+        : count !== null && percent !== null && Math.abs(percent) > 1e-9
+          ? (count * 100) / percent
+          : null;
+
+    const countText = count !== null ? formatCsvNumber(count) : "—";
+    const totalText = resolvedTotal !== null ? formatCsvNumber(resolvedTotal) : "—";
+    const percentText = percent !== null ? formatCsvNumber(percent) : "—";
+
+    return `${countText} / ${totalText} (${percentText}%)`;
+  };
+
+  const buildResultsComparisonCsv = (
+    referenceData: SummaryJob,
+    comparisonData: SummaryJob,
+    simulationParameters?: Array<{
+      label: string | null;
+      value: string | number | null | undefined;
+    }>,
+    selectedFragments?: Record<string, string>,
+  ) => {
+    type CsvMetricDefinition = {
+      key: string;
+      label: string;
+      higherIsBetter: boolean;
+      extract: (residue: any) => number | null;
+    };
+
+    type CsvAggregateMetricDefinition = {
+      key: string;
+      label: string;
+      displayValue?: (metrics: Record<string, unknown>) => string;
+    };
+
+    type CsvAggregateMetricRow = {
+      key: string;
+      label: string;
+      referenceValue: number | null;
+      comparisonValue: number | null;
+      deltaValue: number | null;
+      referenceDisplay?: string;
+      comparisonDisplay?: string;
+    };
+
+    type CsvMetricCell = {
+      metricKey: string;
+      label: string;
+      value: string;
+    };
+
+    type CsvImpactRow = {
+      label: string;
+      cells: CsvMetricCell[];
+    };
+
+    type CsvDetailSection = {
+      title: string;
+      rows: Array<{
+        label: string;
+        values: Array<number | null>;
+      }>;
+    };
+
+    const EPSILON = 1e-9;
+
+    const parseNumericValue = (value?: string | null) => {
+      if (value === undefined || value === null || value === "") {
+        return null;
+      }
+
+      const parsedValue = Number.parseFloat(String(value));
+      return Number.isFinite(parsedValue) ? parsedValue : null;
+    };
+
+    const parseMetricNumber = (value: unknown) => {
+      if (value === undefined || value === null || value === "") {
+        return null;
+      }
+
+      const parsedValue = Number.parseFloat(String(value));
+      return Number.isFinite(parsedValue) ? parsedValue : null;
+    };
+
+    const hasPuckerOutlier = (residue: any) => Boolean((residue.residueMetrics?.pucker_outlier_type || "").toString().trim());
+
+    const hasSuiteOutlier = (residue: any) => {
+      const suiteness = parseNumericValue(residue.residueMetrics?.suiteness);
+      return suiteness !== null && Math.abs(suiteness) <= EPSILON;
+    };
+
+    const getResidueKey = (residue: any) => `${residue.chainID}-${String(residue.original_index)}`;
+
+    const buildResidueMap = (residues: any[]) => {
+      const residueMap = new Map<string, any>();
+      residues.forEach((residue) => {
+        residueMap.set(getResidueKey(residue), residue);
+      });
+      return residueMap;
+    };
+
+    const average = (values: number[]) => {
+      if (values.length === 0) {
+        return null;
+      }
+
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    };
+
+    const median = (values: number[]) => {
+      if (values.length === 0) {
+        return null;
+      }
+
+      const sortedValues = [...values].sort((left, right) => left - right);
+      const middleIndex = Math.floor(sortedValues.length / 2);
+
+      if (sortedValues.length % 2 === 1) {
+        return sortedValues[middleIndex];
+      }
+
+      return (sortedValues[middleIndex - 1] + sortedValues[middleIndex]) / 2;
+    };
+
+    const formatCountShare = (count: number, total: number) => {
+      if (total === 0) {
+        return "—";
+      }
+
+      const percentage = (count / total) * 100;
+      return `${count} / ${formatCsvNumber(percentage)}%`;
+    };
+
+    const summarizeMetric = (
+      metric: CsvMetricDefinition,
+      referenceResidues: any[],
+      comparisonResidues: any[],
+    ) => {
+      const comparisonMap = buildResidueMap(comparisonResidues);
+      const changes: number[] = [];
+
+      referenceResidues.forEach((referenceResidue) => {
+        if (!referenceResidue.selected) {
+          return;
+        }
+
+        const comparisonResidue = comparisonMap.get(getResidueKey(referenceResidue));
+        if (!comparisonResidue || !comparisonResidue.selected) {
+          return;
+        }
+
+        const before = metric.extract(referenceResidue);
+        const after = metric.extract(comparisonResidue);
+        if (before === null || after === null) {
+          return;
+        }
+
+        changes.push(after - before);
+      });
+
+      const improvedChanges = changes.filter((change) => (metric.higherIsBetter ? change > EPSILON : change < -EPSILON));
+      const worsenedChanges = changes.filter((change) => (metric.higherIsBetter ? change < -EPSILON : change > EPSILON));
+      const unchangedCount = changes.length - improvedChanges.length - worsenedChanges.length;
+
+      const orderedImprovements = metric.higherIsBetter
+        ? [...improvedChanges].sort((left, right) => right - left)
+        : [...improvedChanges].sort((left, right) => left - right);
+
+      const orderedWorsenings = metric.higherIsBetter
+        ? [...worsenedChanges].sort((left, right) => left - right)
+        : [...worsenedChanges].sort((left, right) => right - left);
+
+      return {
+        key: metric.key,
+        label: metric.label,
+        comparedCount: changes.length,
+        improvedCount: improvedChanges.length,
+        worsenedCount: worsenedChanges.length,
+        unchangedCount,
+        meanSignedChange: average(changes),
+        improvementRatio:
+          worsenedChanges.length === 0
+            ? improvedChanges.length > 0
+              ? Number.POSITIVE_INFINITY
+              : null
+            : improvedChanges.length / worsenedChanges.length,
+        improvementStats: {
+          largest: orderedImprovements[0] ?? null,
+          smallest: orderedImprovements[orderedImprovements.length - 1] ?? null,
+          mean: average(improvedChanges),
+          median: median(improvedChanges),
+        },
+        worseningStats: {
+          largest: orderedWorsenings[0] ?? null,
+          smallest: orderedWorsenings[orderedWorsenings.length - 1] ?? null,
+          mean: average(worsenedChanges),
+          median: median(worsenedChanges),
+        },
+      };
+    };
+
+    const buildAggregateMetricRows = (
+      referenceMetrics: unknown,
+      comparisonMetrics: unknown,
+    ): CsvAggregateMetricRow[] => {
+      const analyzedRegionMetricDefinitions: CsvAggregateMetricDefinition[] = [
+        { key: "clashscore", label: "Clash score" },
+        {
+          key: "pct_badbonds",
+          label: "Bad bonds / all bonds (%)",
+          displayValue: (metrics) => formatCountAndPercentCsv(metrics, "numbadbonds", "numbonds", "pct_badbonds"),
+        },
+        { key: "pct_resbadbonds", label: "Residues with bad bonds (%)" },
+        {
+          key: "pct_badangles",
+          label: "Bad angles / all angles (%)",
+          displayValue: (metrics) => formatCountAndPercentCsv(metrics, "numbadangles", "numangles", "pct_badangles"),
+        },
+        { key: "pct_resbadangles", label: "Residues with bad angles (%)" },
+        { key: "numSuiteOutliers", label: "Suite outliers" },
+      ];
+
+      const referenceRecord = (referenceMetrics || {}) as Record<string, unknown>;
+      const comparisonRecord = (comparisonMetrics || {}) as Record<string, unknown>;
+
+      return analyzedRegionMetricDefinitions.map((metric) => {
+        const referenceValue = parseMetricNumber(referenceRecord[metric.key]);
+        const comparisonValue = parseMetricNumber(comparisonRecord[metric.key]);
+        const deltaValue = referenceValue !== null && comparisonValue !== null ? comparisonValue - referenceValue : null;
+
+        return {
+          key: metric.key,
+          label: metric.label,
+          referenceValue,
+          comparisonValue,
+          deltaValue,
+          referenceDisplay: metric.displayValue?.(referenceRecord),
+          comparisonDisplay: metric.displayValue?.(comparisonRecord),
+        };
+      });
+    };
+
+    const buildImpactRows = (summaries: Array<ReturnType<typeof summarizeMetric>>): CsvImpactRow[] => {
+      const impactMetricKeys = [
+        "clashscore",
+        "pct_badbonds",
+        "pct_badangles",
+        "suiteness",
+        "suite_outliers",
+        "pucker_outlier_type",
+      ] as const;
+
+      const summaryMap = new Map(summaries.map((summary) => [summary.key, summary] as const));
+
+      return [
+        {
+          label: "Improved (count / %)",
+          cells: impactMetricKeys.map((metricKey) => {
+            const summary = summaryMap.get(metricKey);
+            return {
+              metricKey,
+              label: summary?.label ?? metricKey,
+              value: summary ? formatCountShare(summary.improvedCount, summary.comparedCount) : "—",
+            };
+          }),
+        },
+        {
+          label: "Deteriorated (count / %)",
+          cells: impactMetricKeys.map((metricKey) => {
+            const summary = summaryMap.get(metricKey);
+            return {
+              metricKey,
+              label: summary?.label ?? metricKey,
+              value: summary ? formatCountShare(summary.worsenedCount, summary.comparedCount) : "—",
+            };
+          }),
+        },
+        {
+          label: "Unchanged (count / %)",
+          cells: impactMetricKeys.map((metricKey) => {
+            const summary = summaryMap.get(metricKey);
+            return {
+              metricKey,
+              label: summary?.label ?? metricKey,
+              value: summary ? formatCountShare(summary.unchangedCount, summary.comparedCount) : "—",
+            };
+          }),
+        },
+        {
+          label: "Mean change",
+          cells: impactMetricKeys.map((metricKey) => {
+            const summary = summaryMap.get(metricKey);
+            return {
+              metricKey,
+              label: summary?.label ?? metricKey,
+              value: summary ? formatCsvDelta(summary.meanSignedChange) : "—",
+            };
+          }),
+        },
+      ];
+    };
+
+    const buildDetailedSections = (summaries: Array<ReturnType<typeof summarizeMetric>>): CsvDetailSection[] => {
+      const detailedMetricKeys = ["clashscore", "pct_badbonds", "pct_badangles", "suiteness"] as const;
+      const summaryMap = new Map(summaries.map((summary) => [summary.key, summary] as const));
+
+      const getValue = (metricKey: (typeof detailedMetricKeys)[number], getter: (summary: ReturnType<typeof summarizeMetric>) => number | null) => {
+        const summary = summaryMap.get(metricKey);
+        return summary ? getter(summary) : null;
+      };
+
+      return [
+        {
+          title: "Improvement:",
+          rows: [
+            {
+              label: "Largest",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.improvementStats.largest)),
+            },
+            {
+              label: "Least",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.improvementStats.smallest)),
+            },
+            {
+              label: "Mean",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.improvementStats.mean)),
+            },
+            {
+              label: "Median",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.improvementStats.median)),
+            },
+          ],
+        },
+        {
+          title: "Deterioration:",
+          rows: [
+            {
+              label: "Largest",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.worseningStats.largest)),
+            },
+            {
+              label: "Least",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.worseningStats.smallest)),
+            },
+            {
+              label: "Mean",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.worseningStats.mean)),
+            },
+            {
+              label: "Median",
+              values: detailedMetricKeys.map((metricKey) => getValue(metricKey, (summary) => summary.worseningStats.median)),
+            },
+          ],
+        },
+      ];
+    };
+
+    const metricDefinitions: CsvMetricDefinition[] = [
+      {
+        key: "clashscore",
+        label: "Clash score",
+        higherIsBetter: false,
+        extract: (residue) => parseNumericValue(residue.metrics?.clashscore),
+      },
+      {
+        key: "pct_badbonds",
+        label: "Bad bonds",
+        higherIsBetter: false,
+        extract: (residue) => parseNumericValue(residue.metrics?.pct_badbonds),
+      },
+      {
+        key: "pct_badangles",
+        label: "Bad angles",
+        higherIsBetter: false,
+        extract: (residue) => parseNumericValue(residue.metrics?.pct_badangles),
+      },
+      {
+        key: "suiteness",
+        label: "Suiteness",
+        higherIsBetter: true,
+        extract: (residue) => parseNumericValue(residue.residueMetrics?.suiteness),
+      },
+      {
+        key: "suite_outliers",
+        label: "Suite outliers (suiteness = 0.00)",
+        higherIsBetter: false,
+        extract: (residue) => (hasSuiteOutlier(residue) ? 1 : 0),
+      },
+      {
+        key: "pucker_outlier_type",
+        label: "Sugar pucker outlier",
+        higherIsBetter: false,
+        extract: (residue) => (hasPuckerOutlier(residue) ? 1 : 0),
+      },
+    ];
+
+    const summaries = metricDefinitions.map((metric) => summarizeMetric(metric, referenceData.results.data, comparisonData.results.data));
+    const modelMetricRows = buildAggregateMetricRows(referenceData.results.modelMetrics, comparisonData.results.modelMetrics);
+    const regionMetricRows = buildAggregateMetricRows(referenceData.results.fragmentMetrics, comparisonData.results.fragmentMetrics);
+    const impactRows = buildImpactRows(summaries);
+    const detailSections = buildDetailedSections(summaries);
+    const selectedResiduesCount = referenceData.results.data.filter((residue) => residue.selected).length;
+    const totalResiduesCount = referenceData.results.data.length;
+
+    const lines: string[] = [];
+    const addBlankLine = () => {
+      lines.push("");
+    };
+    const addRow = (values: Array<string | number | null | undefined>) => {
+      lines.push(csvRow(values));
+    };
+
+    addRow(["Results comparison"]);
+    addRow(["Analysed region", selectedFragments ? Object.entries(selectedFragments).map(([chain, region]) => `${chain}: ${region}`).join("; ") : "—"]);
+    addRow(["Selected residues", `${selectedResiduesCount} / ${totalResiduesCount}`]);
+    addBlankLine();
+
+    if (simulationParameters && simulationParameters.length > 0) {
+      addRow(["Refinement parameters"]);
+      addRow(["Parameter", "Value"]);
+      simulationParameters.filter((parameter): parameter is { label: string; value: string | number | null | undefined } => !!parameter.label).forEach((parameter) => {
+        addRow([
+          parameter.label,
+          parameter.value === null || parameter.value === undefined || parameter.value === ""
+            ? "—"
+            : Number.isFinite(Number(parameter.value))
+              ? formatNumberForDisplay(String(parameter.value))
+              : String(parameter.value),
+        ]);
+      });
+      addBlankLine();
+    }
+
+    addRow(["Entire model metrics"]);
+    addRow(["Row", ...modelMetricRows.map((row) => row.label)]);
+    ["Original structure (a)", "After refinement (b)", "Change: Δ = b - a"].forEach((rowLabel, rowIndex) => {
+      addRow([
+        rowLabel,
+        ...modelMetricRows.map((row) => {
+          const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
+          const displayValue = rowIndex === 0 ? row.referenceDisplay : rowIndex === 1 ? row.comparisonDisplay : null;
+          return rowIndex === 2 ? formatCsvDelta(value) : displayValue ?? formatCsvNumber(value);
+        }),
+      ]);
+    });
+    addBlankLine();
+
+    addRow(["Analysed region metrics"]);
+    addRow(["Row", ...regionMetricRows.map((row) => row.label)]);
+    ["Original structure (a)", "After refinement (b)", "Change: Δ = b - a"].forEach((rowLabel, rowIndex) => {
+      addRow([
+        rowLabel,
+        ...regionMetricRows.map((row) => {
+          const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
+          const displayValue = rowIndex === 0 ? row.referenceDisplay : rowIndex === 1 ? row.comparisonDisplay : null;
+          return rowIndex === 2 ? formatCsvDelta(value) : displayValue ?? formatCsvNumber(value);
+        }),
+      ]);
+    });
+    addBlankLine();
+
+    addRow(["Refinement impact on the analysed region"]);
+    addRow(["Row", ...impactRows[0].cells.map((cell) => cell.label)]);
+    impactRows.forEach((row) => {
+      addRow([row.label, ...row.cells.map((cell) => cell.value)]);
+    });
+    addBlankLine();
+
+    addRow(["Detailed refinement metrics for the analysed region"]);
+    addRow(["Section", "Row", "Clash score", "Bad bonds", "Bad angles", "Suiteness"]);
+    detailSections.forEach((section) => {
+      addRow([section.title]);
+      section.rows.forEach((row) => {
+        addRow(["", row.label, ...row.values.map((value) => formatCsvNumber(value))]);
+      });
+      addBlankLine();
+    });
+
+    return lines.join("\n");
+  };
+
   const getAdditionalZipFiles = async (): Promise<Array<{ path: string; blob: Blob }>> => {
     const files: Array<{ path: string; blob: Blob }> = [];
     const baseName = `${originalResults.name || "structure"}-m${selectedModel}`;
@@ -926,6 +1454,27 @@ const SummaryPanel: React.FC = () => {
     // restore previous selection and recolor
     setQualityScore(prevSelected);
     recolorFornaForMetric(prevSelected);
+
+    if (simulationResults) {
+      const simulationParameters = simulationStatusPresentation.parameters
+        ? Object.entries(simulationStatusPresentation.parameters).map(([param, value]) => ({
+            label: getLabelForSimulationParameter(param),
+            value,
+          }))
+        : undefined;
+
+      const comparisonCsv = buildResultsComparisonCsv(
+        originalResults,
+        simulationResults,
+        simulationParameters,
+        originalResults.metadata.resultsStatus?.[selectedModel?.toString() || ""]?.selectedFragments,
+      );
+
+      files.push({
+        path: `${baseName}-RefinementStatistics.csv`,
+        blob: new Blob([comparisonCsv], { type: "text/csv;charset=utf-8" }),
+      });
+    }
 
     const chartCandidates: Array<{ enabled: boolean; ref: React.RefObject<HTMLDivElement | null>; filename: string }> = [
       { enabled: showClashChart, ref: clashChartRef, filename: `${baseName}-ClashScore.png` },

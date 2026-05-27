@@ -61,7 +61,7 @@ const ResidueTable = ({ data, selectedChain, selectedResidueIds, selectFragment,
   }
 
   return (
-    <table className="w-max border-separate">
+    <table className="w-max border-separate select-none">
       <tbody>
         <tr>
           <td className="w-16 p-1 text-left">Index</td>
