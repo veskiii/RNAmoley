@@ -216,11 +216,11 @@ const SummaryPanel: React.FC = () => {
   const getLabelForSimulationParameter = (paramName: string) => {
     switch (paramName) {
       case "restraintBackboneForce":
-        return "Backbone restraint force";
+        return "Backbone restraint force [kcal/mol/Å²]";
       case "restraintGlobalForce":
-        return "Global restraint force";
+        return "Global restraint force [kcal/mol/Å²]";
       case "restraintBasePairsForce":
-        return "Base pairs restraint force";
+        return "Base pairs restraint force [kcal/mol/Å²]";
       case "rmsdCutoff":
         return "RMSD cutoff [Å]";
       default:
