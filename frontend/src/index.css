@@ -28,12 +28,12 @@ code {
   stroke-width: 2px !important;
 }
 
-#rna_ss.forna-main-view line.fornac-link[link_type="basepair"] {
+#rna_ss line.fornac-link[link_type="basepair"] {
   stroke: #999 !important;
   stroke-width: 2px !important;
 }
 
-#rna_ss.forna-main-view line.fornac-link[link_type="pseudoknot"] {
+#rna_ss line.fornac-link[link_type="pseudoknot"] {
   stroke: #999 !important;
   stroke-width: 2px !important;
 }
