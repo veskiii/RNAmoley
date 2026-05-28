@@ -490,7 +490,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   selectedFragments,
   selectedModel,
 }) => {
-  const [showComparison, setShowComparison] = React.useState(true);
+  const [showComparison, setShowComparison] = React.useState(false);
 
   const summaries = useMemo(() => {
     if (!referenceData || !comparisonData) {
@@ -551,35 +551,35 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   return (
     <div className={`rounded border border-gray-100 bg-white p-4 shadow-md ${className}`}>
       
-      <div className="flex justify-between">
+      <div className={`flex justify-between ${showComparison ? 'border-b border-gray-100 pb-4' : ''}`}>
         <h2 className="font-medium">Refinement statistics</h2>
         <div
           onClick={() => setShowComparison(!showComparison)}
           className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer select-none"
         >
-          {showComparison ? "▼ Show" : "▲ Hide" }
+          {!showComparison ? "▼ Show" : "▲ Hide" }
         </div>
       </div>
 
-      {!showComparison && (
-        <div className="mt-4">
+      {showComparison && (
+        <div className="mt-12">
           <div className="mb-6">
             <p>
-              <span className="font-semibold">Analysed region: </span>{selectedResiduesCount} nt selected from model {selectedModel} ({totalResiduesCount} nt total), residues {selectedFragments ? Object.entries(selectedFragments).map(([chain, region]) => `${chain}: ${region}`).join("; ") : "—"}
+              <span className=" text-sm font-medium">Analysed region: </span>{selectedResiduesCount} nt selected from model {selectedModel} ({totalResiduesCount} nt total), residues {selectedFragments ? Object.entries(selectedFragments).map(([chain, region]) => `${chain}: ${region}`).join("; ") : "—"}
             </p>
           </div>
 
           <div className="mb-10">
-            <h3 className="text-sm font-semibold text-gray-800">Refinement parameters</h3>
+            <h3 className="text-sm font-medium text-gray-700">Refinement parameters</h3>
             {simulationParameters && simulationParameters.length > 0 && (
               <div className="mt-2 overflow-x-auto">
                 <table className="border-separate border-spacing-0 text-sm text-gray-600">
                   <thead>
-                    <tr>
+                    <tr className="bg-gray-100">
                       {simulationParameters.filter((p): p is { label: string; value: string } => !!p.label).map((parameter) => (
                         <th
                           key={parameter.label}
-                          className="whitespace-nowrap border-y border-gray-200 px-3 py-1 text-left font-semibold text-gray-700"
+                          className="whitespace-nowrap border-b border-gray-200 px-3 py-3 text-left text-gray-700 font-medium"
                         >
                           {parameter.label}
                         </th>
@@ -604,24 +604,24 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
           </div>
 
           <div className="mb-10">
-            <h3 className="text-sm font-semibold text-gray-800">Entire model metrics</h3>
+            <h3 className="text-sm font-medium text-gray-700">Entire model metrics</h3>
             <div className="mt-2 max-w-6xl overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
                <thead>
-                  <tr>
-                    <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds / all bonds (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad bonds (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles / all angles (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad angles (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
+                  <tr className="bg-gray-100">
+                    <th className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds / all bonds (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bonds (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
                   </tr>
                 </thead>
                 <tbody>
                   {["Original structure (a)", "After refinement (b)", "Change: Δ = b - a"].map((rowLabel, rowIndex) => (
                     <tr key={rowLabel} className={rowIndex % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
-                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{rowLabel}</td>
+                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-medium text-gray-700">{rowLabel}</td>
                       {modelMetricRows.map((row) => {
                         const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
                         const displayValue = rowIndex === 0 ? row.referenceDisplay : rowIndex === 1 ? row.comparisonDisplay : null;
@@ -639,24 +639,24 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
           </div>
 
           <div className="mb-10">
-            <h3 className="text-sm font-semibold text-gray-800">Analysed region metrics</h3>
+            <h3 className="text-sm font-medium text-gray-700">Analysed region metrics</h3>
             <div className="mt-2 max-w-6xl overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
                 <thead>
-                  <tr>
-                    <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds / all bonds (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad bonds (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles / all angles (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Residues with bad angles (%)</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
+                  <tr className="bg-gray-100">
+                    <th className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds / all bonds (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bonds (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
                   </tr>
                 </thead>
                 <tbody>
                   {["Original structure (a)", "After refinement (b)", "Change: Δ = b - a"].map((rowLabel, rowIndex) => (
                     <tr key={rowLabel} className={rowIndex % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
-                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{rowLabel}</td>
+                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-medium text-gray-700">{rowLabel}</td>
                       {regionMetricRows.map((row) => {
                         const value = rowIndex === 0 ? row.referenceValue : rowIndex === 1 ? row.comparisonValue : row.deltaValue;
                         const displayValue = rowIndex === 0 ? row.referenceDisplay : rowIndex === 1 ? row.comparisonDisplay : null;
@@ -674,24 +674,24 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
           </div>
 
           <div className="mb-10">
-            <h3 className="text-sm font-semibold text-gray-800">Refinement impact on the analysed region</h3>
+            <h3 className="text-sm font-medium text-gray-700">Refinement impact on the analysed region</h3>
             <div className="mt-2 max-w-7xl overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
                 <thead>
-                  <tr>
-                    <th className="w-48 min-w-48 sticky left-0 z-10 border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suiteness</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suite outliers</th>
-                    <th className="w-36 min-w-36 border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Sugar Pucker Outliers</th>
+                  <tr className="bg-gray-100">
+                    <th className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suiteness</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Sugar Pucker Outliers</th>
                   </tr>
                 </thead>
                 <tbody>
                   {impactRows.map((row, index) => (
                     <tr key={row.label} className={index % 2 === 0 ? "bg-gray-50/70" : "bg-white"}>
-                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">{row.label}</td>
+                      <td className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-100 bg-inherit px-3 py-2 font-medium text-gray-700">{row.label}</td>
                       {row.cells.map((cell) => (
                         <td key={`${row.label}-${cell.metricKey}`} className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
                           {cell.value}
@@ -705,23 +705,23 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
           </div>
 
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-800">Detailed refinement metrics for the analysed region</h3>
+            <h3 className="text-sm font-medium text-gray-700">Detailed refinement metrics for the analysed region</h3>
             <div className="mt-2 max-w-4xl overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
                 <thead>
-                  <tr>
-                    <th className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-y border-gray-200 bg-white px-3 py-2 text-left font-semibold text-gray-700"></th>
-                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Clash score</th>
-                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad bonds</th>
-                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Bad angles</th>
-                    <th className="border-y border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Suiteness</th>
+                  <tr className="bg-gray-100">
+                    <th className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
+                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
+                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds</th>
+                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles</th>
+                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suiteness</th>
                   </tr>
                 </thead>
                 <tbody>
                   {detailSections.map((section, sectionIndex) => (
                     <React.Fragment key={section.title}>
-                      <tr>
-                        <td className="border-b border-gray-100 bg-gray-100 px-3 py-2 font-semibold text-gray-800" colSpan={5}>
+                      <tr >
+                        <td className="border-b border-gray-100 bg-gray-100 px-3 py-2 font-medium text-gray-700" colSpan={5}>
                           {section.title}
                         </td>
                       </tr>
@@ -730,7 +730,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                           key={`${section.title}-${row.label}`}
                           className={(sectionIndex + rowIndex) % 2 === 0 ? "bg-gray-50/70" : "bg-white"}
                         >
-                          <td className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-b border-gray-100 bg-inherit px-3 py-2 font-semibold text-gray-800">
+                          <td className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-b border-gray-100 bg-inherit px-3 py-2 font-medium text-gray-700">
                             {row.label}
                           </td>
                           {row.values.map((value, valueIndex) => (

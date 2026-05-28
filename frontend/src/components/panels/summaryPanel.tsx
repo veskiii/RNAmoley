@@ -1760,7 +1760,7 @@ const SummaryPanel: React.FC = () => {
               {/* Residue results table */}
               <div className="mt-6">
                   <div className="border border-gray-100 shadow-md p-4">
-                    <div className="flex justify-between">
+                    <div className={`flex justify-between ${showResidueTable ? 'border-b border-gray-100 pb-4' : ''}`}>
                       <div>
                         <label className="font-medium">Local quality table (per residue)</label>
                         <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
