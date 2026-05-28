@@ -2052,7 +2052,7 @@ const SummaryPanel: React.FC = () => {
                   </label>
                 </div>
                 <div className="flex flex-row gap-4 my-3 items-center">
-                  <p>Color by:</p>
+                  <p>Color structure by:</p>
                   {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
