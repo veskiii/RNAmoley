@@ -1753,6 +1753,7 @@ const SummaryPanel: React.FC = () => {
                         }))
                       : undefined}
                     selectedFragments={originalResults.metadata.resultsStatus?.[selectedModel?.toString() || ""]?.selectedFragments}
+                    selectedModel={selectedModel}
                   />
                 </div>
               )}
@@ -2258,7 +2259,7 @@ const SummaryPanel: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <span>Color legend:</span>
+                  <span>Residue and sphere color legend:</span>
                   {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
                     <span
                       key={entry.label}

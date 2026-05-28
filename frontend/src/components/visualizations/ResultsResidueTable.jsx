@@ -185,7 +185,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           <tr>
             {/* <td></td> */}
             <td className="w-32 p-2 text-left">Index</td>
-            {hasSimRows && <td></td>}
+            {hasSimRows && <td className="w-24"></td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -202,7 +202,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           <tr>
             {/* <td></td> */}
             <td className="w-32 p-2 text-left">Residue</td>
-            {hasSimRows && <td></td>}
+            {hasSimRows && <td className="w-24"></td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -221,7 +221,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             <td className="w-32 p-2 text-left">
               Secondary structure
             </td>
-            {hasSimRows && <td></td>}
+            {hasSimRows && <td className="w-24"></td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -285,7 +285,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             >
               Clash score
             </td>
-            {hasSimRows && <td>Original</td>}
+            {hasSimRows && <td className="w-24">Original</td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -311,7 +311,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           </tr>)}
           { analyzeNeighborhood && hasSimRows && (
           <tr>
-            <td>Refined</td>
+            <td className="w-24">After refinement</td>
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               const simEntries = nucleotide ? nucleotide.simData : column.simData;
@@ -357,7 +357,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             >
               Bad bonds
             </td>
-            {hasSimRows && <td>Original</td>}
+            {hasSimRows && <td className="w-24">Original</td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -382,7 +382,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           </tr>)}
           { analyzeNeighborhood && hasSimRows && (
           <tr>
-            <td>Refined</td>
+            <td className="w-24">After refinement</td>
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               const simEntries = nucleotide ? nucleotide.simData : column.simData;
@@ -428,7 +428,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             >
               Bad angles
             </td>
-            {hasSimRows && <td>Original</td>}
+            {hasSimRows && <td className="w-24">Original</td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -453,7 +453,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
           </tr>)}
           { analyzeNeighborhood && hasSimRows && (
           <tr>
-            <td>Refined</td>
+            <td className="w-24">After refinement</td>
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               const simEntries = nucleotide ? nucleotide.simData : column.simData;
@@ -498,7 +498,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             >
               Suiteness
             </td>
-            {hasSimRows && <td>Original</td>}
+            {hasSimRows && <td className="w-24">Original</td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -515,7 +515,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             )})}
           </tr>
           {hasSimRows && <tr>
-            <td>Refined</td>
+            <td className="w-24">After refinement</td>
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               const simEntries = nucleotide ? nucleotide.simData : column.simData;
@@ -560,7 +560,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             >
               Sugar pucker outlier
             </td>
-            {hasSimRows && <td>Original</td>}
+            {hasSimRows && <td className="w-24">Original</td>}
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               return (
@@ -578,7 +578,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             )})}
           </tr>
           {hasSimRows && <tr>
-            <td>Refined</td>
+            <td className="w-24">After refinement</td>
             {tableColumns.map((column, index) => {
               const nucleotide = getColumnNucleotide(column);
               const simEntries = nucleotide ? nucleotide.simData : column.simData;
