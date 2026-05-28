@@ -27,3 +27,13 @@ code {
   stroke: #39ff14 !important;
   stroke-width: 2px !important;
 }
+
+#rna_ss line.fornac-link[link_type="basepair"] {
+  stroke: #999 !important;
+  stroke-width: 2px !important;
+}
+
+#rna_ss line.fornac-link[link_type="pseudoknot"] {
+  stroke: #999 !important;
+  stroke-width: 2px !important;
+}

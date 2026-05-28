@@ -190,7 +190,7 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "sim_running") {
-      return { label: "Refinement in progress...", className: "text-sm font-bold text-gray-800" };
+      return { label: `Refinement of model ${selectedModel} in progress...`, className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_finished") {
@@ -198,16 +198,16 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "sim_analyzing") {
-      return { label: "Analyzing results...", className: "text-sm font-bold text-gray-800" };
+      return { label: `Analyzing refinement results for model ${selectedModel}...`, className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_completed") {
       const simParams = simulationResults?.metadata.simulations?.[selectedModel]?.parameters;
-      return { label: `Refinement completed`, className: "text-sm font-bold text-gray-800", parameters: simParams };
+      return { label: `Refinement of model ${selectedModel} completed`, className: "text-sm font-bold text-gray-800", parameters: simParams };
     }
 
     if (status === "sim_failed") {
-      return { label: "Refinement failed", className: "text-sm font-bold text-red-500" };
+      return { label: `Refinement of model ${selectedModel} failed`, className: "text-sm font-bold text-red-500" };
     }
 
     return { label: status, className: "text-sm font-bold text-gray-800" };
@@ -216,11 +216,11 @@ const SummaryPanel: React.FC = () => {
   const getLabelForSimulationParameter = (paramName: string) => {
     switch (paramName) {
       case "restraintBackboneForce":
-        return "Backbone restraint force";
+        return "Backbone restraint force [kcal/mol/Å²]";
       case "restraintGlobalForce":
-        return "Global restraint force";
+        return "Global restraint force [kcal/mol/Å²]";
       case "restraintBasePairsForce":
-        return "Base pairs restraint force";
+        return "Base pairs restraint force [kcal/mol/Å²]";
       case "rmsdCutoff":
         return "RMSD cutoff [Å]";
       default:
@@ -1753,13 +1753,14 @@ const SummaryPanel: React.FC = () => {
                         }))
                       : undefined}
                     selectedFragments={originalResults.metadata.resultsStatus?.[selectedModel?.toString() || ""]?.selectedFragments}
+                    selectedModel={selectedModel}
                   />
                 </div>
               )}
               {/* Residue results table */}
               <div className="mt-6">
                   <div className="border border-gray-100 shadow-md p-4">
-                    <div className="flex justify-between">
+                    <div className={`flex justify-between ${showResidueTable ? 'border-b border-gray-100 pb-4' : ''}`}>
                       <div>
                         <label className="font-medium">Local quality table (per residue)</label>
                         <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
@@ -2258,7 +2259,7 @@ const SummaryPanel: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <span>Color legend:</span>
+                  <span>Residue and sphere color legend:</span>
                   {getColorLegendEntries(selectedQualityScore, errorFocusedModeMolstar).map((entry) => (
                     <span
                       key={entry.label}

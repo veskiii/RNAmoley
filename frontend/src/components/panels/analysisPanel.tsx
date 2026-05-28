@@ -943,7 +943,7 @@ const Panel: React.FC = () => {
                 </div>
                 {/* 2D and 3D view */}
                 <div className={`mb-6 border border-gray-100 shadow-md p-4 rounded`}>
-                  <div className={`flex justify-between gap-4 items-center`}>
+                  <div className={`flex justify-between gap-4 items-center ${showVisualization ? "border-b border-gray-100 pb-4" : ""}`}>
                       <div>
                         <label className="font-medium">Model visualization</label>
                         <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
