@@ -190,7 +190,7 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "sim_running") {
-      return { label: "Refinement in progress...", className: "text-sm font-bold text-gray-800" };
+      return { label: `Refinement of model ${selectedModel} in progress...`, className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_finished") {
@@ -198,16 +198,16 @@ const SummaryPanel: React.FC = () => {
     }
 
     if (status === "sim_analyzing") {
-      return { label: "Analyzing results...", className: "text-sm font-bold text-gray-800" };
+      return { label: `Analyzing refinement results for model ${selectedModel}...`, className: "text-sm font-bold text-gray-800" };
     }
 
     if (status === "sim_completed") {
       const simParams = simulationResults?.metadata.simulations?.[selectedModel]?.parameters;
-      return { label: `Refinement completed`, className: "text-sm font-bold text-gray-800", parameters: simParams };
+      return { label: `Refinement of model ${selectedModel} completed`, className: "text-sm font-bold text-gray-800", parameters: simParams };
     }
 
     if (status === "sim_failed") {
-      return { label: "Refinement failed", className: "text-sm font-bold text-red-500" };
+      return { label: `Refinement of model ${selectedModel} failed`, className: "text-sm font-bold text-red-500" };
     }
 
     return { label: status, className: "text-sm font-bold text-gray-800" };
