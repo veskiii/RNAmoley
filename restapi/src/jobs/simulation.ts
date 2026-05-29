@@ -334,7 +334,8 @@ async function analyzeSimulationResults(
       metadata,
       analyzeSphereFilesEnabled,
       modelsDir,
-      false
+      false,
+      metadata.simulations?.[modelNumber]?.simJobId
     );
 
     // if (Boolean(metadata.analyzeNeighborhoods)) {
