@@ -28,10 +28,16 @@ services:
       - redis_data:/data
 
   molprobity:
-    image: ghcr.io/veskiii/molprobity:v1.0.0
+    image: ghcr.io/veskiii/molprobity:v2.0.0
+    # build:
+    #   context: ./molprobity
     restart: always
-    #ports:
-    #  - 3015:3001
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MOLPROBITY_WORKER_CONCURRENCY=1
+    # ports:
+    #   - 3015:3001
     volumes:
       - user_data:/user_data
     scale: 4

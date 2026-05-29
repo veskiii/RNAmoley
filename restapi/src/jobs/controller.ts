@@ -38,6 +38,7 @@ import type {
 } from "./types.js";
 import { TOOLS_URL } from "../server.js";
 import { addAnalysisTask, applyPreCalculatedDemoResult, getPreCalculatedDemoResult } from "./analysis.js";
+import { getSphereSession, getSphereSessionKey, getSphereSessionSnapshot } from "./molprobityProgress.js";
 import { addSimulationTask, fetchSimulationStatus } from "./simulation.js";
 import { existsSync } from "fs";
 import { join } from "path";
@@ -501,6 +502,80 @@ export async function analyzeStructure(req: Request, res: Response) {
       created_at: result.rows[0].created_at,
       updated_at: result.rows[0].updated_at,
       message: "Structure analysis is running. Please check back later.",});
+  });
+}
+
+export async function streamAnalysisProgress(req: Request, res: Response) {
+  const id = req.params.id as UUID;
+  const modelNumber = req.params.modelNumber as string;
+
+  if (!id || id.length !== 36) {
+    res.status(422).send({ error: "Invalid job ID." });
+    return;
+  }
+
+  if (!Number.isInteger(parseInt(modelNumber))) {
+    res.status(422).send({ error: "Invalid model number." });
+    return;
+  }
+
+  const key = getSphereSessionKey(id, modelNumber);
+  const session = getSphereSession(key);
+  const snapshot = getSphereSessionSnapshot(key);
+
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  const sendEvent = (eventName: string, payload: unknown) => {
+    res.write(`event: ${eventName}\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  if (snapshot) {
+    sendEvent("snapshot", snapshot);
+  }
+
+  if (!session) {
+    if (snapshot?.done) {
+      sendEvent("done", snapshot);
+      res.end();
+      return;
+    }
+
+    try {
+      const finalResults = await readResults(id, modelNumber);
+      sendEvent("done", finalResults);
+    } catch (error) {
+      sendEvent("error", { message: error instanceof Error ? error.message : String(error) });
+    }
+
+    res.end();
+    return;
+  }
+
+  const onBatch = (payload: unknown) => sendEvent("batch", payload);
+  const onDone = (payload: unknown) => {
+    sendEvent("done", payload);
+    cleanup();
+    res.end();
+  };
+  const onError = (error: unknown) => sendEvent("error", { message: error instanceof Error ? error.message : String(error) });
+
+  const cleanup = () => {
+    session.emitter.off("batch", onBatch);
+    session.emitter.off("done", onDone);
+    session.emitter.off("error", onError);
+  };
+
+  session.emitter.on("batch", onBatch);
+  session.emitter.on("done", onDone);
+  session.emitter.on("error", onError);
+
+  req.on("close", () => {
+    cleanup();
   });
 }
 

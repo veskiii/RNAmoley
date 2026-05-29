@@ -14,6 +14,8 @@ import type {
   NumerationItem,
 } from "./types.js";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
+import http from "http";
+import https from "https";
 import {
     JOBS_DIR,
     DEMO_FILES_DIR,
@@ -23,6 +25,7 @@ import {
     updateModelMetadata,
 } from "./utils.js";
 import { Queue, Worker } from "bullmq";
+import { startMolprobitySphereSession } from "./molprobityProgress.js";
 
 const PRE_CALCULATED_RESULTS: Record<string, { filename: string; radius: number; interval: number; selection: string }> = {
   "Example 1": {"filename" : "example_1.json", "radius": 5, "interval": 1, "selection": "(1:A:1-90)"},
@@ -35,6 +38,35 @@ const PRE_CALCULATED_RESULTS: Record<string, { filename: string; radius: number;
 
 function normalizeSelection(selection: string) {
   return selection.replace(/\s+/g, "");
+}
+
+function createAnalysisLogger(jobID: UUID, modelNumber: string) {
+  const logFilePath = `${JOBS_DIR}/${jobID}/${modelNumber}_analysis.log`;
+
+  function record(message: string) {
+    const line = `${new Date().toISOString()} [Job ${jobID}, Model ${modelNumber}] ${message}`;
+    // append immediately so background coordinators also persist logs
+    void fs.appendFile(logFilePath, `${line}\n`).catch((err) => {
+      console.error(`[AnalysisLogger] failed to append to ${logFilePath}:`, err);
+    });
+    console.info(line);
+  }
+
+  // flush is now a no-op because records are appended immediately
+  async function flush() {
+    return;
+  }
+
+  return { record, flush };
+}
+
+function logStepDuration(
+  record: (message: string) => void,
+  stepName: string,
+  startedAt: number
+) {
+  const durationMs = Date.now() - startedAt;
+  record(`${stepName} took ${durationMs}ms`);
 }
 
 async function hasPreCalculatedDemoFiles(
@@ -265,10 +297,22 @@ export async function applyPreCalculatedDemoResult(
 
 export const analysisQueue = new Queue("analysis", {
   connection: {
-    host: process.env.REDIS_HOST,
-    port: Number(process.env.REDIS_PORT),
+    host: process.env.REDIS_HOST ?? "redis",
+    port: Number(process.env.REDIS_PORT ?? 6379),
   },
 });
+
+// Use explicit per-request agents to avoid connection reuse causing sticky routing
+const defaultHttpAgent = new http.Agent({ keepAlive: false });
+const defaultHttpsAgent = new https.Agent({ keepAlive: false });
+function getAgentForUrl(url: string | URL) {
+  try {
+    const protocol = typeof url === "string" ? new URL(url).protocol : url.protocol;
+    return protocol === "https:" ? defaultHttpsAgent : defaultHttpAgent;
+  } catch {
+    return undefined;
+  }
+}
 
 export function createAnalysisWorker() {
   const worker = new Worker<{
@@ -287,6 +331,13 @@ export function createAnalysisWorker() {
       for (const [modelNumber, residues] of Object.entries(models)) {
         await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled, modelsDir);
       }
+
+      if (analyzeSphereFilesEnabled) {
+        metadata.status = "running";
+        await saveMetadata(jobID, metadata);
+        return;
+      }
+
       const allFailed = Object.values(metadata.resultsStatus || {}).every(
         (status) => status.status === "failed"
       );
@@ -299,8 +350,8 @@ export function createAnalysisWorker() {
     },
     {
       connection: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT),
+        host: process.env.REDIS_HOST ?? "redis",
+        port: Number(process.env.REDIS_PORT ?? 6379),
       },
       concurrency: 1,
     }
@@ -357,7 +408,7 @@ async function performAnalysis(
     }
 
     await saveResults(jobID, modelNumber, analysisOutput);
-    updateModelMetadata(metadata, modelNumber, "completed");
+    updateModelMetadata(metadata, modelNumber, analyzeSphereFilesEnabled ? "running" : "completed");
     await saveMetadata(jobID, metadata);
 
   } catch (error) {
@@ -378,118 +429,162 @@ export async function analyzeStructure(
   modelsDir = "models",
   updateMetadataStatus = true
 ): Promise<Analysis_results> {
+  const analysisStartedAt = Date.now();
+  const logger = createAnalysisLogger(jobID, modelNumber);
+
   if (updateMetadataStatus) {
     updateModelMetadata(metadata, modelNumber, "starting");
     metadata.status = "starting";
     await saveMetadata(jobID, metadata);
   }
 
+  logger.record(
+    `analyzeStructure started. radius=${radius} interval=${interval} analyzeSphereFilesEnabled=${analyzeSphereFilesEnabled} modelsDir=${modelsDir} residues=${residues.length}`
+  );
+
   const resultsSuffix = modelsDir === "models" ? "_results" : "_sim_results";
 
-  await writeSelectedResiduesToFile(jobID, modelNumber, residues, modelsDir);
-  await createFragmentPDB(jobID, modelNumber, modelsDir);
-  const fragmentMetrics = await fetchFragmentMetrics(jobID, modelNumber, modelsDir);
+  try {
+    let stepStartedAt = Date.now();
+    await writeSelectedResiduesToFile(jobID, modelNumber, residues, modelsDir);
+    logStepDuration(logger.record, "writeSelectedResiduesToFile", stepStartedAt);
 
-  const modelMetrics = await fetchModelMetrics(jobID, modelNumber, modelsDir);
-  const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber, modelsDir);
-  // TODO - calculate median suiteness for model and fragment
-  console.log(`[Job ${jobID}, Model ${modelNumber}] residueAnalysisArray length: ${residueAnalysisArray?.length || 0}. First few items:`, residueAnalysisArray?.slice(0, 3));
+    stepStartedAt = Date.now();
+    await createFragmentPDB(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "createFragmentPDB", stepStartedAt);
 
-  const numeration = await fetchNumeration(jobID, modelNumber, modelsDir);
-  const annotations = await fetchAnnotations(jobID, modelNumber, modelsDir);
-  const motifs = await fetchMotifs(jobID, modelNumber, modelsDir);
+    stepStartedAt = Date.now();
+    const fragmentMetrics = await fetchFragmentMetrics(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchFragmentMetrics", stepStartedAt);
 
-  // analysis of residues
-  const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
-    const original_index = extractResidueNumber(res.residue);
-    const chainID = extractChainID(res.residue);
+    stepStartedAt = Date.now();
+    const modelMetrics = await fetchModelMetrics(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchModelMetrics", stepStartedAt);
 
-    // Try to find in numeration with fallbacks: auth first, then label
-    let residueNumeration = Object.values(numeration).find(
-      (n: NumerationItem) => n.auth_residue_number === original_index && n.auth_chain_id === chainID);
-    
-    // Fallback: try label fields if auth didn't match
-    if (!residueNumeration) {
-      residueNumeration = Object.values(numeration).find(
-        (n: NumerationItem) => n.label_residue_number === original_index && n.label_chain_id === chainID);
+    stepStartedAt = Date.now();
+    const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchResidueAnalysis", stepStartedAt);
+    // TODO - calculate median suiteness for model and fragment
+    logger.record(`residueAnalysisArray length: ${residueAnalysisArray?.length || 0}. First few items: ${JSON.stringify(residueAnalysisArray?.slice(0, 3))}`);
+
+    stepStartedAt = Date.now();
+    const numeration = await fetchNumeration(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchNumeration", stepStartedAt);
+
+    stepStartedAt = Date.now();
+    const annotations = await fetchAnnotations(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchAnnotations", stepStartedAt);
+
+    stepStartedAt = Date.now();
+    const motifs = await fetchMotifs(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchMotifs", stepStartedAt);
+
+    // analysis of residues
+    stepStartedAt = Date.now();
+    const initialData: nucleotideResult[] = residueAnalysisArray.map((res) => {
+      const original_index = extractResidueNumber(res.residue);
+      const chainID = extractChainID(res.residue);
+
+      // Try to find in numeration with fallbacks: auth first, then label
+      let residueNumeration = Object.values(numeration).find(
+        (n: NumerationItem) => n.auth_residue_number === original_index && n.auth_chain_id === chainID);
+      
+      // Fallback: try label fields if auth didn't match
+      if (!residueNumeration) {
+        residueNumeration = Object.values(numeration).find(
+          (n: NumerationItem) => n.label_residue_number === original_index && n.label_chain_id === chainID);
+      }
+      
+      // Fallback: try by label_chain_id matching chainID (if label_residue_number is missing)
+      if (!residueNumeration) {
+        residueNumeration = Object.values(numeration).find(
+          (n: NumerationItem) => n.label_chain_id === chainID && n.label_residue_number === original_index);
+      }
+
+      if (!residueNumeration) {
+        return null;
+      }
+      const residueNumber = residueNumeration.annotator_residue_number;
+      const base = residueNumeration.annotator_nucleotide_name;
+      const secondaryStructure = residueNumeration.annotator_dotbracket;
+      const structuralElements = findStructuralElementsForNucleotide(
+        motifs,
+        residueNumber
+      );
+
+      return {
+        residue_number: residueNumber,
+        original_index: original_index,
+        base: base,
+        structure: secondaryStructure,
+        chainID:  chainID,
+        original_chain_id: residueNumeration.auth_chain_id,
+        selected: residues.some(
+          (r) => r.chainID === chainID && r.residueID === original_index
+        ),
+        structuralElements: structuralElements,
+        residueMetrics: res,
+      };
+    }).filter((item): item is nucleotideResult => item !== null);
+    logStepDuration(logger.record, "residue mapping", stepStartedAt);
+
+    logger.record(`Saving results for model ${modelNumber}. Number of residues: ${initialData.length}`);
+    stepStartedAt = Date.now();
+    await saveResults(jobID, modelNumber, {
+      data: initialData,
+      modelMetrics: modelMetrics,
+      fragmentMetrics: fragmentMetrics,
+    }, resultsSuffix);
+    logStepDuration(logger.record, "saveResults (initial)", stepStartedAt);
+
+    if (updateMetadataStatus) {
+      updateModelMetadata(metadata, modelNumber, "running");
+      metadata.status = "running";
+      await saveMetadata(jobID, metadata);
     }
-    
-    // Fallback: try by label_chain_id matching chainID (if label_residue_number is missing)
-    if (!residueNumeration) {
-      residueNumeration = Object.values(numeration).find(
-        (n: NumerationItem) => n.label_chain_id === chainID && n.label_residue_number === original_index);
+
+    if (!analyzeSphereFilesEnabled) {
+      logStepDuration(logger.record, "analyzeStructure total", analysisStartedAt);
+      return {
+        data: initialData,
+        modelMetrics: modelMetrics,
+        fragmentMetrics: fragmentMetrics,
+      };
     }
 
-    if (!residueNumeration) {
-      // const sampleEntries = Object.entries(numeration).slice(0, 3).map(([idx, item]) => 
-      //   `idx=${idx} auth=(chain=${item.auth_chain_id} res=${item.auth_residue_number}) label=(chain=${item.label_chain_id} res=${item.label_residue_number})`
-      // ).join(' | ');
-      // console.error(`Numeration not found for residue ${res.residue}. Looking for chainID='${chainID}' residueNum=${original_index}. Sample: ${sampleEntries}`);
-      return null;
-    }
-    const residueNumber = residueNumeration.annotator_residue_number;
-    // const chainID = residueNumeration.new_chain_id;
-    const base = residueNumeration.annotator_nucleotide_name;
-    const secondaryStructure = residueNumeration.annotator_dotbracket;
-    const structuralElements = findStructuralElementsForNucleotide(
-      motifs,
-      residueNumber
-    );
+    stepStartedAt = Date.now();
+    await createWalkingSphere(jobID, modelNumber, residues, radius, interval, modelsDir);
+    logStepDuration(logger.record, "createWalkingSphere", stepStartedAt);
 
-    return {
-      residue_number: residueNumber,
-      original_index: original_index,
-      base: base,
-      structure: secondaryStructure,
-      chainID:  chainID,
-      original_chain_id: residueNumeration.auth_chain_id,
-      selected: residues.some(
-        (r) => r.chainID === chainID && r.residueID === original_index
-      ),
-      structuralElements: structuralElements,
-      residueMetrics: res,
-    };
-  }).filter((item): item is nucleotideResult => item !== null);
+      stepStartedAt = Date.now();
+      const files = await fs.readdir(`${JOBS_DIR}/${jobID}/${modelNumber}_sphere`);
+      logStepDuration(logger.record, `read sphere directory (${files.length} files)`, stepStartedAt);
 
-  console.log(`Saving results for job ${jobID}, model ${modelNumber}. Number of residues: ${initialData.length}`);
-  await saveResults(jobID, modelNumber, {
-    data: initialData,
-    modelMetrics: modelMetrics,
-    fragmentMetrics: fragmentMetrics,
-  }, resultsSuffix);
+      stepStartedAt = Date.now();
+      await startMolprobitySphereSession({
+        jobID,
+        modelNumber,
+        files,
+        initialData,
+        modelMetrics,
+        fragmentMetrics,
+        resultsSuffix,
+        metadata,
+        analyzeStructureStartedAt: analysisStartedAt,
+        recordLog: logger.record,
+      });
+      logStepDuration(logger.record, "queueMolprobitySphereSession", stepStartedAt);
 
-  if (updateMetadataStatus) {
-    updateModelMetadata(metadata, modelNumber, "running");
-    metadata.status = "running";
-    await saveMetadata(jobID, metadata);
-  }
+    logStepDuration(logger.record, "analyzeStructure initial_phase_total", analysisStartedAt);
 
-  if (!analyzeSphereFilesEnabled) {
     return {
       data: initialData,
       modelMetrics: modelMetrics,
       fragmentMetrics: fragmentMetrics,
     };
+  } finally {
+    await logger.flush();
   }
-
-  await createWalkingSphere(jobID, modelNumber, residues, radius, interval, modelsDir);
-
-  const files = await fs.readdir(`${JOBS_DIR}/${jobID}/${modelNumber}_sphere`);
-  const results = await analyzeSphereFilesIncremental(
-    files,
-    jobID,
-    modelNumber,
-    initialData,
-    modelMetrics,
-    fragmentMetrics,
-    resultsSuffix
-  );
-
-  return {
-    data: results,
-    modelMetrics: modelMetrics,
-    fragmentMetrics: fragmentMetrics,
-  };
 }
 
 async function analyzeSphereFilesIncremental(
@@ -499,21 +594,21 @@ async function analyzeSphereFilesIncremental(
   initialData: nucleotideResult[],
   modelMetrics: metrics,
   fragmentMetrics: metrics,
-  resultsSuffix: string
+  resultsSuffix: string,
+  recordLog: (message: string) => void
 ): Promise<nucleotideResult[]> {
   const resultMap = new Map<number, nucleotideResult>();
   initialData.forEach((res) => resultMap.set(res.residue_number, { ...res }));
 
-  const batchSize = 5;
+  const batchSize = Number(process.env.SPHERE_BATCH_SIZE) || 5;
   const maxRetries = 3;
   const initialDelay = 1000; // 1 second
 
   async function fetchWithRetry(file: string, retryCount = 0): Promise<nucleotideResult | null> {
+    const fetchStartedAt = Date.now();
     try {
-      const res = await fetch(
-        `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelNumber}_sphere/${file}`,
-        { keepalive: true }
-      );
+      const url = `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelNumber}_sphere/${file}`;
+      const res = await fetch(url, { agent: getAgentForUrl(url) } as any);
 
       if (!res.ok) {
         throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
@@ -532,10 +627,12 @@ async function analyzeSphereFilesIncremental(
       }
       const initialNucleotideResults = resultMap.get(initialNucleotide.residue_number);
 
-      return {
+      const result = {
         ...initialNucleotideResults,
         metrics: tmpMetrics,
       } as nucleotideResult;
+      recordLog(`sphere file ${file} analyzed in ${Date.now() - fetchStartedAt}ms (retryCount=${retryCount})`);
+      return result;
     } catch (error) {
       const isTransientError = error instanceof Error && 
         (error.message.includes('ECONNRESET') || 
@@ -557,6 +654,8 @@ async function analyzeSphereFilesIncremental(
 
   for (let i = 0; i < files.length; i += batchSize) {
     const batchFiles = files.slice(i, i + batchSize);
+    const batchStartedAt = Date.now();
+    recordLog(`Starting sphere batch ${Math.floor(i / batchSize) + 1} with ${batchFiles.length} files`);
     const batchTasks = batchFiles.map((file) => fetchWithRetry(file));
 
     const batchResults = await Promise.allSettled(batchTasks);
@@ -584,6 +683,7 @@ async function analyzeSphereFilesIncremental(
       modelMetrics,
       fragmentMetrics,
     }, resultsSuffix);
+    recordLog(`Finished sphere batch ${Math.floor(i / batchSize) + 1} in ${Date.now() - batchStartedAt}ms`);
   }
 
   return Array.from(resultMap.values()).sort(
@@ -607,7 +707,6 @@ async function createWalkingSphere(
   interval: number,
   modelsDir = "models"
 ) {
-
   const residuesFilePath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_residues.json`;
   await fs.writeFile(residuesFilePath, JSON.stringify(residues, null, 2));
 
@@ -625,10 +724,8 @@ async function fetchResidueAnalysis(
   modelNumber: string,
   modelsDir = "models"
 ): Promise<residueMetrics[]> {
-  const residueAnalysis = await fetch(
-    `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`,
-    { keepalive: true }
-  );
+  const residueAnalysisUrl = `${MOLPROBITY_URL}/residue-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`;
+  const residueAnalysis = await fetch(residueAnalysisUrl, { agent: getAgentForUrl(residueAnalysisUrl) } as any);
   if (!residueAnalysis.ok) {
     throw new Error("Residue analysis error: " + residueAnalysis.statusText);
   }
@@ -643,10 +740,8 @@ async function fetchModelMetrics(
   modelNumber: string,
   modelsDir = "models"
 ): Promise<metrics> {
-  const response = await fetch(
-    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`,
-    { keepalive: true }
-  );
+  const modelMetricsUrl = `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`;
+  const response = await fetch(modelMetricsUrl, { agent: getAgentForUrl(modelMetricsUrl) } as any);
   if (!response.ok) {
     throw new Error("One-line analysis error: " + response.statusText);
   }
@@ -661,10 +756,8 @@ async function fetchFragmentMetrics(
   modelNumber: string,
   modelsDir = "models"
 ): Promise<metrics> {
-  const response = await fetch(
-    `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}_fragment.pdb`,
-    { keepalive: true }
-  );
+  const fragmentMetricsUrl = `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}_fragment.pdb`;
+  const response = await fetch(fragmentMetricsUrl, { agent: getAgentForUrl(fragmentMetricsUrl) } as any);
   if (!response.ok) {
     throw new Error("One-line analysis error: " + response.statusText);
   }
