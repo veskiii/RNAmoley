@@ -94,6 +94,8 @@ export type SphereSession = {
   modelNumber: string;
   analyzeStructureEnteredAt?: number;
   startedAt: number;
+  completedStatus: "completed" | "sim_completed";
+  failedStatus: "failed" | "sim_failed";
   resultsSuffix: string;
   metadata: Metadata;
   modelMetrics: metrics;
@@ -124,6 +126,8 @@ export type StartSphereSessionParams = {
   resultsSuffix: string;
   metadata: Metadata;
   analyzeStructureStartedAt?: number;
+  completedStatus?: "completed" | "sim_completed";
+  failedStatus?: "failed" | "sim_failed";
   recordLog?: (message: string) => void;
 };
 
@@ -167,19 +171,24 @@ function getOverallStatus(metadata: Metadata): Metadata["status"] {
     return metadata.status;
   }
 
-  if (statuses.some((status) => status.status === "starting" || status.status === "running")) {
-    return "running";
+  const hasSimulationStatuses = statuses.some((status) => status.status.startsWith("sim_"));
+  const runningStatuses = new Set(["starting", "running", "sim_starting", "sim_running", "sim_analyzing"]);
+  const completedStatuses = new Set(["completed", "sim_completed"]);
+  const failedStatuses = new Set(["failed", "sim_failed"]);
+
+  if (statuses.some((status) => runningStatuses.has(status.status))) {
+    return hasSimulationStatuses ? "simulation_running" : "running";
   }
 
-  if (statuses.every((status) => status.status === "failed")) {
-    return "failed";
+  if (statuses.every((status) => failedStatuses.has(status.status))) {
+    return hasSimulationStatuses ? "simulation_failed" : "failed";
   }
 
-  if (statuses.every((status) => status.status === "completed" || status.status === "failed")) {
-    return statuses.some((status) => status.status === "completed") ? "completed" : "failed";
+  if (statuses.every((status) => completedStatuses.has(status.status) || failedStatuses.has(status.status))) {
+    return hasSimulationStatuses ? "simulation_completed" : "completed";
   }
 
-  return "running";
+  return hasSimulationStatuses ? "simulation_running" : "running";
 }
 
 async function emitSnapshot(session: SphereSession) {
@@ -245,7 +254,6 @@ async function flushPendingUpdates(session: SphereSession, forceFinal = false) {
   if (forceFinal || session.completed >= session.total) {
     const finalSnapshot = getSphereSessionSnapshot(session.key);
     session.finished = true;
-    session.emitter.emit("done", finalSnapshot);
     activeSessions.delete(session.key);
 
     // Log total session duration (end-to-end) if we have a start time
@@ -265,11 +273,13 @@ async function flushPendingUpdates(session: SphereSession, forceFinal = false) {
     updateModelMetadata(
       session.metadata,
       session.modelNumber,
-      session.failedSession ? "failed" : "completed",
+      session.failedSession ? session.failedStatus : session.completedStatus,
       session.failedSession ? `${session.failed} sphere analyses failed` : undefined,
     );
     session.metadata.status = getOverallStatus(session.metadata);
     await saveMetadata(session.jobID, session.metadata);
+
+    session.emitter.emit("done", finalSnapshot);
   }
 }
 
@@ -342,6 +352,8 @@ export async function startMolprobitySphereSession(params: StartSphereSessionPar
     modelNumber: params.modelNumber,
     analyzeStructureEnteredAt: params.analyzeStructureStartedAt,
     startedAt: Date.now(),
+    completedStatus: params.completedStatus ?? "completed",
+    failedStatus: params.failedStatus ?? "failed",
     resultsSuffix: params.resultsSuffix,
     metadata: params.metadata,
     modelMetrics: params.modelMetrics,
@@ -402,4 +414,37 @@ export function getSphereSessionSnapshot(key: string): SphereSessionSnapshot | n
 
 export function getSphereSessionKey(jobID: UUID, modelNumber: string) {
   return getSessionKey(jobID, modelNumber);
+}
+
+export async function waitForSphereSessionCompletion(jobID: UUID, modelNumber: string) {
+  const key = getSessionKey(jobID, modelNumber);
+  const snapshot = getSphereSessionSnapshot(key);
+  if (snapshot?.done) {
+    return snapshot;
+  }
+
+  const session = activeSessions.get(key);
+  if (!session) {
+    return snapshot;
+  }
+
+  return await new Promise<SphereSessionSnapshot | null>((resolve, reject) => {
+    const cleanup = () => {
+      session.emitter.off("done", onDone);
+      session.emitter.off("error", onError);
+    };
+
+    const onDone = (finalSnapshot: SphereSessionSnapshot | null) => {
+      cleanup();
+      resolve(finalSnapshot);
+    };
+
+    const onError = (error: unknown) => {
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error)));
+    };
+
+    session.emitter.on("done", onDone);
+    session.emitter.on("error", onError);
+  });
 }

@@ -571,6 +571,8 @@ export async function analyzeStructure(
         resultsSuffix,
         metadata,
         analyzeStructureStartedAt: analysisStartedAt,
+        completedStatus: updateMetadataStatus ? "completed" : "sim_completed",
+        failedStatus: updateMetadataStatus ? "failed" : "sim_failed",
         recordLog: logger.record,
       });
       logStepDuration(logger.record, "queueMolprobitySphereSession", stepStartedAt);

@@ -9,6 +9,7 @@ import {
 } from "./utils.js";
 import { Queue, Worker } from "bullmq";
 import { analyzeStructure } from "./analysis.js";
+import { waitForSphereSessionCompletion } from "./molprobityProgress.js";
 
 export const simulationQueue = new Queue("simulation", {
   connection: {
@@ -335,6 +336,10 @@ async function analyzeSimulationResults(
       modelsDir,
       false
     );
+
+    if (Boolean(metadata.analyzeNeighborhoods)) {
+      await waitForSphereSessionCompletion(jobID, modelNumber);
+    }
 
     updateModelMetadata(metadata, modelNumber, "sim_completed");
     metadata.status = "simulation_completed";
