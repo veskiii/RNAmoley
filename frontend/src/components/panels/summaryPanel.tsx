@@ -477,7 +477,7 @@ const SummaryPanel: React.FC = () => {
         }
 
         // If simulation tab is enabled, fetch simulation results separately and store them in simulationResults
-        if (simulationTabEnabled) {
+        if (simulationTabEnabled && !isStartingSimulation) {
           try {
             console.log(`Fetching simulation results for job ${jobId}, model ${selectedModel}`);
             const simResponse = await fetchMyData(jobId, selectedModel, "simulation");

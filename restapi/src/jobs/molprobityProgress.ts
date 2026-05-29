@@ -126,6 +126,7 @@ export type StartSphereSessionParams = {
   resultsSuffix: string;
   metadata: Metadata;
   analyzeStructureStartedAt?: number;
+  simJobId?: string;
   completedStatus?: "completed" | "sim_completed";
   failedStatus?: "failed" | "sim_failed";
   recordLog?: (message: string) => void;
@@ -268,6 +269,7 @@ async function flushPendingUpdates(session: SphereSession, forceFinal = false) {
       }
     } catch (err) {
       // ignore logging errors
+      console.error(`[molprobity-progress] error logging session duration for session ${session.key}:`, err);
     }
 
     updateModelMetadata(
@@ -307,6 +309,7 @@ async function startBackgroundProcessing(session: SphereSession) {
         pendingJobResolvers.set(task.jobId, { resolve, reject });
       });
 
+      session.recordLog?.(`queuing molprobity task filename=${task.filename} jobId=${task.jobId}`);
       await molprobityQueue.add("oneline-analysis", { filename: task.filename }, { jobId: task.jobId });
       const parsedResult = await jobPromise;
 
@@ -318,6 +321,7 @@ async function startBackgroundProcessing(session: SphereSession) {
         await scheduleFlush(session);
       }
     } catch (error) {
+      console.error(`[molprobity-progress] error processing task ${task.jobId} for session ${session.key}:`, error);
       session.completed += 1;
       session.failed += 1;
       session.failedSession = true;
@@ -361,10 +365,26 @@ export async function startMolprobitySphereSession(params: StartSphereSessionPar
     initialByResidueNumber,
     sourceToResidueNumber,
     emitter: new EventEmitter(),
-    tasks: params.files.map((filename) => ({
-      filename: `/${params.jobID}/${params.modelNumber}_sphere/${filename}`,
-      jobId: `${params.jobID}:${params.modelNumber}:${filename}`,
-    })),
+    // Use a distinct jobId for simulation-derived tasks. Prefer explicit simJobId when provided,
+    // otherwise fall back to resultsSuffix heuristic (contains "_sim").
+    tasks: params.files.map((filename) => {
+      const hasExplicitSimId = Boolean(params.simJobId);
+      const isSimSuffix = Boolean(params.resultsSuffix && String(params.resultsSuffix).includes("_sim"));
+      let jobId: string;
+
+      if (hasExplicitSimId) {
+        jobId = `${params.jobID}:sim:${params.simJobId}:${params.modelNumber}:${filename}`;
+      } else if (isSimSuffix) {
+        jobId = `${params.jobID}:sim:${params.modelNumber}:${filename}`;
+      } else {
+        jobId = `${params.jobID}:${params.modelNumber}:${filename}`;
+      }
+
+      return {
+        filename: `/${params.jobID}/${params.modelNumber}_sphere/${filename}`,
+        jobId,
+      };
+    }),
     pendingUpdates: [],
     completed: 0,
     failed: 0,

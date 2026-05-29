@@ -427,7 +427,8 @@ export async function analyzeStructure(
   metadata: Metadata,
   analyzeSphereFilesEnabled: boolean,
   modelsDir = "models",
-  updateMetadataStatus = true
+  updateMetadataStatus = true,
+  simJobId?: string
 ): Promise<Analysis_results> {
   const analysisStartedAt = Date.now();
   const logger = createAnalysisLogger(jobID, modelNumber);
@@ -571,6 +572,7 @@ export async function analyzeStructure(
         resultsSuffix,
         metadata,
         analyzeStructureStartedAt: analysisStartedAt,
+        simJobId,
         completedStatus: updateMetadataStatus ? "completed" : "sim_completed",
         failedStatus: updateMetadataStatus ? "failed" : "sim_failed",
         recordLog: logger.record,
@@ -584,7 +586,11 @@ export async function analyzeStructure(
       modelMetrics: modelMetrics,
       fragmentMetrics: fragmentMetrics,
     };
-  } finally {
+  } catch (error) {
+    logger.record(`Error in analyzeStructure: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
+   finally {
     await logger.flush();
   }
 }
