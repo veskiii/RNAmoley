@@ -337,13 +337,13 @@ async function analyzeSimulationResults(
       false
     );
 
-    if (Boolean(metadata.analyzeNeighborhoods)) {
-      await waitForSphereSessionCompletion(jobID, modelNumber);
-    }
+    // if (Boolean(metadata.analyzeNeighborhoods)) {
+    //   await waitForSphereSessionCompletion(jobID, modelNumber);
+    // }
 
-    updateModelMetadata(metadata, modelNumber, "sim_completed");
-    metadata.status = "simulation_completed";
-    await saveMetadata(jobID, metadata);
+    // updateModelMetadata(metadata, modelNumber, "sim_completed");
+    // metadata.status = "simulation_completed";
+    // await saveMetadata(jobID, metadata);
   } catch (error) {
     updateModelMetadata(
       metadata,
