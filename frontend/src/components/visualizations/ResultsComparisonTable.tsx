@@ -493,42 +493,61 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   const [showComparison, setShowComparison] = React.useState(false);
 
   const summaries = useMemo(() => {
-    if (!referenceData || !comparisonData) {
+    if (
+      !referenceData ||
+      !comparisonData ||
+      !referenceData.results ||
+      !comparisonData.results ||
+      !referenceData.results.data ||
+      !comparisonData.results.data
+    ) {
       return [] as MetricSummary[];
     }
 
-    return metricDefinitions.map((metric) =>
-      summarizeMetric(metric, referenceData.results.data, comparisonData.results.data),
-    );
+    const referenceResidues = referenceData.results.data ?? [];
+    const comparisonResidues = comparisonData.results.data ?? [];
+
+    return metricDefinitions.map((metric) => summarizeMetric(metric, referenceResidues, comparisonResidues));
   }, [comparisonData, referenceData]);
 
   const modelMetricRows = useMemo(() => {
-    if (!referenceData || !comparisonData) {
+    if (
+      !referenceData ||
+      !comparisonData ||
+      !referenceData.results ||
+      !comparisonData.results
+    ) {
       return [] as AggregateMetricRow[];
     }
 
-    return buildAggregateMetricRows(
-      referenceData.results.modelMetrics, 
-      comparisonData.results.modelMetrics
-    );
+    return buildAggregateMetricRows(referenceData.results.modelMetrics, comparisonData.results.modelMetrics);
   }, [comparisonData, referenceData]);
 
   const regionMetricRows = useMemo(() => {
-    if (!referenceData || !comparisonData) {
+    if (
+      !referenceData ||
+      !comparisonData ||
+      !referenceData.results ||
+      !comparisonData.results
+    ) {
       return [] as AggregateMetricRow[];
     }
 
-    return buildAggregateMetricRows(
-      referenceData.results.fragmentMetrics,
-      comparisonData.results.fragmentMetrics,
-    );
+    return buildAggregateMetricRows(referenceData.results.fragmentMetrics, comparisonData.results.fragmentMetrics);
   }, [comparisonData, referenceData]);
 
   const impactRows = useMemo(() => buildImpactRows(summaries), [summaries]);
 
   const detailSections = useMemo(() => buildDetailedSections(summaries), [summaries]);
 
-  if (!referenceData || !comparisonData) {
+  if (
+    !referenceData ||
+    !comparisonData ||
+    !referenceData.results ||
+    !comparisonData.results ||
+    !referenceData.results.data ||
+    !comparisonData.results.data
+  ) {
     return null;
   }
 
