@@ -237,9 +237,10 @@ const SummaryPanel: React.FC = () => {
   const simulationStatusPresentation = getModelStatusPresentation(selectedModelStatus);
 
   const getClashesForForna = () => {
-    if (showClashes && displayedResults) {
+    const dataForClashes = displayedResults?.results?.data ?? [];
+    if (showClashes && dataForClashes.length > 0) {
       const clashes = new Set();
-      for (const item of displayedResults.results.data) {
+      for (const item of dataForClashes) {
         const sourceNum = item.residue_number;
 
         if (!item.residueMetrics) continue;
@@ -276,7 +277,8 @@ const SummaryPanel: React.FC = () => {
   }
 
   const colorGnodes = () => {
-    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+    const dataForNodes = displayedResults?.results?.data ?? [];
+    if (dataForNodes.length === 0) {
       console.warn("No data in displayedResults.results.data");
       return;
     }
@@ -294,7 +296,7 @@ const SummaryPanel: React.FC = () => {
       }
     });
 
-    displayedResults.results.data.forEach((residue) => {
+    dataForNodes.forEach((residue) => {
       try {
         const node = nodeByNumber.get(residue.residue_number);
         if (node) {
@@ -311,7 +313,8 @@ const SummaryPanel: React.FC = () => {
   };
 
   const recolorFornaForMetric = (metric: QualityScore) => {
-    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+    const dataForRecolor = displayedResults?.results?.data ?? [];
+    if (dataForRecolor.length === 0) {
       console.warn("No data in displayedResults.results.data for recolorFornaForMetric");
       return;
     }
@@ -334,7 +337,7 @@ const SummaryPanel: React.FC = () => {
       }
     });
 
-    displayedResults.results.data.forEach((residue) => {
+    dataForRecolor.forEach((residue) => {
       try {
         const node = nodeByNumber.get(residue.residue_number);
         if (node) {
@@ -367,12 +370,13 @@ const SummaryPanel: React.FC = () => {
   ]);
 
   const updateColorMaps = () => {
-    if (!displayedResults || !displayedResults.results || !displayedResults.results.data) {
+    const dataForUpdate = displayedResults?.results?.data ?? [];
+    if (dataForUpdate.length === 0) {
       console.error("No data in displayedResults.results.data");
       return;
     }
 
-    displayedResults.results.data.forEach((residue) => {
+    dataForUpdate.forEach((residue) => {
       var color = getColor(residue, QualityScore.CLASH_SCORE);
       clashScoreColorMap.set(residue.residue_number, color);
       color = getColor(residue, QualityScore.BAD_ANGLES);
@@ -477,9 +481,9 @@ const SummaryPanel: React.FC = () => {
         }
 
         // If simulation tab is enabled, fetch simulation results separately and store them in simulationResults
-        if (simulationTabEnabled && !isStartingSimulation) {
+        if (origData.metadata.resultsStatus?.[selectedModel.toString()]?.status === "sim_completed" && !isStartingSimulation) {
           try {
-            console.log(`Fetching simulation results for job ${jobId}, model ${selectedModel}`);
+            console.log(`Fetching simulation results for job ${jobId}, model ${selectedModel}, ${simulationTabEnabled}, ${selectedModelStatus}, ${origData.metadata.resultsStatus?.[selectedModel.toString()]?.status}`);
             const simResponse = await fetchMyData(jobId, selectedModel, "simulation");
             const simData = await simResponse.json();
             if (simResponse.ok) {
@@ -1525,16 +1529,14 @@ const SummaryPanel: React.FC = () => {
 
   // Available chains for the currently selected model (used in JSX below)
   const availableChains: string[] | undefined = originalResults?.metadata?.resultsStatus?.[selectedModel?.toString() || ""]?.chains;
-  const showClashChart =
-    !!originalResults?.metadata.analyzeNeighborhoods &&
-    hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.CLASH_SCORE);
-  const showBadBondsChart =
-    !!originalResults?.metadata.analyzeNeighborhoods &&
-    hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.BAD_BONDS);
-  const showBadAnglesChart =
-    !!originalResults?.metadata.analyzeNeighborhoods &&
-    hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.BAD_ANGLES);
-  const showSuitenessChart = hasChainMetricLineChartValues(originalResults.results.data, simulationResults?.results.data, selectedChain, QualityScore.SUITENESS);
+  const origDataForCharts = originalResults?.results?.data ?? [];
+  const simDataForCharts = simulationResults?.results?.data;
+  const analyzeNeighborhoodsEnabled = Boolean(originalResults?.metadata?.analyzeNeighborhoods);
+
+  const showClashChart = analyzeNeighborhoodsEnabled && hasChainMetricLineChartValues(origDataForCharts, simDataForCharts, selectedChain, QualityScore.CLASH_SCORE);
+  const showBadBondsChart = analyzeNeighborhoodsEnabled && hasChainMetricLineChartValues(origDataForCharts, simDataForCharts, selectedChain, QualityScore.BAD_BONDS);
+  const showBadAnglesChart = analyzeNeighborhoodsEnabled && hasChainMetricLineChartValues(origDataForCharts, simDataForCharts, selectedChain, QualityScore.BAD_ANGLES);
+  const showSuitenessChart = hasChainMetricLineChartValues(origDataForCharts, simDataForCharts, selectedChain, QualityScore.SUITENESS);
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
@@ -1792,8 +1794,8 @@ const SummaryPanel: React.FC = () => {
                     <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                       <ResultsResidueTable
                       key={`residue-table-${selectedModel}`}
-                      data={originalResults.results.data}
-                      simData={simulationResults?.results.data}
+                      data={origDataForCharts}
+                      simData={simDataForCharts}
                       analyzeNeighborhood={originalResults.metadata.analyzeNeighborhoods}
                       selectedScore={selectedQualityScoreInResidueTable}
                       setSelectedScore={setQualityScoreInResidueTable}
@@ -1836,8 +1838,8 @@ const SummaryPanel: React.FC = () => {
                       ⬇️
                     </button>
                     <ChainMetricLineChart
-                      data={originalResults.results.data}
-                      data2={simulationResults?.results.data}
+                      data={origDataForCharts}
+                      data2={simDataForCharts}
                       selectedChain={selectedChain}
                       selectedScore={QualityScore.CLASH_SCORE}
                     />
@@ -1857,8 +1859,8 @@ const SummaryPanel: React.FC = () => {
                       ⬇️
                     </button>
                     <ChainMetricLineChart
-                      data={originalResults.results.data}
-                      data2={simulationResults?.results.data}
+                      data={origDataForCharts}
+                      data2={simDataForCharts}
                       selectedChain={selectedChain}
                       selectedScore={QualityScore.BAD_BONDS}
                     />
@@ -1878,8 +1880,8 @@ const SummaryPanel: React.FC = () => {
                       ⬇️
                     </button>
                     <ChainMetricLineChart
-                      data={originalResults.results.data}
-                      data2={simulationResults?.results.data}
+                      data={origDataForCharts}
+                      data2={simDataForCharts}
                       selectedChain={selectedChain}
                       selectedScore={QualityScore.BAD_ANGLES}
                     />
@@ -1900,8 +1902,8 @@ const SummaryPanel: React.FC = () => {
                       ⬇️
                     </button>
                     <ChainMetricLineChart
-                      data={originalResults.results.data}
-                      data2={simulationResults?.results.data}
+                      data={origDataForCharts}
+                      data2={simDataForCharts}
                       selectedChain={selectedChain}
                       selectedScore={QualityScore.SUITENESS}
                     />
@@ -2254,7 +2256,7 @@ const SummaryPanel: React.FC = () => {
                       setChains={setChainsState}
                       initialized={initialized}
                       setInitialized={setInitialized}
-                      resultResidues={comparisonModeMolstar ? originalResults.results.data : displayedResults?.results.data || originalResults.results.data}
+                      resultResidues={comparisonModeMolstar ? origDataForCharts : (displayedResults?.results?.data ?? origDataForCharts)}
                       selectedQualityScore={selectedQualityScore}
                       radius={originalResults.metadata.radius}
                       errorFocusedMode={!comparisonModeMolstar && errorFocusedModeMolstar}
@@ -2281,6 +2283,11 @@ const SummaryPanel: React.FC = () => {
                 </div>
               </div>
             </div>
+            <button
+              onClick={() => console.log(`Test button clicked - ${simulationTabEnabled}`)}
+            >
+              Test
+            </button>
           </div>
           <Footer />
         </div>

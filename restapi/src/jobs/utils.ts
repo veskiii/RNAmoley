@@ -391,11 +391,21 @@ export async function fetchJSONFile(
   modelsDir = "models"
 ) {
   if (modelNumber) {
+    try {
     const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${modelsDir}/${filename}`);
     return JSON.parse(data.toString());
+    } catch (error: any) {
+      console.error(`Error fetching JSON file ${filename} for model ${modelNumber} of job ${jobID}:`, error);
+      return null;
+    }
   } else {
+    try {
     const data = await fs.readFile(`${JOBS_DIR}/${jobID}/${filename}`);
     return JSON.parse(data.toString());
+    } catch (error: any) {
+      console.error(`Error fetching JSON file ${filename} for job ${jobID}:`, error);
+      return null;
+    }
   }
 }
 
