@@ -483,6 +483,9 @@ const SummaryPanel: React.FC = () => {
             const simResponse = await fetchMyData(jobId, selectedModel, "simulation");
             const simData = await simResponse.json();
             if (simResponse.ok) {
+              if (simulationResults === undefined ) {
+                setSelectedResultsSource("simulation");
+              }
               setSimulationResults((prev) => {
                 return JSON.stringify(prev) !== JSON.stringify(simData) ? simData : prev;
               });
