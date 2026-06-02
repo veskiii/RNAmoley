@@ -483,6 +483,9 @@ const SummaryPanel: React.FC = () => {
             const simResponse = await fetchMyData(jobId, selectedModel, "simulation");
             const simData = await simResponse.json();
             if (simResponse.ok) {
+              if (simulationResults === undefined ) {
+                setSelectedResultsSource("simulation");
+              }
               setSimulationResults((prev) => {
                 return JSON.stringify(prev) !== JSON.stringify(simData) ? simData : prev;
               });
@@ -1697,7 +1700,9 @@ const SummaryPanel: React.FC = () => {
                 </div>
                 {/* Global and fragment results */}
                 <div className="border border-gray-100 shadow-md rounded p-4">
-                  <label className="font-medium">Global quality summary (input structure)</label>
+                  <div className="border-b border-gray-100 pb-2 mb-2">
+                    <label className="font-medium">Global quality summary (input structure)</label>
+                  </div>
                   <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                     <GlobalResultsTable
                       selectedModel={selectedModel}
@@ -1802,7 +1807,7 @@ const SummaryPanel: React.FC = () => {
               </div>
               {/* Line plots of chain quality */}
               <div className="mt-6 border border-gray-100 shadow-md rounded p-4">
-                <div>
+                <div className="border-b border-gray-100 pb-2 mb-2">
                   <label className="font-medium">Local quality line charts (per residue)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                     <span
@@ -1914,7 +1919,7 @@ const SummaryPanel: React.FC = () => {
               
               {/* Visualizations */}
               <div className="my-6 border border-gray-100 shadow-md rounded p-4">
-                <div>
+                <div className="border-b border-gray-100 pb-2 mb-2">
                   <label className="font-medium">Structure visualization (colored by local quality)</label>
                   <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
                       <span
