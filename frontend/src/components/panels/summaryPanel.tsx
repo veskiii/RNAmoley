@@ -2283,11 +2283,6 @@ const SummaryPanel: React.FC = () => {
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => console.log(`Test button clicked - ${simulationTabEnabled}`)}
-            >
-              Test
-            </button>
           </div>
           <Footer />
         </div>
