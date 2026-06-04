@@ -77,7 +77,7 @@ const GlobalResultsTable = ({ selectedModel, modelMetrics, modelScore, fragmentM
                             {field.label}
                         </th>
                     ))}
-                    <th className="px-4 py-2 border-b border-gray-300 text-left font-semibold">Quality score</th>
+                    <th className="px-4 py-2 border-b border-gray-300 text-left font-semibold">RNAmoley Quality Score (RQS)</th>
                 </tr>
             </thead>
             <tbody>

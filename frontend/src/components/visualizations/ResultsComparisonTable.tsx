@@ -643,7 +643,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Quality score</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">RNAmoley Quality Score (RQS)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -688,7 +688,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Quality score</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">RNAmoley Quality Score (RQS)</th>
                   </tr>
                 </thead>
                 <tbody>

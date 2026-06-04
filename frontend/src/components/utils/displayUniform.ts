@@ -10,7 +10,10 @@ export const formatNumberForDisplay = (value: string) => {
     return value;
   }
 
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 2,
-  }).format(parsedValue);
+  const hasDecimal = normalizedValue.indexOf('.') !== -1;
+  const options: Intl.NumberFormatOptions = hasDecimal
+    ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+    : { maximumFractionDigits: 2 };
+
+  return new Intl.NumberFormat("en-US", options).format(parsedValue);
 };
