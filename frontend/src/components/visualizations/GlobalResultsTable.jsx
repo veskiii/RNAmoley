@@ -56,12 +56,12 @@ const renderCombinedMetricValue = (metrics, keys) => {
     return values.map((value) => formatNumberForDisplay(value.toString())).join(" / ");
 };
 
-const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simModelMetrics = null, simFragmentMetrics = null }) => {
+const GlobalResultsTable = ({ selectedModel, modelMetrics, modelScore, fragmentMetrics, fragmentScore, simModelMetrics = null, simModelScore = null, simFragmentMetrics = null, simFragmentScore = null }) => {
     const rows = [
-        { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics },
-        simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (after refinement)`, metrics: simModelMetrics },
-        { label: "Analysed region", metrics: fragmentMetrics },
-        simFragmentMetrics && { label: "Analysed region (after refinement)", metrics: simFragmentMetrics },
+        { label: `Entire model ${selectedModel || "<X>}"}`, metrics: modelMetrics, score: modelScore },
+        simModelMetrics && { label: `Entire model ${selectedModel || "<X>"} (after refinement)`, metrics: simModelMetrics, score: simModelScore },
+        { label: "Analysed region", metrics: fragmentMetrics, score: fragmentScore },
+        simFragmentMetrics && { label: "Analysed region (after refinement)", metrics: simFragmentMetrics, score: simFragmentScore },
     ];
 
     return (
@@ -77,6 +77,7 @@ const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simM
                             {field.label}
                         </th>
                     ))}
+                    <th className="px-4 py-2 border-b border-gray-300 text-left font-semibold">Quality score</th>
                 </tr>
             </thead>
             <tbody>
@@ -90,6 +91,11 @@ const GlobalResultsTable = ({ selectedModel, modelMetrics, fragmentMetrics, simM
                                     : renderMetricValue(row.metrics, field.key)}
                             </td>
                         ))}
+                        <td className="px-4 py-2 border-b border-gray-200">
+                            {row.score !== undefined && row.score !== null && row.score !== ""
+                                ? formatNumberForDisplay(row.score.toString())
+                                : <span className="text-gray-400">—</span>}
+                        </td>
                     </tr>
                 ))}
             </tbody>

@@ -10,6 +10,7 @@ import {
   Chain,
   clashScoreColorMap,
   QualityScore,
+  Residue,
   SummaryJob,
 } from "../utils/types";
 import DownloadLink from "../common/downloadLink";
@@ -85,6 +86,43 @@ const getColorLegendEntries = (qualityScore: QualityScore, errorFocusedMode: boo
   }
 
   return [];
+};
+
+const calculateRNAmoleyScore = (residues: Residue[], fragmentOnly: boolean): number => {
+  // Placeholder implementation - replace with actual scoring logic
+  const notClashedResiduesPct: number = residues.filter(residue => 
+      (fragmentOnly ? residue.selected : true) 
+      && residue.residueMetrics?.worst_clash !== undefined && (residue.residueMetrics.worst_clash === "" || parseFloat(residue.residueMetrics.worst_clash) < 0.4))
+      .length / residues.filter(residue => (fragmentOnly ? residue.selected : true)).length;
+  const notBadBondsResiduesPct: number = residues.filter(residue => 
+      (fragmentOnly ? residue.selected : true) 
+      && residue.residueMetrics?.worst_length_sigma !== undefined && parseFloat(residue.residueMetrics.worst_length_sigma) < 4)
+      .length / residues.filter(residue => (fragmentOnly ? residue.selected : true)).length;
+  const notBadAnglesResiduesPct: number = residues.filter(residue => 
+      (fragmentOnly ? residue.selected : true) 
+      && residue.residueMetrics?.worst_angle_sigma !== undefined && parseFloat(residue.residueMetrics.worst_angle_sigma) < 4)
+      .length / residues.filter(residue => (fragmentOnly ? residue.selected : true)).length;
+  const suiteNotOutliersResiduesPct: number = residues.filter(residue => 
+      (fragmentOnly ? residue.selected : true) 
+      && residue.residueMetrics?.suiteness !== undefined && residue.residueMetrics.suiteness !== "0.00")
+      .length / residues.filter(residue => (fragmentOnly ? residue.selected : true)).length;
+  const sugarPuckerNotOutliersResiduesPct: number = residues.filter(residue => 
+      (fragmentOnly ? residue.selected : true) 
+      && residue.residueMetrics?.pucker_outlier_type !== undefined && residue.residueMetrics.pucker_outlier_type === "")
+      .length / residues.filter(residue => (fragmentOnly ? residue.selected : true)).length;
+
+  const cleanResiduesPct: number = residues.filter(residue => 
+      (fragmentOnly ? residue.selected : true) 
+      && residue.residueMetrics && parseFloat(residue.residueMetrics.worst_clash || "0") < 0.4 
+      && parseFloat(residue.residueMetrics.worst_length_sigma || "0") < 4 
+      && parseFloat(residue.residueMetrics.worst_angle_sigma || "0") < 4 
+      && residue.residueMetrics.suiteness !== "0.00" 
+      && residue.residueMetrics.pucker_outlier_type === "")
+      .length / residues.filter(residue => (fragmentOnly ? residue.selected : true)).length;
+
+  console.log(`RNAmoley score calculation: notClashedResiduesPct=${notClashedResiduesPct}, notBadBondsResiduesPct=${notBadBondsResiduesPct}, notBadAnglesResiduesPct=${notBadAnglesResiduesPct}, suiteNotOutliersResiduesPct=${suiteNotOutliersResiduesPct}, sugarPuckerNotOutliersResiduesPct=${sugarPuckerNotOutliersResiduesPct}, cleanResiduesPct=${cleanResiduesPct}`);
+
+  return (notClashedResiduesPct + notBadBondsResiduesPct + notBadAnglesResiduesPct + suiteNotOutliersResiduesPct + sugarPuckerNotOutliersResiduesPct + cleanResiduesPct) / 6;
 };
 
 const SummaryPanel: React.FC = () => {
@@ -1532,6 +1570,11 @@ const SummaryPanel: React.FC = () => {
   const origDataForCharts = originalResults?.results?.data ?? [];
   const simDataForCharts = simulationResults?.results?.data;
   const analyzeNeighborhoodsEnabled = Boolean(originalResults?.metadata?.analyzeNeighborhoods);
+  
+  const rnaMoleyScoreModel = calculateRNAmoleyScore(origDataForCharts, false);
+  const rnaMoleyScoreFragment = calculateRNAmoleyScore(origDataForCharts, true);
+  const rnaMoleyScoreModelSim = simDataForCharts ? calculateRNAmoleyScore(simDataForCharts || [], false) : null;
+  const rnaMoleyScoreFragmentSim = simDataForCharts && simDataForCharts ? calculateRNAmoleyScore(simDataForCharts || [], true) : null;
 
   const showClashChart = analyzeNeighborhoodsEnabled && hasChainMetricLineChartValues(origDataForCharts, simDataForCharts, selectedChain, QualityScore.CLASH_SCORE);
   const showBadBondsChart = analyzeNeighborhoodsEnabled && hasChainMetricLineChartValues(origDataForCharts, simDataForCharts, selectedChain, QualityScore.BAD_BONDS);
@@ -1708,8 +1751,10 @@ const SummaryPanel: React.FC = () => {
                   <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
                     <GlobalResultsTable
                       selectedModel={selectedModel}
-                      modelMetrics={originalResults.results.modelMetrics} 
+                      modelMetrics={originalResults.results.modelMetrics}
+                      modelScore={rnaMoleyScoreModel}
                       fragmentMetrics={originalResults.results.fragmentMetrics}
+                      fragmentScore={rnaMoleyScoreFragment}
                     />
                   </div>
                 </div>
@@ -1761,6 +1806,10 @@ const SummaryPanel: React.FC = () => {
                       : undefined}
                     selectedFragments={originalResults.metadata.resultsStatus?.[selectedModel?.toString() || ""]?.selectedFragments}
                     selectedModel={selectedModel}
+                    modelScore={rnaMoleyScoreModel}
+                    simModelScore={rnaMoleyScoreModelSim}
+                    fragmentScore={rnaMoleyScoreFragment}
+                    simFragmentScore={rnaMoleyScoreFragmentSim}
                   />
                 </div>
               )}

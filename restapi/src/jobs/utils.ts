@@ -266,6 +266,8 @@ function sanitizeResidueMetrics(value: residueMetrics): residueMetrics {
     implied_pucker: value.implied_pucker,
     suitename: value.suitename,
     suiteness: value.suiteness,
+    worst_length_sigma: value.worst_length_sigma,
+    worst_angle_sigma: value.worst_angle_sigma,
   };
 }
 

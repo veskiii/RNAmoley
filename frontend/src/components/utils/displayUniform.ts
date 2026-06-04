@@ -11,6 +11,6 @@ export const formatNumberForDisplay = (value: string) => {
   }
 
   return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 20,
+    maximumFractionDigits: 2,
   }).format(parsedValue);
 };
