@@ -14,6 +14,10 @@ type ResultsComparisonTableProps = {
   className?: string;
   selectedFragments?: Record<string, string>;
   selectedModel: number;
+  modelScore: number | null;
+  simModelScore: number | null;
+  fragmentScore: number | null;
+  simFragmentScore: number | null;
 };
 
 type MetricDefinition = {
@@ -489,6 +493,10 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   className = "",
   selectedFragments,
   selectedModel,
+  modelScore,
+  simModelScore,
+  fragmentScore,
+  simFragmentScore,
 }) => {
   const [showComparison, setShowComparison] = React.useState(false);
 
@@ -624,7 +632,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
 
           <div className="mb-10">
             <h3 className="text-sm font-medium text-gray-700">Entire model metrics</h3>
-            <div className="mt-2 max-w-6xl overflow-x-auto">
+            <div className="mt-2 max-w-7xl overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
                <thead>
                   <tr className="bg-gray-100">
@@ -635,6 +643,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Quality score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -650,6 +659,15 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                           </td>
                         );
                       })}
+                      <td className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
+                        {rowIndex === 0
+                          ? formatValue(modelScore)
+                          : rowIndex === 1
+                            ? formatValue(simModelScore)
+                            : formatDelta(
+                                modelScore !== null && simModelScore !== null ? simModelScore - modelScore : null,
+                              )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -659,7 +677,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
 
           <div className="mb-10">
             <h3 className="text-sm font-medium text-gray-700">Analysed region metrics</h3>
-            <div className="mt-2 max-w-6xl overflow-x-auto">
+            <div className="mt-2 max-w-7xl overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr className="bg-gray-100">
@@ -670,6 +688,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Quality score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -685,6 +704,15 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                           </td>
                         );
                       })}
+                      <td className="w-36 min-w-36 border-b border-gray-100 px-3 py-2 text-gray-700">
+                        {rowIndex === 0
+                          ? formatValue(fragmentScore)
+                          : rowIndex === 1
+                            ? formatValue(simFragmentScore)
+                            : formatDelta(
+                                fragmentScore !== null && simFragmentScore !== null ? simFragmentScore - fragmentScore : null,
+                              )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

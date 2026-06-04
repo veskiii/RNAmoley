@@ -122,6 +122,8 @@ export interface ResidueMetrics {
   implied_pucker: string;
   suitename: string;
   suiteness: string;
+  worst_length_sigma: string;
+  worst_angle_sigma: string;
 }
 
 export type Residue = {

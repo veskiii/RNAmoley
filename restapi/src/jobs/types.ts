@@ -226,11 +226,11 @@ export interface residueMetrics {
   // num_length_out: string;
   // worst_length: string;
   // worst_length_value: string;
-  // worst_length_sigma: string;
+  worst_length_sigma: string;
   // num_angle_out: string;
   // worst_angle: string;
   // worst_angle_value: string;
-  // worst_angle_sigma: string;
+  worst_angle_sigma: string;
   // outlier_count: string;
   // outlier_count_sep_geom: string;
 }
