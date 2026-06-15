@@ -6,7 +6,7 @@ import Footer from "../common/footerComponent";
 const AboutPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="sticky top-0 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
+      <div className="sticky top-0 z-10 bg-white flex flex-row gap-2 pt-2 justify-between pr-10 pb-2 shadow-bottom">
         <Logo />
         <HomeIcon />
       </div>
