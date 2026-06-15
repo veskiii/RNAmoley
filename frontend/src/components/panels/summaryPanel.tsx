@@ -1623,7 +1623,7 @@ const SummaryPanel: React.FC = () => {
               </div>
             </div>
             {/* Copy link and download buttons */}
-            <div className={"flex flex-row gap-2 mt-6 items-center"}>
+            <div className={"flex flex-col md:flex-row gap-2 mt-6 items-center"}>
               <DownloadLink />
               <DownloadFile
                 id={jobId}
@@ -1631,7 +1631,7 @@ const SummaryPanel: React.FC = () => {
                 disabled={!canStartSimulation}
                 getAdditionalFiles={getAdditionalZipFiles}
               />
-              <div className="flex flex-row items-center gap-x-4">
+              <div className="flex flex-col md:flex-row items-center gap-x-4">
                 <button
                   role="button"
                   tabIndex={canStartSimulation ? 0 : -1}
@@ -1684,7 +1684,7 @@ const SummaryPanel: React.FC = () => {
                   >
                     ?
                   </span>
-                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                  <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                     By default, results for the first chain of the first model are displayed.
                   </span>
                 </span>
@@ -1702,7 +1702,7 @@ const SummaryPanel: React.FC = () => {
                       >
                         ?
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                         Select a model to view its processed chains and analysis results. The first model is selected by default and analyzed automatically. Other models become available as previous analyses are completed.
                       </span>
                     </span>
@@ -1770,7 +1770,7 @@ const SummaryPanel: React.FC = () => {
                     >
                       ?
                     </span>
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                       Select a chain to view analysis results for the selected regions.
                     </span>
                   </span>
@@ -1826,7 +1826,7 @@ const SummaryPanel: React.FC = () => {
                           >
                             ?
                           </span>
-                          <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                          <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                             Displays local quality score for each residue's neighborhood.
                           </span>
                         </span>
@@ -1867,7 +1867,7 @@ const SummaryPanel: React.FC = () => {
                     >
                       ?
                     </span>
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                       Display line charts of Clash score, bad bonds, bad angles and suiteness for each residue's neighborhood. Hover a mouse on a point to see the exact value for selected residue.
                     </span>
                   </span>
@@ -1979,14 +1979,14 @@ const SummaryPanel: React.FC = () => {
                       >
                         ?
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-36 md:-translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                         Displays the 2D and 3D structure colored according to the selected quality score.
                       </span>
                     </span>
                 </div>
                 {hasSimulationStarted && selectedModelStatus !== "sim_failed" && (
                   <div className="my-3">
-                    <div className="flex flex-row gap-4 items-center" role="radiogroup" aria-label="Results source">
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center" role="radiogroup" aria-label="Results source">
                       <p>Display structure:</p>
                       <label
                         className={`flex cursor-pointer items-center justify-center gap-2 rounded-md py-2 text-sm transition`}
@@ -2047,7 +2047,7 @@ const SummaryPanel: React.FC = () => {
                             >
                               ?
                             </span>
-                            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                               Display the aligned original (orange) and post-refinement (blue) structures in the 3D view.
                             </span>
                           </span>
@@ -2076,7 +2076,7 @@ const SummaryPanel: React.FC = () => {
                         >
                           ?
                         </span>
-                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                           Colors analyzed residues using a continuous green-to-red scale based on the selected metric values. Non-analyzed residues are shown in dark gray.
                         </span>
                       </span>
@@ -2100,14 +2100,14 @@ const SummaryPanel: React.FC = () => {
                         >
                           ?
                         </span>
-                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-36 md:-translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
                           Highlights analyzed residues with serious structural issues in orange for the selected metric. Non-analyzed residues are dark gray; residues without serious issues are white.
                         </span>
                       </span>
                     </span>
                   </label>
                 </div>
-                <div className="flex flex-row gap-4 my-3 items-center">
+                <div className="flex flex-col md:flex-row gap-4 my-3 items-start md:items-center">
                   <p>Color structure by:</p>
                   {originalResults.metadata.analyzeNeighborhoods && (
                   <label className="flex items-center gap-2 cursor-pointer">
