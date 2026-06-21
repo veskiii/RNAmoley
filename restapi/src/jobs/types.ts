@@ -144,6 +144,52 @@ export interface metrics {
   medianSuiteness?: string;
 }
 
+export interface ClashAtomRef {
+  chain: string;
+  residueNumber: string;
+  residueName: string;
+  atomName: string;
+};
+
+export interface ClashEntry {
+  source: ClashAtomRef;
+  target: ClashAtomRef;
+  overlapAngstrom: number;
+};
+
+export interface ClashscoreParsedResult {
+  messages: string[];
+  thresholdAngstrom: number | null;
+  clashes: ClashEntry[];
+  clashscore: number | null;
+  clashscoreB40: number | null;
+  unparsed: string[];
+};
+
+export interface BadBondEntry {
+  atoms: [string, string];
+  value: number;
+  sigma: number;
+};
+
+export interface BadAngleEntry {
+  atoms: [string, string, string];
+  value: number;
+  sigma: number;
+};
+
+export interface GeoResidueSummary {
+  resId: string;
+  chainId: string;
+  base: string;
+  badBondCount: number;
+  bondCount: number;
+  badAngleCount: number;
+  angleCount: number;
+  badBonds: BadBondEntry[];
+  badAngles: BadAngleEntry[];
+};
+
 export interface nucleotideResult {
   residue_number: number;
   original_index: number;

@@ -28,7 +28,7 @@ services:
       - redis_data:/data
 
   molprobity:
-    image: ghcr.io/veskiii/molprobity:v2.0.0
+    image: ghcr.io/veskiii/molprobity:v3.0.0
     # build:
     #   context: ./molprobity
     restart: always
