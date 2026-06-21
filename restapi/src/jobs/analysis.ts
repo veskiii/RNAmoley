@@ -12,6 +12,8 @@ import type {
   StructuralElement,
   Numeration,
   NumerationItem,
+  ClashscoreParsedResult,
+  GeoResidueSummary,
 } from "./types.js";
 import { MOLPROBITY_URL, TOOLS_URL } from "../server.js";
 import http from "http";
@@ -25,7 +27,6 @@ import {
     updateModelMetadata,
 } from "./utils.js";
 import { Queue, Worker } from "bullmq";
-import { startMolprobitySphereSession } from "./molprobityProgress.js";
 
 const PRE_CALCULATED_RESULTS: Record<string, { filename: string; radius: number; interval: number; selection: string }> = {
   "Example 1": {"filename" : "example_1.json", "radius": 5, "interval": 1, "selection": "(1:A:1-90)"},
@@ -332,12 +333,6 @@ export function createAnalysisWorker() {
         await performAnalysis(jobID, modelNumber, residues, radius, interval, metadata, analyzeSphereFilesEnabled, modelsDir);
       }
 
-      if (analyzeSphereFilesEnabled) {
-        metadata.status = "running";
-        await saveMetadata(jobID, metadata);
-        return;
-      }
-
       const allFailed = Object.values(metadata.resultsStatus || {}).every(
         (status) => status.status === "failed"
       );
@@ -408,7 +403,7 @@ async function performAnalysis(
     }
 
     await saveResults(jobID, modelNumber, analysisOutput);
-    updateModelMetadata(metadata, modelNumber, analyzeSphereFilesEnabled ? "running" : "completed");
+    updateModelMetadata(metadata, modelNumber, "completed");
     await saveMetadata(jobID, metadata);
 
   } catch (error) {
@@ -465,6 +460,14 @@ export async function analyzeStructure(
     stepStartedAt = Date.now();
     const residueAnalysisArray = await fetchResidueAnalysis(jobID, modelNumber, modelsDir);
     logStepDuration(logger.record, "fetchResidueAnalysis", stepStartedAt);
+
+    stepStartedAt = Date.now();
+    const clashscoreAnalysis = await fetchClashscoreAnalysis(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchClashscoreAnalysis", stepStartedAt);
+
+    stepStartedAt = Date.now();
+    const geometryAnalysis = await fetchGeometryAnalysis(jobID, modelNumber, modelsDir);
+    logStepDuration(logger.record, "fetchGeometryAnalysis", stepStartedAt);
     // TODO - calculate median suiteness for model and fragment
     logger.record(`residueAnalysisArray length: ${residueAnalysisArray?.length || 0}. First few items: ${JSON.stringify(residueAnalysisArray?.slice(0, 3))}`);
 
@@ -557,32 +560,37 @@ export async function analyzeStructure(
     await createWalkingSphere(jobID, modelNumber, residues, radius, interval, modelsDir);
     logStepDuration(logger.record, "createWalkingSphere", stepStartedAt);
 
-      stepStartedAt = Date.now();
-      const files = await fs.readdir(`${JOBS_DIR}/${jobID}/${modelNumber}_sphere`);
-      logStepDuration(logger.record, `read sphere directory (${files.length} files)`, stepStartedAt);
+    stepStartedAt = Date.now();
+    const files = await fs.readdir(`${JOBS_DIR}/${jobID}/${modelNumber}_sphere`);
+    logStepDuration(logger.record, `read sphere directory (${files.length} files)`, stepStartedAt);
 
-      stepStartedAt = Date.now();
-      await startMolprobitySphereSession({
-        jobID,
-        modelNumber,
-        files,
-        initialData,
-        modelMetrics,
-        fragmentMetrics,
-        resultsSuffix,
-        metadata,
-        analyzeStructureStartedAt: analysisStartedAt,
-        simJobId,
-        completedStatus: updateMetadataStatus ? "completed" : "sim_completed",
-        failedStatus: updateMetadataStatus ? "failed" : "sim_failed",
-        recordLog: logger.record,
-      });
-      logStepDuration(logger.record, "queueMolprobitySphereSession", stepStartedAt);
+    stepStartedAt = Date.now();
+    const sphereProcessedData = await analyzeSphereFilesIncremental(
+      files,
+      jobID,
+      modelNumber,
+      initialData,
+      clashscoreAnalysis,
+      geometryAnalysis,
+      logger.record,
+    );
+    await saveResults(jobID, modelNumber, {
+      data: sphereProcessedData,
+      modelMetrics,
+      fragmentMetrics,
+    }, resultsSuffix);
+    logStepDuration(logger.record, "analyzeSphereFilesSimple", stepStartedAt);
+
+    if (!updateMetadataStatus) {
+      updateModelMetadata(metadata, modelNumber, "sim_completed");
+      metadata.status = "simulation_completed";
+      await saveMetadata(jobID, metadata);
+    }
 
     logStepDuration(logger.record, "analyzeStructure initial_phase_total", analysisStartedAt);
 
     return {
-      data: initialData,
+      data: sphereProcessedData,
       modelMetrics: modelMetrics,
       fragmentMetrics: fragmentMetrics,
     };
@@ -600,98 +608,197 @@ async function analyzeSphereFilesIncremental(
   jobID: UUID,
   modelNumber: string,
   initialData: nucleotideResult[],
-  modelMetrics: metrics,
-  fragmentMetrics: metrics,
-  resultsSuffix: string,
+  clashscoreAnalysis: ClashscoreParsedResult,
+  geometryAnalysis: GeoResidueSummary[],
   recordLog: (message: string) => void
 ): Promise<nucleotideResult[]> {
   const resultMap = new Map<number, nucleotideResult>();
   initialData.forEach((res) => resultMap.set(res.residue_number, { ...res }));
 
-  const batchSize = Number(process.env.SPHERE_BATCH_SIZE) || 5;
-  const maxRetries = 3;
-  const initialDelay = 1000; // 1 second
-
-  async function fetchWithRetry(file: string, retryCount = 0): Promise<nucleotideResult | null> {
-    const fetchStartedAt = Date.now();
-    try {
-      const url = `${MOLPROBITY_URL}/oneline-analysis?filename=/${jobID}/${modelNumber}_sphere/${file}`;
-      const res = await fetch(url, { agent: getAgentForUrl(url) } as any);
-
-      if (!res.ok) {
-        throw new Error(`Error analyzing file ${file}: ${res.statusText}`);
-      }
-
-      const tmpMetrics: metrics = (await res.json()) as metrics;
-      const [chainId, originalNumberStr] = file.split(".")[0]?.split("_") ?? [];
-      const originalNumber = parseInt(originalNumberStr ?? "");
-      // find in initialData the nucleotide with this original index and chain id
-      if (!chainId || isNaN(originalNumber)) {
-        throw new Error(`Invalid file name format: ${file}`);
-      }
-      const initialNucleotide = initialData.find((n) => n.original_index === originalNumber && n.chainID === chainId);
-      if (!initialNucleotide) {
-        throw new Error(`Initial nucleotide not found for chain ${chainId} and index ${originalNumber} in file ${file}`);
-      }
-      const initialNucleotideResults = resultMap.get(initialNucleotide.residue_number);
-
-      const result = {
-        ...initialNucleotideResults,
-        metrics: tmpMetrics,
-      } as nucleotideResult;
-      recordLog(`sphere file ${file} analyzed in ${Date.now() - fetchStartedAt}ms (retryCount=${retryCount})`);
-      return result;
-    } catch (error) {
-      const isTransientError = error instanceof Error && 
-        (error.message.includes('ECONNRESET') || 
-         error.message.includes('ETIMEDOUT') || 
-         error.message.includes('ECONNREFUSED') ||
-         error.message.includes('fetch failed'));
-      
-      if (isTransientError && retryCount < maxRetries) {
-        const delay = initialDelay * Math.pow(2, retryCount); // Exponential backoff
-        console.warn(`[Job ${jobID}, Model ${modelNumber}] Transient error for file ${file}, retry ${retryCount + 1}/${maxRetries} after ${delay}ms:`, error instanceof Error ? error.message : error);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        return fetchWithRetry(file, retryCount + 1);
-      }
-
-      console.error(`Error processing file ${file}:`, error);
-      return null;
-    }
+  function normalizeAtomName(atomName: string): string {
+    return atomName.trim().replace(/\s+/g, "").toUpperCase();
   }
 
-  for (let i = 0; i < files.length; i += batchSize) {
-    const batchFiles = files.slice(i, i + batchSize);
-    const batchStartedAt = Date.now();
-    recordLog(`Starting sphere batch ${Math.floor(i / batchSize) + 1} with ${batchFiles.length} files`);
-    const batchTasks = batchFiles.map((file) => fetchWithRetry(file));
+  function parseSphereFileAtoms(content: string): Array<{ chainID: string; residueID: number; atomName: string }> {
+    const atoms: Array<{ chainID: string; residueID: number; atomName: string }> = [];
+    const lines = content.split(/\r?\n/);
 
-    const batchResults = await Promise.allSettled(batchTasks);
-    const fulfilled = batchResults
-      .filter(
-        (p): p is PromiseFulfilledResult<nucleotideResult | null> =>
-          p.status === "fulfilled"
-      )
-      .map((p) => p.value)
-      .filter((result) => result !== null) as nucleotideResult[];
-
-    for (const res of fulfilled) {
-      if (res) {
-        resultMap.set(res.residue_number, res);
+    for (const line of lines) {
+      if (!line.startsWith("ATOM") && !line.startsWith("HETATM")) {
+        continue;
       }
+
+      const atomName = normalizeAtomName(line.substring(12, 16));
+      const chainID = line.substring(21, 22).trim();
+      const residueID = Number(line.substring(22, 26).trim());
+
+      if (!atomName || !chainID || !Number.isFinite(residueID)) {
+        continue;
+      }
+
+      atoms.push({ chainID, residueID, atomName });
     }
 
-    const sortedResults = Array.from(resultMap.values()).sort(
-      (a, b) => a.residue_number - b.residue_number
-    );
+    return atoms;
+  }
 
-    console.log(`Saving results for job ${jobID}, model ${modelNumber}. Number of residues: ${sortedResults.length}`);
-    await saveResults(jobID, modelNumber, {
-      data: sortedResults,
-      modelMetrics,
-      fragmentMetrics,
-    }, resultsSuffix);
-    recordLog(`Finished sphere batch ${Math.floor(i / batchSize) + 1} in ${Date.now() - batchStartedAt}ms`);
+  function parseSphereFilename(fileName: string): { chainID: string; residueID: number } | null {
+    const stem = fileName.split(".")[0] ?? "";
+    const separatorIndex = stem.lastIndexOf("_");
+    if (separatorIndex <= 0) {
+      return null;
+    }
+
+    const chainID = stem.slice(0, separatorIndex).trim();
+    const residueID = Number(stem.slice(separatorIndex + 1).trim());
+    if (!chainID || !Number.isFinite(residueID)) {
+      return null;
+    }
+
+    return { chainID, residueID };
+  }
+
+  function parseGeometryResidueID(resId: string): number | null {
+    const match = resId.match(/-?\d+/);
+    if (!match) {
+      return null;
+    }
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function buildAtomKey(chainID: string, residueID: number, atomName: string): string {
+    return `${chainID}:${residueID}:${normalizeAtomName(atomName)}`;
+  }
+
+  function formatPercent(count: number, total: number): string {
+    if (total <= 0) {
+      return "0.00";
+    }
+    return ((count / total) * 100).toFixed(2);
+  }
+
+  for (const file of files) {
+    const startedAt = Date.now();
+
+    try {
+      const sourceResidue = parseSphereFilename(file);
+      if (!sourceResidue) {
+        recordLog(`Skipping sphere file with invalid filename format: ${file}`);
+        continue;
+      }
+
+      const initialNucleotide = initialData.find(
+        (nucleotide) =>
+          nucleotide.chainID === sourceResidue.chainID && nucleotide.original_index === sourceResidue.residueID,
+      );
+      if (!initialNucleotide) {
+        recordLog(`No initial nucleotide found for sphere file ${file}`);
+        continue;
+      }
+
+      const sphereFilePath = `${JOBS_DIR}/${jobID}/${modelNumber}_sphere/${file}`;
+      const sphereFileContent = await fs.readFile(sphereFilePath, "utf-8");
+      const sphereAtoms = parseSphereFileAtoms(sphereFileContent);
+
+      const atomKeys = new Set<string>();
+      const atomsByResidue = new Map<string, Set<string>>();
+      for (const atom of sphereAtoms) {
+        atomKeys.add(buildAtomKey(atom.chainID, atom.residueID, atom.atomName));
+        const residueKey = `${atom.chainID}:${atom.residueID}`;
+        const existing = atomsByResidue.get(residueKey) ?? new Set<string>();
+        existing.add(normalizeAtomName(atom.atomName));
+        atomsByResidue.set(residueKey, existing);
+      }
+
+      let clashCount = 0;
+      for (const clash of clashscoreAnalysis.clashes) {
+        // if (
+        //   normalizeAtomName(clash.source.atomName).startsWith("H") ||
+        //   normalizeAtomName(clash.target.atomName).startsWith("H")
+        // ) {
+        //   continue;
+        // }
+        const sourceKey = buildAtomKey(
+          clash.source.chain,
+          Number(clash.source.residueNumber),
+          clash.source.atomName,
+        );
+        const targetKey = buildAtomKey(
+          clash.target.chain,
+          Number(clash.target.residueNumber),
+          clash.target.atomName,
+        );
+
+        if (atomKeys.has(sourceKey) && atomKeys.has(targetKey)) {
+          clashCount += 1;
+        }
+      }
+
+      let badBondCount = 0;
+      let totalBondCount = 0;
+      let badAngleCount = 0;
+      let totalAngleCount = 0;
+
+      for (const geometryResidue of geometryAnalysis) {
+        const residueID = parseGeometryResidueID(geometryResidue.resId);
+        if (residueID === null) {
+          continue;
+        }
+
+        const residueKey = `${geometryResidue.chainId}:${residueID}`;
+        const residueAtoms = atomsByResidue.get(residueKey);
+        if (!residueAtoms || residueAtoms.size === 0) {
+          continue;
+        }
+
+        totalBondCount += geometryResidue.bondCount;
+        totalAngleCount += geometryResidue.angleCount;
+
+        badBondCount += geometryResidue.badBonds.filter((bond) =>
+          bond.atoms.some((atom) => residueAtoms.has(normalizeAtomName(atom))),
+        ).length;
+
+        badAngleCount += geometryResidue.badAngles.filter((angle) =>
+          angle.atoms.some((atom) => residueAtoms.has(normalizeAtomName(atom))),
+        ).length;
+      }
+
+      const clashscoreFromSphere = (clashCount / Math.max(sphereAtoms.length, 1)) * 1000;
+      const residueMetricsFromSphere: metrics = {
+        pdbFileName: file,
+        chains: "1",
+        residues: "1",
+        clashscore: String(clashscoreFromSphere),
+        numbadbonds: String(badBondCount),
+        numbonds: String(Math.max(totalBondCount, badBondCount)),
+        pct_badbonds: formatPercent(badBondCount, Math.max(totalBondCount, badBondCount)),
+        pct_resbadbonds: badBondCount > 0 ? "100.00" : "0.00",
+        numbadangles: String(badAngleCount),
+        numangles: String(Math.max(totalAngleCount, badAngleCount)),
+        pct_badangles: formatPercent(badAngleCount, Math.max(totalAngleCount, badAngleCount)),
+        pct_resbadangles: badAngleCount > 0 ? "100.00" : "0.00",
+        numSuiteOutliers: "-",
+        numSuites: "-",
+      };
+
+      const current = resultMap.get(initialNucleotide.residue_number);
+      if (current) {
+        resultMap.set(initialNucleotide.residue_number, {
+          ...current,
+          metrics: residueMetricsFromSphere,
+        });
+      }
+      else {
+        recordLog(`No existing nucleotide result found for ${file} to update with sphere metrics`);
+      }
+
+    } catch (error) {
+      recordLog(
+        `sphere file ${file} failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      console.error(`Error processing sphere file ${file}:`, error);
+    }
   }
 
   return Array.from(resultMap.values()).sort(
@@ -773,6 +880,58 @@ async function fetchFragmentMetrics(
   const filePath = `${JOBS_DIR}/${jobID}/${modelsDir}/${modelNumber}_FragmentMetrics.json`;
   await fs.writeFile(filePath, JSON.stringify(metrics, null, 2));
   return metrics;
+}
+
+async function fetchClashscoreAnalysis(
+  jobID: UUID,
+  modelNumber: string,
+  modelsDir = "models"
+): Promise<ClashscoreParsedResult> {
+  const clashscoreUrl = `${MOLPROBITY_URL}/clashscore?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`;
+  const response = await fetch(clashscoreUrl, { agent: getAgentForUrl(clashscoreUrl) } as any);
+  if (!response.ok) {
+    throw new Error("Clashscore analysis error: " + response.statusText);
+  }
+  const responseData = (await response.json()) as {
+    success?: boolean;
+    [key: string]: unknown;
+  };
+
+  if (!responseData.success) {
+    throw new Error("Clashscore analysis failed: " + JSON.stringify(responseData));
+  }
+
+  const clashscoreData = await fetchJSONFile(jobID, `${modelNumber}.clash`, modelNumber, modelsDir);
+  if (!clashscoreData) {
+    throw new Error(`Clashscore file for model ${modelNumber} not found`);
+  }
+  return clashscoreData as ClashscoreParsedResult;
+}
+
+async function fetchGeometryAnalysis(
+  jobID: UUID,
+  modelNumber: string,
+  modelsDir = "models"
+): Promise<GeoResidueSummary[]> {
+  const mpGeoUrl = `${MOLPROBITY_URL}/mpgeo-analysis?filename=/${jobID}/${modelsDir}/${modelNumber}.pdb`;
+  const response = await fetch(mpGeoUrl, { agent: getAgentForUrl(mpGeoUrl) } as any);
+  if (!response.ok) {
+    throw new Error("Geometry analysis error: " + response.statusText);
+  }
+  const responseData = (await response.json()) as {
+    success?: boolean;
+    [key: string]: unknown;
+  };
+
+  if (!responseData.success) {
+    throw new Error("Geometry analysis failed: " + JSON.stringify(responseData));
+  }
+  
+  const geometryData = await fetchJSONFile(jobID, `${modelNumber}.geo.json`, modelNumber, modelsDir);
+  if (!geometryData) {
+    throw new Error(`Geometry file for model ${modelNumber} not found`);
+  }
+  return geometryData as GeoResidueSummary[];
 }
 
 async function fetchNumeration(
