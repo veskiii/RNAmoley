@@ -51,7 +51,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ id, jobName, disabled, 
       let downloadButton = document.getElementById(
         "downloadButton"
       ) as HTMLElement;
-      downloadButton.textContent = "✔ Files downloaded!";
+      downloadButton.textContent = "Preparing download...";
       downloadButton.style.color = "#000000";
       downloadButton.style.backgroundColor = Colors.beige;
 
