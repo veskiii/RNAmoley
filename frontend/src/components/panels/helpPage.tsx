@@ -217,8 +217,8 @@ const HelpPage = () => {
               <p>
                 Local analysis provides detailed quality scores for each residue and its neighborhood. 
                 The neighborhood is defined by a sphere with a user-specified radius, centered on 
-                the C1' atoms of the selected residues. Each residue that at least one atom is located
-                within the sphere is considered part of the neighborhood. Enabling local analysis 
+                the C1' atoms of the selected residues. <b>Each residue that has at least one atom located
+                within the sphere is considered part of the neighborhood.</b> Enabling local analysis 
                 provides users clash scores, bad bonds and bad angles scores for each residue and its neighborhood, 
                 while disabling it only provides suiteness and sugar pucker outlier types (also included in local analysis).
               </p>
@@ -364,7 +364,7 @@ const HelpPage = () => {
                 to the energy minimization.
               </p>
               <p>The modal will appear with options for correction:</p>
-              <ul className="list-disc ml-3">
+              <ul className="list-disc list-inside ml-3">
                 <li>
                   <strong>Backbone restraint force</strong> (kcal/mol/Å²) - Adjust the strength of restraints 
                   applied to the RNA backbone during refinement simulations, influencing how strongly the backbone 
@@ -493,7 +493,11 @@ const HelpPage = () => {
                 <i>Color structure by:</i> radio buttons.
               </p>
               <p>
-                As in the previous panel, users can learn more about how to use the 3D view in 
+                In the 3D view, there are spheres drawn around the selected residues to indicate their neighborhoods, 
+                when local analysis quality score is selected. It should be noted, that those spheres are rendered in 
+                Mol* Viewer only for visualization purposes and might not fully resemble the actual neighborhoods used
+                in the analysis. However, they are set to be as close as possible to the actual neighborhoods. As in the 
+                previous panel, users can learn more about how to use the 3D view in 
                 {' '}<a href="https://molstar.org/viewer-docs/" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: Colors.blue }}>Mol* Viewer Documentation</a>.
               </p>
               <p>
@@ -504,7 +508,7 @@ const HelpPage = () => {
               <p>
                 If user has run refinement, then they can select modes of displaying the structure:
               </p>
-              <ul className="list-disc ml-3">
+              <ul className="list-disc list-inside ml-3">
                 <li>
                   <b>Original</b> - Displays the original structure before refinement.
                 </li>
@@ -520,7 +524,7 @@ const HelpPage = () => {
               <p>
                 The <i>Visualization mode</i> radio buttons serve as the switch between two coloring modes for the structure in 2D and 3D views.
               </p>
-              <ul className="list-disc ml-3">
+              <ul className="list-disc list-inside ml-3">
                 <li>
                   <b>Continous coloring</b> - Colors the structure continously in green-to-red scale based on the quality scores, 
                   providing a quick visual representation of the structure's quality. The coloring legend is displayed below the views.
@@ -543,7 +547,7 @@ const HelpPage = () => {
               RNAmoley is a web-based application, therefore it can be accessed from any device with a modern web browser or a mobile web browser.
               The application was tested on the following browsers:
             </p>
-            <ul className="list-disc ml-3">
+            <ul className="list-disc list-inside ml-3">
               <li>Google Chrome (149.0.7827.156)</li>
               <li>Mozilla Firefox (152.0.2)</li>
               <li>Microsoft Edge (149.0.4022.80)</li>
