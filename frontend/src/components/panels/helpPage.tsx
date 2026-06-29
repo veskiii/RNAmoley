@@ -131,10 +131,11 @@ const HelpPage = () => {
           <p>
             RNAmoley is a web server designed for RNA analysis and refinement,
             enabling users to upload data and view results through RNA structure 
-            visualizations in 2D and 3D. The application supports file formats 
+            visualizations in 2D and 3D. For input, the application supports file formats 
             such as PDB (.pdb) and mmCIF (.mmCIF, .cif) as well as structure 
             identifiers (PDB ID). The primary goal of RNAmoley is to allow 
-            RNA 3D structures assesment both globally and locally and provide 
+            RNA 3D structures assesment (steric clashes, bond lengths and angles, 
+            sugar puckers, suites) both globally and locally and provide 
             possibility to correct detected irregularities.
           </p>
 
@@ -149,10 +150,10 @@ const HelpPage = () => {
               General workflow of using RNAmoley consists of these main steps:
             </p>
             <ol className="list-decimal list-inside ml-3">
-              <li>Upload the structure and specify type of analysis (only global or local analysis).</li>
-              <li>Specify models and region of interest for the analysis.</li>
-              <li>Browse the results and analyze the structure.</li>
-              <li>(Optional) Refine the structure and reanalyze results.</li>
+              <li>Uploading the structure and specifying the type of analysis (only global or local analysis).</li>
+              <li>Specifying models and region of interest for the analysis.</li>
+              <li>Browsing the results and analyzing the structure.</li>
+              <li>(Optional) Refining the structure and reanalyzing results.</li>
             </ol>
           <div className="ml-3">
             <h3
@@ -180,24 +181,23 @@ const HelpPage = () => {
               >
                 Upload the structure
               </h4>
-              <ol className="list-decimal list-inside ml-3">
-                <li>
+              <ol className="list-decimal list-outside ml-3">
+                <li className="mb-1">
                   Choose one of the three data input methods:
                   <ul className="list-disc list-inside ml-3">
                     <li>
-                      <b>Upload file</b> - Upload an RNA file in PDB or mmCIF
-                      format.
+                      <b>Upload file</b> - Upload atom coordinate file.
                     </li>
                     <li>
-                      <b>Fetch by PDB ID</b> - Enter a PDB structure identifier (classic 4-character code or newer 12-character code).
+                      <b>Fetch by PDB ID</b> - Enter a PDB structure identifier (both, 4- and 12-character codes are accepted).
                     </li>
                     <li>
                       <b>Choose from samples</b> - Select an RNA structure from
-                      preloaded examples based on RNA-Puzzles and CASP15 submissions.
+                      preloaded examples.
                     </li>
                   </ul>
                 </li>
-                <li>
+                <li className="mb-1">
                   Specify the type of analysis by checking the box for local analysis and setting the radius 
                   of neighborhood sphere if local analysis is enabled. By default, local analysis is enabled
                   and the radius of neighborhood sphere is set to 5 Å.
@@ -217,8 +217,8 @@ const HelpPage = () => {
               <p>
                 Local analysis provides detailed quality scores for each residue and its neighborhood. 
                 The neighborhood is defined by a sphere with a user-specified radius, centered on 
-                the C1' atoms of the selected residues. Each residue that at least one atom is located
-                within the sphere is considered part of the neighborhood. Enabling local analysis 
+                the C1' atoms of the selected residues. <b>Each residue that has at least one atom located
+                within the sphere is considered part of the neighborhood.</b> Enabling local analysis 
                 provides users clash scores, bad bonds and bad angles scores for each residue and its neighborhood, 
                 while disabling it only provides suiteness and sugar pucker outlier types (also included in local analysis).
               </p>
@@ -364,7 +364,7 @@ const HelpPage = () => {
                 to the energy minimization.
               </p>
               <p>The modal will appear with options for correction:</p>
-              <ul className="list-disc ml-3">
+              <ul className="list-disc list-inside ml-3">
                 <li>
                   <strong>Backbone restraint force</strong> (kcal/mol/Å²) - Adjust the strength of restraints 
                   applied to the RNA backbone during refinement simulations, influencing how strongly the backbone 
@@ -493,7 +493,11 @@ const HelpPage = () => {
                 <i>Color structure by:</i> radio buttons.
               </p>
               <p>
-                As in the previous panel, users can learn more about how to use the 3D view in 
+                In the 3D view, there are spheres drawn around the selected residues to indicate their neighborhoods, 
+                when local analysis quality score is selected. It should be noted, that those spheres are rendered in 
+                Mol* Viewer only for visualization purposes and might not fully resemble the actual neighborhoods used
+                in the analysis. However, they are set to be as close as possible to the actual neighborhoods. As in the 
+                previous panel, users can learn more about how to use the 3D view in 
                 {' '}<a href="https://molstar.org/viewer-docs/" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: Colors.blue }}>Mol* Viewer Documentation</a>.
               </p>
               <p>
@@ -504,7 +508,7 @@ const HelpPage = () => {
               <p>
                 If user has run refinement, then they can select modes of displaying the structure:
               </p>
-              <ul className="list-disc ml-3">
+              <ul className="list-disc list-inside ml-3">
                 <li>
                   <b>Original</b> - Displays the original structure before refinement.
                 </li>
@@ -520,7 +524,7 @@ const HelpPage = () => {
               <p>
                 The <i>Visualization mode</i> radio buttons serve as the switch between two coloring modes for the structure in 2D and 3D views.
               </p>
-              <ul className="list-disc ml-3">
+              <ul className="list-disc list-inside ml-3">
                 <li>
                   <b>Continous coloring</b> - Colors the structure continously in green-to-red scale based on the quality scores, 
                   providing a quick visual representation of the structure's quality. The coloring legend is displayed below the views.
@@ -543,15 +547,44 @@ const HelpPage = () => {
               RNAmoley is a web-based application, therefore it can be accessed from any device with a modern web browser or a mobile web browser.
               The application was tested on the following browsers:
             </p>
-            <ul className="list-disc ml-3">
-              <li>Google Chrome (149.0.7827.156)</li>
-              <li>Mozilla Firefox (152.0.2)</li>
-              <li>Microsoft Edge (149.0.4022.80)</li>
-              <li>Apple Safari (17.2.1)</li>
-              <li>Mobile Safari (26.5)</li>
-              <li>Google Chrome for Android (134.0.6998.135)</li>
-              <li>Samsung Internet (29.0.1.12)</li>
-            </ul>
+            <div className="ml-3 mt-2 overflow-x-auto">
+              <table className="min-w-max border border-gray-300 text-left">
+                <tbody>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-300 px-3 py-2 font-semibold">Browser</th>
+                    <th className="border border-gray-300 px-3 py-2 font-semibold">Version</th>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2">Google Chrome</td>
+                    <td className="border border-gray-300 px-3 py-2">149.0.7827.156</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2">Mozilla Firefox</td>
+                    <td className="border border-gray-300 px-3 py-2">152.0.2</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2">Microsoft Edge</td>
+                    <td className="border border-gray-300 px-3 py-2">149.0.4022.80</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2">Apple Safari</td>
+                    <td className="border border-gray-300 px-3 py-2">17.2.1</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2">Mobile Safari</td>
+                    <td className="border border-gray-300 px-3 py-2">26.5</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2">Google Chrome for Android</td>
+                    <td className="border border-gray-300 px-3 py-2">134.0.6998.135</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2">Samsung Internet</td>
+                    <td className="border border-gray-300 px-3 py-2">29.0.1.12</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
