@@ -348,7 +348,7 @@ export function createAnalysisWorker() {
         host: process.env.REDIS_HOST ?? "redis",
         port: Number(process.env.REDIS_PORT ?? 6379),
       },
-      concurrency: 1,
+      concurrency: 5,
     }
   );
 
