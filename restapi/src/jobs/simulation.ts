@@ -37,7 +37,7 @@ export function createSimulationWorker() {
         host: process.env.REDIS_HOST,
         port: Number(process.env.REDIS_PORT),
       },
-      concurrency: 1,
+      concurrency: 3,
     }
   );
 
@@ -131,8 +131,8 @@ async function performSimulation(
     // Poll for simulation completion
     let simCompleted = false;
     let pollCount = 0;
-    const maxPolls = 1440; // 24 hours with 60-second intervals
-    const pollInterval = 30000; // 30 seconds
+    const maxPolls = 180; // 30 minutes with 10-second intervals
+    const pollInterval = 10000; // 10 seconds
 
     while (!simCompleted && pollCount < maxPolls) {
       await new Promise((resolve) => setTimeout(resolve, pollInterval));

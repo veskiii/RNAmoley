@@ -100,7 +100,7 @@ services:
       NODE_ENV: production
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      SIM_WORKER_CONCURRENCY: 1
+      SIM_WORKER_CONCURRENCY: 3
     ports:
       - 3004:3001
     volumes:
