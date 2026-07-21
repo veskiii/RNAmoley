@@ -194,6 +194,8 @@ type ModelAnnotationRecord = {
 	name?: string;
 };
 
+const RNA_RESNAMES = new Set(["A", "C", "G", "U", "I"]);
+
 function toValidSegmentName(rawName: string | undefined) {
 	const normalized = (rawName ?? "")
 		.trim()
@@ -311,6 +313,87 @@ function getPdbLineChainId(line: string) {
 	return (line[21] ?? "").trim();
 }
 
+function getPdbLineResidueName(line: string) {
+	return (line.slice(17, 20).trim().toUpperCase());
+}
+
+function isAtomLikeRecord(line: string) {
+	return line.startsWith("ATOM  ") || line.startsWith("HETATM") || line.startsWith("ANISOU") || line.startsWith("TER   ");
+}
+
+function isRnaResidueName(resname: string) {
+	return RNA_RESNAMES.has(resname.toUpperCase());
+}
+
+async function writeRnaOnlyPdb(sourcePdbPath: string, targetPdbPath: string) {
+	const pdbContent = await fs.readFile(sourcePdbPath, "utf8");
+	const pdbLines = pdbContent.split(/\r?\n/);
+	const outputLines: string[] = [];
+
+	for (const line of pdbLines) {
+		if (!isAtomLikeRecord(line)) {
+			outputLines.push(line);
+			continue;
+		}
+
+		if (line.startsWith("TER   ")) {
+			continue;
+		}
+
+		if (isRnaResidueName(getPdbLineResidueName(line))) {
+			outputLines.push(line);
+		}
+	}
+
+	await fs.writeFile(targetPdbPath, `${outputLines.join("\n")}\n`, "utf8");
+}
+
+async function getRnaChainNamesFromPdb(pdbPath: string) {
+	const pdbContent = await fs.readFile(pdbPath, "utf8");
+	const pdbLines = pdbContent.split(/\r?\n/);
+	const chainNames: string[] = [];
+	const seen = new Set<string>();
+
+	for (const line of pdbLines) {
+		if (!line.startsWith(("ATOM  ")) && !line.startsWith("HETATM")) {
+			continue;
+		}
+
+		if (!isRnaResidueName(getPdbLineResidueName(line))) {
+			continue;
+		}
+
+		const chainId = getPdbLineChainId(line) || "S";
+		if (!seen.has(chainId)) {
+			seen.add(chainId);
+			chainNames.push(chainId);
+		}
+	}
+
+	if (chainNames.length === 0) {
+		throw new Error(`[sim] No RNA residues found in ${pdbPath}`);
+	}
+
+	return chainNames;
+}
+
+async function hasNonRnaAtomsInPdb(pdbPath: string) {
+	const pdbContent = await fs.readFile(pdbPath, "utf8");
+	const pdbLines = pdbContent.split(/\r?\n/);
+
+	for (const line of pdbLines) {
+		if (!line.startsWith("ATOM  ") && !line.startsWith("HETATM")) {
+			continue;
+		}
+
+		if (!isRnaResidueName(getPdbLineResidueName(line))) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 async function preparePdbFilesForChains(
 	simPath: string,
 	simModelPath: string,
@@ -398,7 +481,7 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	// Ensure selected residues JSON exists (recover from results if missing)
 	await ensureSelectedResidues(modelsPath, envPath, data.modelNumber);
 	const sourceModelNtcs = await ensureDnatcoAnalysis(envPath, path.relative(envPath, sourceModel));
-	const chainNames = await getChainNamesFromAnnotation(modelsPath, data.modelNumber);
+	const complexModel = path.join(simPath, `${data.modelNumber}_complex.pdb`);
 	const simModel = path.join(simPath, `${data.modelNumber}.pdb`);
 	const sourcePsfgen = path.join(scriptsPath, "psfgen.tcl");
 	const simPsfgen = path.join(simPath, "psfgen.tcl");
@@ -409,15 +492,21 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 	const outputPsf = path.join(simPath, "output.psf");
 	const targetPdb = path.join(simPath, "target.pdb");
 	const restraintsScript = path.join(scriptsPath, "run_restraints_single.py");
+	const mergeComplexScript = path.join(scriptsPath, "merge_minimized_complex.py");
 	const exportPDBScript = path.join(scriptsPath, "export_first_rmsd_threshold_single.py");
 	const exportLogPath = path.join(simPath, "export_first_rmsd_threshold_single.log");
 	const resultPdb = path.join(simPath, `${data.modelNumber}_sim.pdb`);
+	const rnaResultPdb = path.join(simPath, `${data.modelNumber}_sim_rna.pdb`);
 
 	await fs.rm(simPath, { recursive: true, force: true });
 	await fs.mkdir(simPath, { recursive: true });
-	await fs.copyFile(sourceModel, simModel);
+	await fs.copyFile(sourceModel, complexModel);
 	await fs.copyFile(sourcePsfgen, simPsfgen);
 	await fs.copyFile(sourceNamd, simNamd);
+	await writeRnaOnlyPdb(complexModel, simModel);
+	const hasNonRnaAtoms = await hasNonRnaAtomsInPdb(complexModel);
+	console.log(`[sim] Non-RNA obstacles ${hasNonRnaAtoms ? "enabled" : "disabled (RNA-only input)"}.`);
+	const chainNames = await getRnaChainNamesFromPdb(simModel);
 
 	const preparedChains = await preparePdbFilesForChains(simPath, simModel, chainNames);
 	const segmentBlocks = buildPsfgenSegmentBlocks(preparedChains);
@@ -435,38 +524,41 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 
 	await fs.copyFile(outputPdb, targetPdb);
 
+	const restraintsArgs: string[] = [
+		restraintsScript,
+		"--namd-bin",
+		"namd3",
+		"--templates-dir",
+		"/webserver/scripts/ntc_templates",
+		"--base-pair-templates-dir",
+		"/webserver/scripts/base_pair_templates",
+		"--generator-script",
+		"/webserver/scripts/generate_colvars_combined.py",
+		"--pairs",
+		sourceModelPairs,
+		"--csv",
+		sourceModelNtcs,
+		"--zero-psf-charges",
+		"--global-force-constant",
+		String(data.restraintGlobalForce),
+		"--pairs-force-constant",
+		String(data.restraintBasePairsForce),
+		"--backbone-force-constant",
+		String(data.restraintBackboneForce),
+		"--outputname",
+		"sim",
+	];
+
+	if (data.simOnlyFragment) {
+		restraintsArgs.push("--residues-json", sourceModelSelectedResidues);
+	}
+
+	if (hasNonRnaAtoms) {
+		restraintsArgs.push("--complex-pdb", path.basename(complexModel));
+	}
+
 	console.log("[sim] NAMD: uruchamianie restrykcji i symulacji przez run_restraints_single.py...");
-	await runCommand(
-		"python",
-		[
-			restraintsScript,
-			"--namd-bin",
-			"namd3",
-			"--templates-dir",
-			"/webserver/scripts/ntc_templates",
-			"--base-pair-templates-dir",
-			"/webserver/scripts/base_pair_templates",
-			"--generator-script",
-			"/webserver/scripts/generate_colvars_combined.py",
-			data.simOnlyFragment && "--residues-json",
-			data.simOnlyFragment && sourceModelSelectedResidues,
-			"--pairs",
-			sourceModelPairs,
-			"--csv",
-			sourceModelNtcs,
-			"--zero-psf-charges",
-			"--global-force-constant",
-			String(data.restraintGlobalForce),
-			"--pairs-force-constant",
-			String(data.restraintBasePairsForce),
-			"--backbone-force-constant",
-			String(data.restraintBackboneForce),
-			"--outputname",
-			"sim",
-		],
-		simPath,
-		"run_restraints_single",
-	);
+	await runCommand("python", restraintsArgs, simPath, "run_restraints_single");
 
 	const dcdFilePath = path.join(simPath, "sim.dcd");
 
@@ -494,6 +586,28 @@ export async function processSimJob(data: SimJobData): Promise<SimJobResult> {
 			logFilePath: exportLogPath,
 		},
 	);
+
+	await fs.copyFile(resultPdb, rnaResultPdb);
+
+	if (hasNonRnaAtoms) {
+		console.log("[sim] NAMD: scalanie zminimalizowanego RNA z oryginalnym kompleksem...");
+		await runCommand(
+			"python",
+			[
+				mergeComplexScript,
+				"--complex-pdb",
+				path.basename(complexModel),
+				"--rna-pdb",
+				rnaResultPdb,
+				"--out-pdb",
+				resultPdb,
+			],
+			simPath,
+			"merge_minimized_complex",
+		);
+	} else {
+		console.log("[sim] NAMD: pomijam merge_minimized_complex (wejscie RNA-only).");
+	}
 
 	return {
 		simPath,
