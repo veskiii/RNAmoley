@@ -13,12 +13,12 @@ const parseEnvInt = (rawValue: string | undefined, fallback: number) => {
 
 const statusPollingLimiter = createPollingRateLimiter({
 	windowMs: parseEnvInt(process.env.STATUS_POLLING_WINDOW_MS, 1000),
-	maxRequests: parseEnvInt(process.env.STATUS_POLLING_MAX_REQUESTS, 3),
+	maxRequests: parseEnvInt(process.env.STATUS_POLLING_MAX_REQUESTS, 10),
 });
 
 const streamConnectLimiter = createPollingRateLimiter({
 	windowMs: parseEnvInt(process.env.STREAM_CONNECT_WINDOW_MS, 10000),
-	maxRequests: parseEnvInt(process.env.STREAM_CONNECT_MAX_REQUESTS, 5),
+	maxRequests: parseEnvInt(process.env.STREAM_CONNECT_MAX_REQUESTS, 15),
 });
 
 // router.get('/', getJobs);

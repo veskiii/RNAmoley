@@ -425,14 +425,23 @@ def parse_step_residues(step_value: str) -> Tuple[int, int]:
 
 
 def parse_chain_id(chain_value: str, step_value: str) -> str:
-    # First, try to extract from Step field (most reliable, format: custom_<chainID>_...)
+    # First, try to extract from Step field.
+    # Supported formats seen in this pipeline:
+    # - custom_<chainID>_...
+    # - <model>_<chainID>_<base1>_<res1>_<base2>_<res2>
     step_match = re.search(r"custom_([^_]+)_", step_value)
     if step_match:
         parsed = step_match.group(1).strip()
         if parsed:
             return parsed[0]
 
-    # Fall back to Chain column if Step extraction fails
+    step_parts = [part for part in step_value.split("_") if part]
+    if len(step_parts) >= 6:
+        parsed = step_parts[1].strip()
+        if parsed:
+            return parsed[0]
+
+    # Fall back to Chain column if Step extraction fails.
     chain = chain_value.strip()
     if chain:
         return chain[0]
