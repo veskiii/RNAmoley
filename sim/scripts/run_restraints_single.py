@@ -12,14 +12,12 @@ The workflow matches the grid-search helper, but executes only one combination:
 from __future__ import annotations
 
 import argparse
-import math
 import re
 import shlex
 import json
 import shutil
 import subprocess
 from pathlib import Path
-from dataclasses import dataclass
 
 
 def to_token(value: float) -> str:
@@ -51,39 +49,6 @@ def replace_outputname(text: str, new_outputname: str) -> str:
         raise ValueError("Could not find 'set outputname ...' in namd script")
 
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
-
-
-def add_namd_tcl_forces(text: str, tcl_script_name: str) -> str:
-    lines = text.splitlines()
-
-    filtered: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("tclForces") or stripped.startswith("tclForcesScript"):
-            continue
-        filtered.append(line)
-
-    insert_at = None
-    for idx, line in enumerate(filtered):
-        if line.strip().startswith("## COLVARS"):
-            insert_at = idx
-            break
-
-    if insert_at is None:
-        for idx, line in enumerate(filtered):
-            if line.strip().startswith("## Output"):
-                insert_at = idx
-                break
-
-    if insert_at is None:
-        insert_at = len(filtered)
-
-    filtered[insert_at:insert_at] = [
-        "tclBC               on",
-        f"tclBCScript         {{ source {tcl_script_name} }}",
-    ]
-
-    return "\n".join(filtered) + ("\n" if text.endswith("\n") else "")
 
 
 def zero_psf_natom_charges(psf_path: Path) -> None:
@@ -125,6 +90,24 @@ def zero_psf_natom_charges(psf_path: Path) -> None:
     psf_path.write_text("\n".join(lines) + ("\n" if text.endswith("\n") else ""), encoding="utf8")
 
 
+def is_rna_resname(resname: str) -> bool:
+    # Canonical RNA residue names found in PDB/mmCIF exports.
+    return resname.strip().upper() in {
+        "A",
+        "C",
+        "G",
+        "U",
+        "RA",
+        "RC",
+        "RG",
+        "RU",
+        "ADE",
+        "CYT",
+        "GUA",
+        "URA",
+    }
+
+
 def write_pdb_with_residue_occupancy(pdb_path: Path, residues_json: Path, out_pdb_path: Path) -> None:
     text = pdb_path.read_text(encoding="utf8")
     data = json.loads(residues_json.read_text(encoding="utf8"))
@@ -145,16 +128,23 @@ def write_pdb_with_residue_occupancy(pdb_path: Path, residues_json: Path, out_pd
 
     for line in lines:
         if line.startswith(("ATOM  ", "HETATM")):
-            # Standard PDB columns: chain at 22 (index 21), resseq 23-26 (22:26), occupancy 55-60 (54:60)
+            # Standard PDB columns:
+            # residue name 18-20 (17:20), chain 22 (21), resseq 23-26 (22:26), occupancy 55-60 (54:60)
+            resname = line[17:20].strip()
             chain = line[21:22]
             resseq_s = line[22:26].strip()
-            try:
-                resseq = int(resseq_s)
-            except Exception:
-                out_lines.append(line)
-                continue
+            is_rna = is_rna_resname(resname)
 
-            occ = 0.0 if (chain, resseq) in residues else 1.0
+            # Keep existing behavior for selected RNA residues (occupancy 0),
+            # and always keep non-RNA atoms fixed (occupancy 1).
+            occ = 1.0
+            if is_rna:
+                try:
+                    resseq = int(resseq_s)
+                except Exception:
+                    resseq = None
+                if resseq is not None and (chain, resseq) in residues:
+                    occ = 0.0
 
             # Ensure line is long enough to replace occupancy field
             if len(line) < 60:
@@ -166,210 +156,6 @@ def write_pdb_with_residue_occupancy(pdb_path: Path, residues_json: Path, out_pd
             out_lines.append(line)
 
     out_pdb_path.write_text("\n".join(out_lines) + ("\n" if text.endswith("\n") else ""), encoding="utf8")
-
-
-RNA_RESNAMES = {"A", "C", "G", "U", "I"}
-
-
-@dataclass(frozen=True)
-class PdbAtom:
-    serial: int
-    atom_name: str
-    element: str
-    resname: str
-    chain_id: str
-    resseq: int
-    icode: str
-    x: float
-    y: float
-    z: float
-
-
-@dataclass(frozen=True)
-class ObstacleSphere:
-    label: str
-    x: float
-    y: float
-    z: float
-    radius: float
-    atom_count: int
-
-
-def is_atom_record(line: str) -> bool:
-    return line.startswith(("ATOM", "HETATM"))
-
-
-def parse_pdb_atom(line: str) -> PdbAtom | None:
-    if not is_atom_record(line) or len(line) < 54:
-        return None
-
-    try:
-        serial = int(line[6:11])
-        atom_name = line[12:16].strip()
-        element = (line[76:78].strip() if len(line) >= 78 else "")
-        if not element:
-            # Infer element from atom name when the dedicated PDB element field is empty.
-            letters_only = "".join(ch for ch in atom_name if ch.isalpha())
-            if letters_only:
-                if len(letters_only) >= 2 and letters_only[:2].upper() in {
-                    "CL", "BR", "NA", "MG", "ZN", "FE", "CA", "MN", "CU", "CO", "NI", "CD", "HG",
-                }:
-                    element = letters_only[:2]
-                else:
-                    element = letters_only[0]
-        element = element.upper()
-        resname = line[17:20].strip()
-        chain_id = line[21:22].strip() or "_"
-        resseq = int(line[22:26])
-        icode = line[26:27].strip()
-        x = float(line[30:38])
-        y = float(line[38:46])
-        z = float(line[46:54])
-    except Exception:
-        return None
-
-    return PdbAtom(
-        serial=serial,
-        atom_name=atom_name,
-        element=element,
-        resname=resname,
-        chain_id=chain_id,
-        resseq=resseq,
-        icode=icode,
-        x=x,
-        y=y,
-        z=z,
-    )
-
-
-def is_rna_residue(resname: str) -> bool:
-    return resname.upper() in RNA_RESNAMES
-
-
-def residue_key(atom: PdbAtom) -> tuple[str, int, str, str]:
-    return (atom.chain_id, atom.resseq, atom.icode, atom.resname)
-
-# https://pse-info.de/en/scale/radius_vdw
-def build_obstacle_spheres(pdb_path: Path, radius_margin: float, minimum_radius: float) -> list[ObstacleSphere]:
-    element_radii: dict[str, float] = {
-        "H": 1.20,
-        "C": 1.70,
-        "N": 1.55,
-        "O": 1.52,
-        "P": 1.80,
-        "S": 1.80,
-        "F": 1.35,
-        "CL": 1.75,
-        "BR": 1.85,
-        "I": 1.98,
-        "MG": 1.73,
-        "NA": 2.27,
-        "K": 2.75,
-        "CA": 2.31,
-        "ZN": 1.39,
-        "FE": 1.94,
-    }
-
-    spheres: list[ObstacleSphere] = []
-    for line in pdb_path.read_text(encoding="utf8").splitlines():
-        atom = parse_pdb_atom(line)
-        if atom is None:
-            continue
-        if is_rna_residue(atom.resname):
-            continue
-
-        base_radius = element_radii.get(atom.element, 1.70)
-        radius = max(base_radius + radius_margin, minimum_radius)
-        label = f"{atom.chain_id}:{atom.resname}{atom.resseq}{atom.icode or ''}:{atom.atom_name}:{atom.serial}"
-        spheres.append(
-            ObstacleSphere(
-                label=label,
-                x=atom.x,
-                y=atom.y,
-                z=atom.z,
-                radius=radius,
-                atom_count=1,
-            )
-        )
-
-    spheres.sort(key=lambda item: item.label)
-    return spheres
-
-
-def write_obstacle_force_script(
-    script_path: Path,
-    spheres: list[ObstacleSphere],
-    force_constant: float,
-) -> None:
-    sphere_lines = []
-    for sphere in spheres:
-        sphere_lines.append(
-            "    {"
-            f"{sphere.x:.6f} {sphere.y:.6f} {sphere.z:.6f} {sphere.radius:.6f}"
-            "}"
-        )
-
-    script = "\n".join(
-        [
-            "# Auto-generated static obstacle repulsion for NAMD tclBC",
-            f"set obstacleForceConstant {force_constant:.6f}",
-            "set obstacleSpheres {",
-            *sphere_lines,
-            "}",
-            "",
-            "proc calcforces {step unique} {",
-            "    global obstacleForceConstant obstacleSpheres",
-            "    while {[nextatom]} {",
-            "        set pos [getcoord]",
-            "        set x [lindex $pos 0]",
-            "        set y [lindex $pos 1]",
-            "        set z [lindex $pos 2]",
-            "        set fx 0.0",
-            "        set fy 0.0",
-            "        set fz 0.0",
-            "        foreach sphere $obstacleSpheres {",
-            "            lassign $sphere centerX centerY centerZ radius",
-            "            set dx [expr {$x - $centerX}]",
-            "            set dy [expr {$y - $centerY}]",
-            "            set dz [expr {$z - $centerZ}]",
-            "            set dist2 [expr {$dx*$dx + $dy*$dy + $dz*$dz}]",
-            "            if {$dist2 <= 1.0e-12} {",
-            "                continue",
-            "            }",
-            "            set dist [expr {sqrt($dist2)}]",
-            "            if {$dist < $radius} {",
-            "                set penetration [expr {$radius - $dist}]",
-            "                set scale [expr {$obstacleForceConstant * $penetration / $dist}]",
-            "                set fx [expr {$fx + $scale * $dx}]",
-            "                set fy [expr {$fy + $scale * $dy}]",
-            "                set fz [expr {$fz + $scale * $dz}]",
-            "            }",
-            "        }",
-            "        if {$fx != 0.0 || $fy != 0.0 || $fz != 0.0} {",
-            "            addforce [list $fx $fy $fz]",
-            "        }",
-            "    }",
-            "}",
-            "",
-        ]
-    )
-
-    script_path.write_text(script + "\n", encoding="utf8")
-
-
-def write_obstacle_summary(summary_path: Path, spheres: list[ObstacleSphere]) -> None:
-    payload = [
-        {
-            "label": sphere.label,
-            "x": sphere.x,
-            "y": sphere.y,
-            "z": sphere.z,
-            "radius": sphere.radius,
-            "atomCount": sphere.atom_count,
-        }
-        for sphere in spheres
-    ]
-    summary_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf8")
 
 
 def set_fixed_atoms(text: str, enable: bool, fixed_file: str) -> str:
@@ -547,29 +333,6 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Output PDB path for occupancy-modified PDB (defaults to <outputname>_residues.pdb)",
     )
-    parser.add_argument(
-        "--complex-pdb",
-        default=None,
-        help="Optional full complex PDB used only to derive static obstacle spheres for non-RNA atoms",
-    )
-    parser.add_argument(
-        "--obstacle-force-constant",
-        type=float,
-        default=25.0,
-        help="Repulsive force constant for obstacle spheres in kcal/mol/A^2",
-    )
-    parser.add_argument(
-        "--obstacle-radius-margin",
-        type=float,
-        default=1.5,
-        help="Extra radius added on top of each non-RNA atom vdW radius when building obstacles",
-    )
-    parser.add_argument(
-        "--obstacle-min-radius",
-        type=float,
-        default=1.8,
-        help="Minimum obstacle sphere radius in Angstrom",
-    )
     return parser.parse_args()
 
 
@@ -602,8 +365,6 @@ def main() -> None:
         else workdir / f"single_{outputname}.log"
     )
     generator_log_path = workdir / f"generate_{outputname}.log"
-    obstacle_script_path = workdir / f"obstacle_forces_{outputname}.tcl"
-    obstacle_summary_path = workdir / f"obstacle_spheres_{outputname}.json"
 
     namd_bin_path = args.namd_bin
     if not Path(namd_bin_path).is_absolute():
@@ -629,8 +390,6 @@ def main() -> None:
     print(f"Generator log: {generator_log_path.name}")
     print(f"Base-pair templates dir: {args.base_pair_templates_dir}")
     print(f"NAMD processes: {num_processes}")
-    if args.complex_pdb:
-        print(f"Complex PDB: {Path(args.complex_pdb).name}")
 
     generator_cmd = [
         args.python,
@@ -678,11 +437,6 @@ def main() -> None:
     if args.dry_run:
         print("DRY-RUN generate: " + " ".join(shlex.quote(x) for x in generator_cmd))
         print("DRY-RUN write: " + shlex.quote(str(run_namd_script)))
-        if args.complex_pdb:
-            print("DRY-RUN obstacle script: " + shlex.quote(str(obstacle_script_path)))
-            print("DRY-RUN obstacle summary: " + shlex.quote(str(obstacle_summary_path)))
-        if args.zero_psf_charges:
-            print("DRY-RUN normalize PSF: " + shlex.quote(str((workdir / args.psf).resolve())))
         print("DRY-RUN run: " + " ".join(shlex.quote(x) for x in namd_cmd))
         print("DRY-RUN generator log: " + shlex.quote(str(generator_log_path)))
         print("DRY-RUN log: " + shlex.quote(str(log_path)))
@@ -695,25 +449,6 @@ def main() -> None:
 
     namd_template_text = namd_script.read_text()
     run_command(generator_cmd, cwd=workdir, log_path=generator_log_path)
-
-    obstacle_spheres: list[ObstacleSphere] = []
-    if args.complex_pdb:
-        complex_pdb_path = (workdir / args.complex_pdb).resolve()
-        if not complex_pdb_path.exists():
-            raise FileNotFoundError(f"Missing complex PDB: {complex_pdb_path}")
-
-        obstacle_spheres = build_obstacle_spheres(
-            complex_pdb_path,
-            radius_margin=args.obstacle_radius_margin,
-            minimum_radius=args.obstacle_min_radius,
-        )
-        print(f"Built obstacle spheres: {len(obstacle_spheres)} from {complex_pdb_path.name}")
-        write_obstacle_force_script(
-            obstacle_script_path,
-            obstacle_spheres,
-            force_constant=args.obstacle_force_constant,
-        )
-        write_obstacle_summary(obstacle_summary_path, obstacle_spheres)
 
     # If residues JSON is provided, write a PDB with occupancy flags
     if args.residues_json:
@@ -732,14 +467,10 @@ def main() -> None:
         # Update run-specific NAMD script to enable fixedAtoms and point to generated PDB
         final_script_text = replace_outputname(namd_template_text, outputname)
         final_script_text = set_fixed_atoms(final_script_text, True, out_pdb_residues.name)
-        if obstacle_spheres:
-            final_script_text = add_namd_tcl_forces(final_script_text, obstacle_script_path.name)
         run_namd_script.write_text(final_script_text)
     else:
         # No residues JSON: just write script with updated outputname
         final_script_text = replace_outputname(namd_template_text, outputname)
-        if obstacle_spheres:
-            final_script_text = add_namd_tcl_forces(final_script_text, obstacle_script_path.name)
         run_namd_script.write_text(final_script_text)
 
     psf_path = (workdir / args.psf).resolve()
