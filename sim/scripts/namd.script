@@ -22,7 +22,8 @@ binaryoutput        yes
 # Input - AMBER w NAMD nie używa paraTypeCharmm on
 set paramdir /webserver/scripts/amber
 source $paramdir/OL3/namdrc.OL3        
-# source $paramdir/solvents/namdrc.tip3p 
+source $paramdir/solvents/namdrc.tip3p 
+source $paramdir/ff99SBildn/namdrc.ff99SBildn
 
 temperature         $temperature
 
