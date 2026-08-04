@@ -200,7 +200,7 @@ const HelpPage = () => {
                 <li className="mb-1">
                   Specify the type of analysis by checking the box for local analysis and setting the radius 
                   of neighborhood sphere if local analysis is enabled. By default, local analysis is enabled
-                  and the radius of neighborhood sphere is set to 5 Å.
+                  and the radius of neighborhood sphere is set to 7 Å.
                 </li>
                 <li>
                   Click the <i>Next</i> button, which becomes active after all data is

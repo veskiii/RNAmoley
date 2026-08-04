@@ -29,12 +29,12 @@ import {
 import { Queue, Worker } from "bullmq";
 
 const PRE_CALCULATED_RESULTS: Record<string, { filename: string; radius: number; interval: number; selection: string }> = {
-  "Example 1": {"filename" : "example_1.json", "radius": 5, "interval": 1, "selection": "(1:A:1-90)"},
-  "Example 2": {"filename" : "example_2.json", "radius": 5, "interval": 1, "selection": "(1:A:11-36)"},
-  "Example 3": {"filename" : "example_3.json", "radius": 5, "interval": 1, "selection": "(1:A:8-12),(1:A:44-49)"},
-  "Example 4": {"filename" : "example_4.json", "radius": 5, "interval": 1, "selection": "(1:A:42-83)"},
+  "Example 1": {"filename" : "example_1.json", "radius": 7, "interval": 1, "selection": "(1:A:1-90)"},
+  "Example 2": {"filename" : "example_2.json", "radius": 7, "interval": 1, "selection": "(1:A:11-36)"},
+  "Example 3": {"filename" : "example_3.json", "radius": 7, "interval": 1, "selection": "(1:A:8-12),(1:A:44-49)"},
+  "Example 4": {"filename" : "example_4.json", "radius": 7, "interval": 1, "selection": "(1:A:42-83)"},
   "Example 5": {"filename" : "example_5.json", "radius": 8, "interval": 1, "selection": "(1:A:1-39),(1:A:83-90)"},
-  "Example 6": {"filename" : "example_6_<model_number>.json", "radius": 5, "interval": 1, "selection": "(1:0:1-30),(3:0:1-30),(5:0:1-30)"},
+  "Example 6": {"filename" : "example_6_<model_number>.json", "radius": 7, "interval": 1, "selection": "(1:0:1-30),(3:0:1-30),(5:0:1-30)"},
 }
 
 function normalizeSelection(selection: string) {

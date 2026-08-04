@@ -29,13 +29,13 @@ const SimulationStartModal: React.FC<SimulationStartModalProps> = ({
   onSubmit,
 }) => {
   const [restraintBackboneForce, setRestraintBackboneForce] = useState(
-    formatNumberForDisplay("500")
+    formatNumberForDisplay("0")
   );
   const [restraintGlobalForce, setRestraintGlobalForce] = useState(
-    formatNumberForDisplay("100000")
+    formatNumberForDisplay("1000")
   );
   const [restraintBasePairsForce, setRestraintBasePairsForce] = useState(
-    formatNumberForDisplay("500")
+    formatNumberForDisplay("0")
   );
   const [rmsdCutoff, setRmsdCutoff] = useState(formatNumberForDisplay("0.4"));
   const [validationError, setValidationError] = useState<string | null>(null);

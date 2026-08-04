@@ -25,7 +25,7 @@ const Dashboard: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const sphereRadiusInputRef = useRef<HTMLInputElement | null>(null);
   const [useWalkingSphere, setUseWalkingSphere] = useState(true);
-  const [sphereRadius, setSphereRadius] = useState<number>(5);
+  const [sphereRadius, setSphereRadius] = useState<number>(7);
   const [sphereInterval, setSphereInterval] = useState<number>(1);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const Dashboard: React.FC = () => {
       label: "1",
       file: "Xiao model 04 submitted to PZ39",
       useWalkingSphere: true,
-      sphereRadius: 5,
+      sphereRadius: 7,
       sphereInterval: 1,
     },
     {
@@ -58,7 +58,7 @@ const Dashboard: React.FC = () => {
       label: "2",
       file: "RNAComposer model 03 submitted to PZ39",
       useWalkingSphere: true,
-      sphereRadius: 5,
+      sphereRadius: 7,
       sphereInterval: 1,
     },
     {
@@ -67,7 +67,7 @@ const Dashboard: React.FC = () => {
       label: "3",
       file: "RNAComposer model 03 submitted to PZ39",
       useWalkingSphere: true,
-      sphereRadius: 5,
+      sphereRadius: 7,
       sphereInterval: 1,
     },
     {
@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
       label: "4",
       file: "Dfold model 01 submitted to PZ39",
       useWalkingSphere: true,
-      sphereRadius: 5,
+      sphereRadius: 7,
       sphereInterval: 1,
     },
     {
@@ -94,7 +94,7 @@ const Dashboard: React.FC = () => {
       label: "6",
       file: "SoutheRNA models submitted to R1117",
       useWalkingSphere: true,
-      sphereRadius: 5,
+      sphereRadius: 7,
       sphereInterval: 1,
     }
   ];
@@ -237,7 +237,7 @@ const Dashboard: React.FC = () => {
 
   function resetSettings() {
     setUseWalkingSphere(true);
-    setSphereRadius(5);
+    setSphereRadius(7);
     setSphereInterval(1);
     clearFileInput();
     setPdbCode("");
