@@ -44,6 +44,45 @@ def detect_file_format(filepath):
     # Default to PDB if can't determine
     return 'pdb'
 
+ELEMENT_TWO_LETTER = {
+    "MG", "ZN", "NA", "MN", "CA", "FE", "CO", "NI", "CD", "CU",
+    "CL", "BR", "SE", "SI", "AL", "LI", "AS", "HG", "PT", "AU",
+}
+
+def guess_element_from_atom_name(atom_name):
+    """Guess element symbol from a PDB atom name (e.g. C2' -> C, MG -> Mg)."""
+    letters = ''.join(ch for ch in atom_name if ch.isalpha())
+    if not letters:
+        return ''
+    upper = letters.upper()
+    if upper in ELEMENT_TWO_LETTER:
+        return upper[0] + upper[1].lower()
+    return upper[0]
+
+def fix_atom_element_column(line):
+    """Ensure an ATOM/HETATM line has the correct right-justified element in columns 77-78."""
+    if not (line.startswith('ATOM') or line.startswith('HETATM')):
+        return line
+
+    stripped_line = line.rstrip('\n')
+    if len(stripped_line) < 80:
+        stripped_line = stripped_line.ljust(80)
+
+    atom_name = stripped_line[12:16]
+    expected_element = guess_element_from_atom_name(atom_name)
+    if not expected_element:
+        return stripped_line + '\n'
+
+    element_field = expected_element.rjust(2)
+    stripped_line = stripped_line[:76] + element_field + stripped_line[78:]
+    return stripped_line + '\n'
+
+def process_pdb_line(line):
+    """Apply element-column validation/repair to ATOM/HETATM lines before writing."""
+    if line.startswith('ATOM') or line.startswith('HETATM'):
+        return fix_atom_element_column(line)
+    return line
+
 def count_models_pdb(file_handle):
     """Count models in PDB file"""
     count = 0
@@ -114,7 +153,7 @@ def separate_pdb_models(file_handle, output_folder, model_count):
                     continue
                 if line.startswith('ENDMDL'):
                     continue
-                f.write(line)
+                f.write(process_pdb_line(line))
             f.write("END\n")
         model_numbers.append(1)
     else:
@@ -148,7 +187,7 @@ def separate_pdb_models(file_handle, output_folder, model_count):
                 f = None
             elif line.strip():  # Skip empty lines
                 if f is not None and not f.closed:
-                    f.write(line)
+                    f.write(process_pdb_line(line))
         
         # Close the last file if it's still open
         if f is not None and not f.closed:
