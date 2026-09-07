@@ -585,6 +585,13 @@ const HelpPage = () => {
                 </tbody>
               </table>
             </div>
+            <p>
+              Analysis can also be performed through the API using {" "}
+              <a href="/rnamoley.py" download="rnamoley.py" className="hover:underline" style={{ color: Colors.blue }}>
+                this script
+              </a>
+              .
+            </p>
           </div>
         </div>
       </div>
