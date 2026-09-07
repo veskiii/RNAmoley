@@ -41,16 +41,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 # Install pnpm globally (uses cached npm where possible)
 RUN npm install -g pnpm@${PNPM_VERSION}
 
-# install maxit
-WORKDIR /usr/src
-RUN wget https://sw-tools.rcsb.org/apps/MAXIT/maxit-v11.200-prod-src.tar.gz && \
-    zcat maxit-v11.200-prod-src.tar.gz | tar -xf - && \
-    rm maxit-v11.200-prod-src.tar.gz
-WORKDIR /usr/src/maxit-v11.200-prod-src
-RUN make binary
-ENV RCSBROOT="/usr/src/maxit-v11.200-prod-src"
-ENV PATH="$PATH:$RCSBROOT/bin"
-
 # install rnapolis
 WORKDIR /usr/src
 RUN git clone https://github.com/tzok/rnapolis-py
