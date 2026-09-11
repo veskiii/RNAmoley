@@ -814,14 +814,28 @@ export async function walkingSphere(
 export async function runFragmentExtraction(
   id: string,
   modelNumber: string,
-  modelsDir = "models"
+  modelsDir = "models",
+  sourcePdbFilename?: string
 ) {
-  console.log(`Running fragment extraction on model ${modelNumber} of ${id}...`);
+  console.log(`Running fragment extraction on model ${modelNumber} of ${id}... Source filename: ${sourcePdbFilename}`);
+
+  // guard against callers accidentally forwarding the literal string "undefined"
+  if (sourcePdbFilename === "undefined" || sourcePdbFilename === "") {
+    sourcePdbFilename = undefined;
+  }
+
+  const sourcePdb = sourcePdbFilename
+    ? `${JOBS_DIR}/${id}/${modelsDir}/${sourcePdbFilename}`
+    : `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}.pdb`;
+
+  const fragmentFilename = sourcePdbFilename
+    ? `${sourcePdbFilename.replace(/\.pdb$/i, "")}_fragment.pdb`
+    : `${modelNumber}_fragment.pdb`;
 
   const fragment = spawnSync(`${SCRIPTS_DIR}/Extract_fragment.py`, [
-    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}.pdb`,
+    sourcePdb,
     `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_residues.json`,
-    `${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_fragment.pdb`,
+    `${JOBS_DIR}/${id}/${modelsDir}/${fragmentFilename}`,
   ], { encoding: "utf-8" });
 
   // console.log("stdout:", fragment.stdout);
@@ -831,8 +845,13 @@ export async function runFragmentExtraction(
     throw fragment.error;
   }
 
+  if (fragment.status !== 0) {
+    console.error(`Extract_fragment.py exited with status ${fragment.status}: ${fragment.stderr}`);
+    throw new Error(`Extract_fragment.py exited with status ${fragment.status}: ${fragment.stderr}`);
+  }
+
   try {
-    await fs.access(`${JOBS_DIR}/${id}/${modelsDir}/${modelNumber}_fragment.pdb`);
+    await fs.access(`${JOBS_DIR}/${id}/${modelsDir}/${fragmentFilename}`);
   } catch (e) {
     console.error("Fragment file was not created!");
     throw new Error("Fragment file was not created!");
@@ -841,3 +860,160 @@ export async function runFragmentExtraction(
   return { success: true };
 }
 
+export async function calculateSimRMSD(
+  id: string,
+  modelNumber: string,
+  fragment: boolean
+) {
+  console.log(`Calculating ${fragment ? "fragment" : "full"} RMSD for model ${modelNumber} of ${id}...`);
+
+  const rmsd = spawnSync(`rmsd.py`, fragment ? [
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/output_fragment.pdb`,
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_fragment.pdb`,
+  ] : [
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/output.pdb`,
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.pdb`,
+  ], { encoding: "utf-8" });
+
+  if (rmsd.error) {
+    console.error("Error calculating RMSD: ", rmsd.error);
+    throw rmsd.error;
+  }
+  // save value and remove white characters
+  const rmsdResult = (rmsd.stdout ?? "").trim();
+
+  // write result to a file
+  try {
+    await fs.writeFile(
+      `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.rmsd`,
+      rmsdResult,
+      "utf-8"
+    );
+  } catch (e) {
+    console.error("Failed to write RMSD result to file: ", e);
+    throw new Error("Failed to write RMSD result to file");
+  }
+
+  console.log(`RMSD calculation for model ${modelNumber} of ${id} finished. RMSD = ${rmsdResult}`);
+  return { value: rmsdResult };
+}
+
+export async function calculateSimINF(
+  id: string,
+  modelNumber: string,
+  fragment: boolean
+) {
+  console.log(`Calculating ${fragment ? "fragment" : "full"} INF for model ${modelNumber} of ${id}...`);
+
+  const infResults: Record<string, string> = {};
+  for (const category of ["canonical", "noncanonical", "stacking", "all"]) {
+
+    const inf = spawnSync(`inf.py`, fragment ? [
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/output_fragment.pdb`,
+      `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_fragment.pdb`,
+      category
+    ] : [
+      `${JOBS_DIR}/${id}/${modelNumber}_sim/output.pdb`,
+      `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.pdb`,
+      category
+    ], { encoding: "utf-8" });
+
+  if (inf.error) {
+    console.error("Error calculating INF: ", inf.error);
+    throw inf.error;
+  }
+  const infResult = (inf.stdout ?? "").trim();
+  infResults[category] = infResult;
+  }
+
+  // write result to a file
+  try {
+    await fs.writeFile(
+      `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.inf`,
+      JSON.stringify(infResults, null, 2),
+      "utf-8"
+    );
+  } catch (e) {
+    console.error("Failed to write INF result to file: ", e);
+    throw new Error("Failed to write INF result to file");
+  }
+
+  console.log(`INF calculation for model ${modelNumber} of ${id} finished. INF = ${JSON.stringify(infResults)}`);
+  return { value: infResults };
+}
+
+export async function calculateSimLddt(
+  id: string,
+  modelNumber: string,
+  fragment: boolean
+) {
+  console.log(`Calculating ${fragment ? "fragment" : "full"} LDDT for model ${modelNumber} of ${id}...`);
+
+  const lddt = spawnSync(`lddt.py`, fragment ? [
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/output_fragment.pdb`,
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_fragment.pdb`,
+  ] : [
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/output.pdb`,
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.pdb`,
+  ], { encoding: "utf-8" });
+
+  if (lddt.error) {
+    console.error("Error calculating LDDT: ", lddt.error);
+    throw lddt.error;
+  }
+  // save value and remove white characters
+  const lddtResult = (lddt.stdout ?? "").trim();
+
+  // write result to a file
+  try {
+    await fs.writeFile(
+      `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.lddt`,
+      lddtResult,
+      "utf-8"
+    );
+  } catch (e) {
+    console.error("Failed to write LDDT result to file: ", e);
+    throw new Error("Failed to write LDDT result to file");
+  }
+
+  console.log(`LDDT calculation for model ${modelNumber} of ${id} finished. Lddt = ${lddtResult}`);
+  return { value: lddtResult };
+}
+
+export async function calculateSimMcq(
+  id: string,
+  modelNumber: string,
+  fragment: boolean
+) {
+  console.log(`Calculating ${fragment ? "fragment" : "full"} MCQ for model ${modelNumber} of ${id}...`);
+
+  const mcq = spawnSync(`mcq.py`, fragment ? [
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/output_fragment.pdb`,
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_fragment.pdb`,
+  ] : [
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/output.pdb`,
+    `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.pdb`,
+  ], { encoding: "utf-8" });
+
+  if (mcq.error) {
+    console.error("Error calculating MCQ: ", mcq.error);
+    throw mcq.error;
+  }
+  // save value and remove white characters
+  const mcqResult = (mcq.stdout ?? "").trim();
+
+  // write result to a file
+  try {
+    await fs.writeFile(
+      `${JOBS_DIR}/${id}/${modelNumber}_sim/${modelNumber}_sim.mcq`,
+      mcqResult,
+      "utf-8"
+    );
+  } catch (e) {
+    console.error("Failed to write MCQ result to file: ", e);
+    throw new Error("Failed to write MCQ result to file");
+  }
+
+  console.log(`MCQ calculation for model ${modelNumber} of ${id} finished. Mcq = ${mcqResult}`);
+  return { value: mcqResult };
+}

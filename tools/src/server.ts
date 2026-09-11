@@ -1,5 +1,8 @@
 import express from "express";
 import {
+  calculateSimINF,
+  calculateSimRMSD,
+  calculateSimLddt,
   correctModels,
   inspectOriginalFileComposition,
   runAnnotator,
@@ -8,6 +11,7 @@ import {
   runMotifExtractor,
   splitModels,
   walkingSphere,
+  calculateSimMcq,
 } from "./wrappers.js";
 
 const app = express();
@@ -210,6 +214,11 @@ app.post("/fragment", (req, res) => {
   const id = req.query.id as string;
   const modelNumber = req.query.modelNumber as string;
   const modelsDir = (req.query.modelsDir as string) || "models";
+  const sourcePdbFilenameRaw = req.query.sourcePdbFilename as string | undefined;
+  const sourcePdbFilename =
+    sourcePdbFilenameRaw && sourcePdbFilenameRaw !== "undefined"
+      ? sourcePdbFilenameRaw
+      : undefined;
 
   if (!id) {
     res.status(400).send({ error: "Fragment extraction error: id is required" });
@@ -223,7 +232,107 @@ app.post("/fragment", (req, res) => {
     return;
   }
 
-  runFragmentExtraction(id, modelNumber, modelsDir)
+  runFragmentExtraction(id, modelNumber, modelsDir, sourcePdbFilename)
+    .then((output) => {
+      res.status(200).send(output);
+    })
+    .catch((error) => {
+      res.status(500).send(error);
+    });
+});
+
+app.post("/rmsd", (req, res) => {
+  const id = req.query.id as string;
+  const modelNumber = req.query.modelNumber as string;
+
+  if (!id) {
+    res.status(400).send({ error: "RMSD error: id is required" });
+    return;
+  }
+
+  if (!modelNumber) {
+    res.status(400).send({ error: "RMSD error: modelNumber is required" });
+    return;
+  }
+
+  const fragment = req.query.fragment === "true";
+
+  calculateSimRMSD(id, modelNumber, fragment)
+    .then((output) => {
+      res.status(200).send(output);
+    })
+    .catch((error) => {
+      res.status(500).send(error);
+    });
+});
+
+app.post("/inf", (req, res) => {
+  const id = req.query.id as string;
+  const modelNumber = req.query.modelNumber as string;
+
+  if (!id) {
+    res.status(400).send({ error: "INF error: id is required" });
+    return;
+  }
+
+  if (!modelNumber) {
+    res.status(400).send({ error: "INF error: modelNumber is required" });
+    return;
+  }
+
+  const fragment = req.query.fragment === "true";
+
+  calculateSimINF(id, modelNumber, fragment)
+    .then((output) => {
+      res.status(200).send(output);
+    })
+    .catch((error) => {
+      res.status(500).send(error);
+    });
+});
+
+app.post("/lddt", (req, res) => {
+  const id = req.query.id as string;
+  const modelNumber = req.query.modelNumber as string;
+
+  if (!id) {
+    res.status(400).send({ error: "LDDT error: id is required" });
+    return;
+  }
+
+  if (!modelNumber) {
+    res.status(400).send({ error: "LDDT error: modelNumber is required" });
+    return;
+  }
+
+  const fragment = req.query.fragment === "true";
+
+  calculateSimLddt(id, modelNumber, fragment)
+    .then((output) => {
+      res.status(200).send(output);
+    })
+    .catch((error) => {
+      res.status(500).send(error);
+    });
+});
+
+app.post("/mcq", (req, res) => {
+  const id = req.query.id as string;
+  const modelNumber = req.query.modelNumber as string;
+
+  if (!id) {
+    res.status(400).send({ error: "MCQ error: id is required" });
+    return;
+  }
+
+  if (!modelNumber) {
+    res.status(400).send({ error: "MCQ error: modelNumber is required" });
+    return;
+  }
+
+  const fragment = req.query.fragment === "true";
+
+  calculateSimMcq(id, modelNumber, fragment)
     .then((output) => {
       res.status(200).send(output);
     })

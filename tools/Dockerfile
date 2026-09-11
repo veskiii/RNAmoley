@@ -64,6 +64,12 @@ RUN python -m pip install --no-cache-dir \
     python -m pip install --no-cache-dir .
 ENV PATH="$PATH:/root/.local/bin"
 
+WORKDIR /usr/src
+RUN git clone https://github.com/tzok/rna-metrics.git
+WORKDIR /usr/src/rna-metrics
+RUN chmod +x inf.py lddt.py rmsd.py mcq.py
+ENV PATH="$PATH:/usr/src/rna-metrics"
+
 # add scripts to path
 ENV PATH="$PATH:/usr/src/app/scripts"
 

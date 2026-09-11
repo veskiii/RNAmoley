@@ -1003,7 +1003,7 @@ async function fetchMotifs(
   );
 }
 
-async function writeSelectedResiduesToFile(
+export async function writeSelectedResiduesToFile(
   jobID: UUID,
   modelNumber: string,
   residues: ChainElement[],
@@ -1013,13 +1013,14 @@ async function writeSelectedResiduesToFile(
   await fs.writeFile(residuesFilePath, JSON.stringify(residues, null, 2));
 }
 
-async function createFragmentPDB(
+export async function createFragmentPDB(
   jobID: UUID,
   modelNumber: string,
-  modelsDir = "models"
+  modelsDir = "models",
+  sourcePdbFilename?: string
 ) {
   const fragment = await fetch(
-    `${TOOLS_URL}/fragment?id=${jobID}&modelNumber=${modelNumber}&modelsDir=${modelsDir}`,
+    `${TOOLS_URL}/fragment?id=${jobID}&modelNumber=${modelNumber}&modelsDir=${modelsDir}&sourcePdbFilename=${sourcePdbFilename}`,
     { method: "POST" }
   );
   if (!fragment.ok) {

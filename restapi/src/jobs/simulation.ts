@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import type { UUID } from "crypto";
-import type { ChainElement, Metadata, SimulationParameters } from "./types.js";
+import type { ChainElement, ComparisonMetrics, Metadata, SimulationParameters } from "./types.js";
 import { SIM_URL, TOOLS_URL } from "../server.js";
 import {
     JOBS_DIR,
@@ -8,7 +8,7 @@ import {
     updateModelMetadata,
 } from "./utils.js";
 import { Queue, Worker } from "bullmq";
-import { analyzeStructure } from "./analysis.js";
+import { analyzeStructure, createFragmentPDB, writeSelectedResiduesToFile } from "./analysis.js";
 import { waitForSphereSessionCompletion } from "./molprobityProgress.js";
 
 export const simulationQueue = new Queue("simulation", {
@@ -325,6 +325,14 @@ async function analyzeSimulationResults(
       throw new Error(`Motif extraction failed: ${motifsResponse.statusText}`);
     }
 
+    
+    await writeSelectedResiduesToFile(jobID, modelNumber, selectedResidues, modelsDir);
+    await createFragmentPDB(jobID, modelNumber, modelsDir, "output.pdb");
+    await createFragmentPDB(jobID, modelNumber, modelsDir);
+
+    await calculateDifferenceMetrics(jobID, modelNumber, false, metadata);
+    await calculateDifferenceMetrics(jobID, modelNumber, true, metadata);
+
     await analyzeStructure(
       jobID,
       modelNumber,
@@ -358,3 +366,106 @@ async function analyzeSimulationResults(
     throw error;
   }
 }
+
+const calculateDifferenceMetrics = async (jobID: UUID, modelNumber: string, fragment: boolean, metadata: Metadata) => {
+  const targetKey = fragment ? "fragmentComparisonMetrics" : "comparisonMetrics";
+
+  const appendComparisonMetrics = (next: Partial<ComparisonMetrics>) => {
+    if (!metadata.simulations || !metadata.simulations[modelNumber]) {
+      return;
+    }
+
+    const current = metadata.simulations[modelNumber][targetKey] ?? {};
+    metadata.simulations[modelNumber][targetKey] = {
+      ...current,
+      ...next,
+    };
+  };
+
+  const rmsdResponse = await fetch(`${TOOLS_URL}/rmsd?id=${jobID}&modelNumber=${modelNumber}&fragment=${String(fragment)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!rmsdResponse.ok) {
+    console.error(`RMSD calculation failed: ${rmsdResponse.statusText}`);
+    return;
+  }
+
+  const rmsdPayload = (await rmsdResponse.json()) as { value?: string } | null;
+  const rmsdResult = rmsdPayload && typeof rmsdPayload === "object" && "value" in rmsdPayload
+    ? rmsdPayload.value ?? "N/A"
+    : "N/A";
+
+  appendComparisonMetrics({ rmsd: rmsdResult });
+  await saveMetadata(jobID, metadata);
+
+  const infResponse = await fetch(`${TOOLS_URL}/inf?id=${jobID}&modelNumber=${modelNumber}&fragment=${String(fragment)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!infResponse.ok) {
+    console.error(`INF calculation failed: ${infResponse.statusText}`);
+    return;
+  }
+
+  const infPayload = (await infResponse.json()) as { value?: Record<string, string> } | null;
+  const infValues = infPayload && typeof infPayload === "object" && "value" in infPayload
+    ? infPayload.value ?? {}
+    : {};
+
+  const comparisonMetrics: ComparisonMetrics = {
+    infwc: typeof infValues.canonical === "string" ? infValues.canonical : "N/A",
+    infnwc: typeof infValues.noncanonical === "string" ? infValues.noncanonical : "N/A",
+    infstack: typeof infValues.stacking === "string" ? infValues.stacking : "N/A",
+    infall: typeof infValues.all === "string" ? infValues.all : "N/A",
+  };
+
+  appendComparisonMetrics(comparisonMetrics);
+  await saveMetadata(jobID, metadata);
+
+  const lddtResponse = await fetch(`${TOOLS_URL}/lddt?id=${jobID}&modelNumber=${modelNumber}&fragment=${String(fragment)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!lddtResponse.ok) {
+    console.error(`LDDT calculation failed: ${lddtResponse.statusText}`);
+    return;
+  }
+
+  const lddtPayload = (await lddtResponse.json()) as { value?: string } | null;
+  const lddtResult = lddtPayload && typeof lddtPayload === "object" && "value" in lddtPayload
+    ? lddtPayload.value ?? "N/A"
+    : "N/A";
+
+  appendComparisonMetrics({ lddt: lddtResult });
+  await saveMetadata(jobID, metadata);
+
+  const mcqResponse = await fetch(`${TOOLS_URL}/mcq?id=${jobID}&modelNumber=${modelNumber}&fragment=${String(fragment)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!mcqResponse.ok) {
+    console.error(`MCQ calculation failed: ${mcqResponse.statusText}`);
+    return;
+  }
+
+  const mcqPayload = (await mcqResponse.json()) as { value?: string } | null;
+  const mcqResult = mcqPayload && typeof mcqPayload === "object" && "value" in mcqPayload
+    ? mcqPayload.value ?? "N/A"
+    : "N/A";
+
+  appendComparisonMetrics({ mcq: mcqResult });
+  await saveMetadata(jobID, metadata);
+};
