@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { SummaryJob, Residue } from "../utils/types";
+import { SummaryJob, Residue, ComparisonMetrics } from "../utils/types";
 import { formatNumberForDisplay } from "../utils/displayUniform";
 
 type ResultsComparisonTableProps = {
@@ -18,6 +18,8 @@ type ResultsComparisonTableProps = {
   simModelScore: number | null;
   fragmentScore: number | null;
   simFragmentScore: number | null;
+  comparisonMetrics?: ComparisonMetrics;
+  fragmentComparisonMetrics?: ComparisonMetrics;
 };
 
 type MetricDefinition = {
@@ -150,6 +152,35 @@ const impactMetricKeys = [
 ] as const;
 
 const detailedMetricKeys = ["clashscore", "pct_badbonds", "pct_badangles", "suiteness"] as const;
+
+const comparisonMetricLabelMap: Record<keyof ComparisonMetrics, string> = {
+  rmsd: "RMSD",
+  infall: "INFall",
+  infwc: "INFwc",
+  infnwc: "INFnwc",
+  infstack: "INFstacking",
+  lddt: "LDDT",
+  mcq: "MCQ",
+};
+
+const normalizeComparisonMetrics = (value: ComparisonMetrics | Record<string, unknown> | undefined | null): Partial<ComparisonMetrics> => {
+  if (!value) {
+    return {};
+  }
+
+  const root = (value as { comparisonMetrics?: ComparisonMetrics }).comparisonMetrics ?? value;
+  const record = (root ?? {}) as Record<string, unknown>;
+
+  return {
+    rmsd: typeof record.rmsd === "string" ? record.rmsd : undefined,
+    infall: typeof record.infall === "string" ? record.infall : undefined,
+    infwc: typeof record.infwc === "string" ? record.infwc : undefined,
+    infnwc: typeof record.infnwc === "string" ? record.infnwc : undefined,
+    infstack: typeof record.infstack === "string" ? record.infstack : undefined,
+    lddt: typeof record.lddt === "string" ? record.lddt : undefined,
+    mcq: typeof record.mcq === "string" ? record.mcq : undefined,
+  };
+};
 
 const parseNumericValue = (value?: string | null) => {
   if (value === undefined || value === null || value === "") {
@@ -497,6 +528,8 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   simModelScore,
   fragmentScore,
   simFragmentScore,
+  comparisonMetrics,
+  fragmentComparisonMetrics,
 }) => {
   const [showComparison, setShowComparison] = React.useState(false);
 
@@ -547,6 +580,26 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
   const impactRows = useMemo(() => buildImpactRows(summaries), [summaries]);
 
   const detailSections = useMemo(() => buildDetailedSections(summaries), [summaries]);
+
+  const comparisonMetricRows = useMemo(() => {
+    const metricKeys = Object.keys(comparisonMetricLabelMap) as Array<keyof ComparisonMetrics>;
+    const metricValues = normalizeComparisonMetrics(comparisonMetrics);
+    const fragmentMetricValues = normalizeComparisonMetrics(fragmentComparisonMetrics);
+
+    const buildRow = (label: string, isFragment = false) => ({
+      label,
+      values: metricKeys.reduce((acc, key) => {
+        const value = isFragment ? fragmentMetricValues[key] : metricValues[key];
+        acc[key] = value && value !== "N/A" ? value : "—";
+        return acc;
+      }, {} as Record<keyof ComparisonMetrics, string>),
+    });
+
+    return [
+      buildRow("Entire model", false),
+      buildRow("Analysed fragment", true),
+    ];
+  }, [comparisonMetrics, fragmentComparisonMetrics]);
 
   if (
     !referenceData ||
@@ -751,7 +804,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
             </div>
           </div>
 
-          <div className="mb-4">
+          <div className="mb-10">
             <h3 className="text-sm font-medium text-gray-700">Detailed refinement metrics for the analysed region</h3>
             <div className="mt-2 max-w-4xl overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
@@ -788,6 +841,41 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                         </tr>
                       ))}
                     </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-gray-700">Global fold and topology preservation</h3>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-fit border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="sticky left-0 z-10 w-40 min-w-40 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Category</th>
+                    {Object.entries(comparisonMetricLabelMap).map(([metricKey, label]) => (
+                      <th
+                        key={metricKey}
+                        className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"
+                      >
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonMetricRows.map((row) => (
+                    <tr key={row.label} className="bg-white">
+                      <td className="sticky left-0 z-10 w-40 min-w-40 border-b border-gray-100 bg-inherit px-3 py-2 font-medium text-gray-700">
+                        {row.label}
+                      </td>
+                      {(Object.keys(comparisonMetricLabelMap) as Array<keyof ComparisonMetrics>).map((metricKey) => (
+                        <td key={`${row.label}-${metricKey}`} className="border-b border-gray-100 px-3 py-2 text-gray-700">
+                          {row.values[metricKey] ?? "—"}
+                        </td>
+                      ))}
+                    </tr>
                   ))}
                 </tbody>
               </table>

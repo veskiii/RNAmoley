@@ -104,8 +104,20 @@ export interface SimulationInfo {
   simJobId: string;
   status: string;
   parameters: SimulationParameters;
+  comparisonMetrics?: ComparisonMetrics;
+  fragmentComparisonMetrics?: ComparisonMetrics;
   startedAt?: string;
   completedAt?: string;
+}
+
+export interface ComparisonMetrics {
+  infwc?: string;
+  infnwc?: string;
+  infstack?: string;
+  infall?: string;
+  rmsd?: string;
+  lddt?: string;
+  mcq?: string;
 }
 
 export interface metrics {

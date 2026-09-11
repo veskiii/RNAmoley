@@ -1810,6 +1810,14 @@ const SummaryPanel: React.FC = () => {
                     simModelScore={rnaMoleyScoreModelSim}
                     fragmentScore={rnaMoleyScoreFragment}
                     simFragmentScore={rnaMoleyScoreFragmentSim}
+                    comparisonMetrics={
+                      simulationResults.metadata.simulations?.[selectedModel?.toString() || ""]?.comparisonMetrics
+                      ?? originalResults.metadata.simulations?.[selectedModel?.toString() || ""]?.comparisonMetrics
+                    }
+                    fragmentComparisonMetrics={
+                      simulationResults.metadata.simulations?.[selectedModel?.toString() || ""]?.fragmentComparisonMetrics
+                      ?? originalResults.metadata.simulations?.[selectedModel?.toString() || ""]?.fragmentComparisonMetrics
+                    }
                   />
                 </div>
               )}

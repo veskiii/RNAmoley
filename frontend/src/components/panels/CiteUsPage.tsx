@@ -25,7 +25,7 @@ const CiteUsPage = () => {
               Any published work that has made use of RNAmoley should cite the following paper:
             </p>
             <p className="mt-4">
-              Mikolaj Mlynarczyk, Simón Poblete, Marta Szachniuk (2026) RNAmoley: uncovering and refining structural inaccuracies in RNA 3D models. <i>submitted</i> 
+              Mikolaj Mlynarczyk, Simón Poblete, Marta Szachniuk (2027) RNAmoley: uncovering and refining structural inaccuracies in RNA 3D models. <i>submitted</i> 
             </p>
             <br />
             <br />
