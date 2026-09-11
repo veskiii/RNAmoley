@@ -47,32 +47,96 @@ def detect_file_format(filepath):
 ELEMENT_TWO_LETTER = {
     "MG", "ZN", "NA", "MN", "CA", "FE", "CO", "NI", "CD", "CU",
     "CL", "BR", "SE", "SI", "AL", "LI", "AS", "HG", "PT", "AU",
+    "IR", "PB", "BA", "SR", "CS", "RB", "TL", "RU", "RH", "PD",
+    "AG", "OS", "EU", "TB", "YB", "GD", "SM", "LU",
 }
 
 def guess_element_from_atom_name(atom_name):
-    """Guess element symbol from a PDB atom name (e.g. C2' -> C, MG -> Mg)."""
-    letters = ''.join(ch for ch in atom_name if ch.isalpha())
-    if not letters:
+    """
+    Guess element symbol from a PDB atom name (columns 13-16, length 4).
+    Standard PDB atom name alignment:
+    - 2-character chemical symbols (Mg, Ca, Fe, Zn, Cl, etc.) start at column 13 (index 0).
+    - 1-character chemical symbols (C, N, O, P, S, H, etc.) start at column 14 (index 1), with index 0 being a space.
+    - If index 0 is a digit (e.g., '1H5'', '2HG'), the element is the first letter (e.g. 'H').
+    """
+    if not atom_name:
         return ''
-    upper = letters.upper()
-    if upper in ELEMENT_TWO_LETTER:
-        return upper[0] + upper[1].lower()
-    return upper[0]
+
+    atom_name_padded = atom_name.ljust(4)
+
+    # Check if first character is a digit (e.g. 1H5', 2H2', 1HB)
+    if atom_name_padded[0].isdigit():
+        letters = [ch for ch in atom_name_padded if ch.isalpha()]
+        if letters:
+            return letters[0].upper()
+        return ''
+
+    # If first character is a space, it's a 1-character element (e.g., " CA ", " N  ", " C1'", " OP1")
+    if atom_name_padded[0] == ' ':
+        letters = [ch for ch in atom_name_padded[1:] if ch.isalpha()]
+        if letters:
+            return letters[0].upper()
+        return ''
+
+    # 4-character atom names starting with H (e.g., HG11, HD21, HE22, HZ3, HH12, HA2, HB3) are Hydrogens
+    if atom_name_padded[0].upper() == 'H':
+        stripped = atom_name_padded.strip().upper()
+        if stripped != "HG" and stripped != "HE" and stripped != "HF" and stripped != "HO":
+            return 'H'
+        if stripped in ELEMENT_TWO_LETTER:
+            return stripped[0] + stripped[1].lower()
+        return 'H'
+
+    # If first character is a letter:
+    # Check if the first two characters form a known 2-letter element (e.g., "MG  ", "CA  ", "FE  ", "CL  ", "IR  ")
+    first_two = ''.join(ch for ch in atom_name_padded[:2] if ch.isalpha()).upper()
+    if len(first_two) == 2 and first_two in ELEMENT_TWO_LETTER:
+        return first_two[0] + first_two[1].lower()
+
+    # Otherwise, fallback to the first letter
+    first_letter = atom_name_padded[0]
+    if first_letter.isalpha():
+        return first_letter.upper()
+
+    return ''
 
 def fix_atom_element_column(line):
     """Ensure an ATOM/HETATM line has the correct right-justified element in columns 77-78."""
     if not (line.startswith('ATOM') or line.startswith('HETATM')):
         return line
 
-    stripped_line = line.rstrip('\n')
+    stripped_line = line.rstrip('\r\n')
     if len(stripped_line) < 80:
         stripped_line = stripped_line.ljust(80)
 
     atom_name = stripped_line[12:16]
+    existing_element = stripped_line[76:78].strip()
     expected_element = guess_element_from_atom_name(atom_name)
+
     if not expected_element:
         return stripped_line + '\n'
 
+    # If existing element is present, check if it's already consistent
+    if existing_element:
+        # If exact match (case-insensitive), normalize format
+        if existing_element.upper() == expected_element.upper():
+            element_field = expected_element.rjust(2)
+            stripped_line = stripped_line[:76] + element_field + stripped_line[78:]
+            return stripped_line + '\n'
+
+        # If both are 1-letter and first letters match (e.g. existing="H", expected="H")
+        if len(existing_element) == 1 and len(expected_element) == 1 and existing_element[0].upper() == expected_element[0].upper():
+            element_field = expected_element.rjust(2)
+            stripped_line = stripped_line[:76] + element_field + stripped_line[78:]
+            return stripped_line + '\n'
+
+        # If both are 2-letter and match (e.g. existing="MG", expected="Mg")
+        if len(existing_element) == 2 and len(expected_element) == 2 and existing_element.upper() == expected_element.upper():
+            element_field = expected_element.rjust(2)
+            stripped_line = stripped_line[:76] + element_field + stripped_line[78:]
+            return stripped_line + '\n'
+
+    # If missing or conflicting, overwrite with expected element
     element_field = expected_element.rjust(2)
     stripped_line = stripped_line[:76] + element_field + stripped_line[78:]
     return stripped_line + '\n'
