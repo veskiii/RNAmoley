@@ -442,6 +442,12 @@ const HelpPage = () => {
                 the refinement results by providing a breakdown of largest, least, mean and median improvements 
                 and deteriorations for each quality score in the selected region.
               </p>
+              <p>
+                <i>Global fold and topology preservation</i> table summarizes the impact of the refinement process 
+                on the overall fold and topology of the entire model and the selected region. It includes metrics 
+                such as RMSD, MCQ, INF (all, canonical (WC), non-canonical (nWC) and stacking) and LDDT. Those metrics
+                are calculated between pre- and post-refinement structures.
+              </p>
 
               <h4
                 id="local-quality-table"

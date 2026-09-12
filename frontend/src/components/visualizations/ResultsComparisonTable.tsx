@@ -154,13 +154,13 @@ const impactMetricKeys = [
 const detailedMetricKeys = ["clashscore", "pct_badbonds", "pct_badangles", "suiteness"] as const;
 
 const comparisonMetricLabelMap: Record<keyof ComparisonMetrics, string> = {
-  rmsd: "RMSD",
+  rmsd: "RMSD [Å]",
   infall: "INFall",
   infwc: "INFwc",
   infnwc: "INFnwc",
   infstack: "INFstacking",
   lddt: "LDDT",
-  mcq: "MCQ",
+  mcq: "MCQ [°]",
 };
 
 const normalizeComparisonMetrics = (value: ComparisonMetrics | Record<string, unknown> | undefined | null): Partial<ComparisonMetrics> => {
@@ -848,12 +848,22 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
           </div>
 
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-gray-700">Global fold and topology preservation</h3>
+            <h3 className="text-sm font-medium text-gray-700">Global fold and topology preservation <span className="group relative inline-flex cursor-help items-center justify-center ml-2">
+                      <span
+                        aria-label="What this field does"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-xs font-semibold text-gray-600"
+                      >
+                        ?
+                      </span>
+                      <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-36 md:w-64 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                        Displays metrics computed between pre- and post-refinement structures.
+                      </span>
+                    </span></h3>
             <div className="mt-2 overflow-x-auto">
               <table className="w-fit border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="sticky left-0 z-10 w-40 min-w-40 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Category</th>
+                    <th className="sticky left-0 z-9 w-40 min-w-40 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Category</th>
                     {Object.entries(comparisonMetricLabelMap).map(([metricKey, label]) => (
                       <th
                         key={metricKey}
@@ -867,7 +877,7 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                 <tbody>
                   {comparisonMetricRows.map((row) => (
                     <tr key={row.label} className="bg-white">
-                      <td className="sticky left-0 z-10 w-40 min-w-40 border-b border-gray-100 bg-inherit px-3 py-2 font-medium text-gray-700">
+                      <td className="sticky left-0 z-9 w-40 min-w-40 border-b border-gray-100 bg-inherit px-3 py-2 font-medium text-gray-700">
                         {row.label}
                       </td>
                       {(Object.keys(comparisonMetricLabelMap) as Array<keyof ComparisonMetrics>).map((metricKey) => (
