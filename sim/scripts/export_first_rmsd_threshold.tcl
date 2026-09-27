@@ -84,6 +84,7 @@ $ref_sel delete
 
 if {$found_frame < 0} {
     set export_sel [atomselect $traj_mol $export_selection frame $last_frame]
+    $export_sel set occupancy 1.00
     $export_sel writepdb $out_pdb
     $export_sel delete
 
