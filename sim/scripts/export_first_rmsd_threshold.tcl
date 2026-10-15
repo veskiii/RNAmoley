@@ -72,6 +72,7 @@ for {set frame 0} {$frame < $num_frames} {incr frame} {
         set found_frame $frame
 
         set export_sel [atomselect $traj_mol $export_selection frame $frame]
+        $export_sel set occupancy 1.00
         $export_sel writepdb $out_pdb
         $export_sel delete
 
