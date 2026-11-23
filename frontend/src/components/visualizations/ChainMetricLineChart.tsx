@@ -92,9 +92,9 @@ const getMetricLabel = (selectedScore: QualityScore) => {
     case QualityScore.CLASH_SCORE:
       return "Clash score";
     case QualityScore.BAD_ANGLES:
-      return "Bad angles";
+      return "% bad angles";
     case QualityScore.BAD_BONDS:
-      return "Bad bonds";
+      return "% bad bonds";
     case QualityScore.SUITENESS:
       return "Suiteness";
     case QualityScore.SUGAR_PUCKER_OUT:
