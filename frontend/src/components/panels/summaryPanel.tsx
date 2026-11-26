@@ -38,8 +38,8 @@ type ColorLegendEntry = {
 
 const qualityScoreLegendLabels: Partial<Record<QualityScore, string>> = {
   [QualityScore.CLASH_SCORE]: "Clash Score",
-  [QualityScore.BAD_BONDS]: "Bad Bonds",
-  [QualityScore.BAD_ANGLES]: "Bad Angles",
+  [QualityScore.BAD_BONDS]: "Bad bond lengths",
+  [QualityScore.BAD_ANGLES]: "Bad bond angles",
   [QualityScore.SUITENESS]: "Suiteness",
 };
 
@@ -1194,16 +1194,16 @@ const SummaryPanel: React.FC = () => {
         { key: "clashscore", label: "Clash score" },
         {
           key: "pct_badbonds",
-          label: "Bad bonds / all bonds (%)",
+          label: "Bad bond lengths / all bond lengths (%)",
           displayValue: (metrics) => formatCountAndPercentCsv(metrics, "numbadbonds", "numbonds", "pct_badbonds"),
         },
-        { key: "pct_resbadbonds", label: "Residues with bad bonds (%)" },
+        { key: "pct_resbadbonds", label: "Residues with bad bond lengths (%)" },
         {
           key: "pct_badangles",
-          label: "Bad angles / all angles (%)",
+          label: "Bad bond angles / all bond angles (%)",
           displayValue: (metrics) => formatCountAndPercentCsv(metrics, "numbadangles", "numangles", "pct_badangles"),
         },
-        { key: "pct_resbadangles", label: "Residues with bad angles (%)" },
+        { key: "pct_resbadangles", label: "Residues with bad bond angles (%)" },
         { key: "numSuiteOutliers", label: "Suite outliers" },
       ];
 
@@ -1351,13 +1351,13 @@ const SummaryPanel: React.FC = () => {
       },
       {
         key: "pct_badbonds",
-        label: "Bad bonds",
+        label: "Bad bond lengths",
         higherIsBetter: false,
         extract: (residue) => parseNumericValue(residue.metrics?.pct_badbonds),
       },
       {
         key: "pct_badangles",
-        label: "Bad angles",
+        label: "Bad bond angles",
         higherIsBetter: false,
         extract: (residue) => parseNumericValue(residue.metrics?.pct_badangles),
       },
@@ -1454,7 +1454,7 @@ const SummaryPanel: React.FC = () => {
     addBlankLine();
 
     addRow(["Detailed refinement metrics for the analysed region"]);
-    addRow(["Section", "Row", "Clash score", "Bad bonds", "Bad angles", "Suiteness"]);
+    addRow(["Section", "Row", "Clash score", "Bad bond lengths", "Bad bond angles", "Suiteness"]);
     detailSections.forEach((section) => {
       addRow([section.title]);
       section.rows.forEach((row) => {
@@ -1968,7 +1968,7 @@ const SummaryPanel: React.FC = () => {
                   )}
                   {!originalResults.metadata.analyzeNeighborhoods && (
                     <p className="">
-                      Local analysis was not enabled. To compute clash scores, bad bonds, and bad angles for residue neighborhoods, 
+                      Local analysis was not enabled. To compute clash scores, bad bond lengths, and bad bond angles for residue neighborhoods, 
                       enable "Local analysis" during submission.
                     </p>
                   )}
@@ -2140,7 +2140,7 @@ const SummaryPanel: React.FC = () => {
                       onChange={(e) => setQualityScore(e.target.value as QualityScore)}
                       className="cursor-pointer"
                     />
-                    <span className="text-sm">Bad bonds</span>
+                    <span className="text-sm">% bad bond lengths</span>
                   </label>
                   )}
                   {originalResults.metadata.analyzeNeighborhoods && (
@@ -2153,7 +2153,7 @@ const SummaryPanel: React.FC = () => {
                       onChange={(e) => setQualityScore(e.target.value as QualityScore)}
                       className="cursor-pointer"
                     />
-                    <span className="text-sm">Bad angles</span>
+                    <span className="text-sm">% bad bond angles</span>
                   </label>
                   )}
                   <label className="flex items-center gap-2 cursor-pointer">

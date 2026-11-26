@@ -90,16 +90,16 @@ const analyzedRegionMetricDefinitions: AggregateMetricDefinition[] = [
   { key: "clashscore", label: "Clash score" },
   {
     key: "pct_badbonds",
-    label: "Bad bonds / all bonds (%)",
+    label: "Bad bond lengths / all bond lengths (%)",
     displayValue: (metrics) => formatCountAndPercent(metrics, "numbadbonds", "numbonds", "pct_badbonds"),
   },
-  { key: "pct_resbadbonds", label: "Residues with bad bonds (%)" },
+  { key: "pct_resbadbonds", label: "Residues with bad bond lengths (%)" },
   {
     key: "pct_badangles",
-    label: "Bad angles / all angles (%)",
+    label: "Bad bond angles / all bond angles (%)",
     displayValue: (metrics) => formatCountAndPercent(metrics, "numbadangles", "numangles", "pct_badangles"),
   },
-  { key: "pct_resbadangles", label: "Residues with bad angles (%)" },
+  { key: "pct_resbadangles", label: "Residues with bad bond angles (%)" },
   { key: "numSuiteOutliers", label: "Suite outliers" },
 ];
 
@@ -112,13 +112,13 @@ const metricDefinitions: MetricDefinition[] = [
   },
   {
     key: "pct_badbonds",
-    label: "Bad bonds",
+    label: "Bad bond lengths",
     higherIsBetter: false,
     extract: (residue) => parseNumericValue(residue.metrics?.pct_badbonds),
   },
   {
     key: "pct_badangles",
-    label: "Bad angles",
+    label: "Bad bond angles",
     higherIsBetter: false,
     extract: (residue) => parseNumericValue(residue.metrics?.pct_badangles),
   },
@@ -691,10 +691,10 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                   <tr className="bg-gray-100">
                     <th className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds / all bonds (%)</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bonds (%)</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond lengths / all bond lengths (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bond lengths (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond angles / all bond angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bond angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">RNAmoley Quality Score (RQS)</th>
                   </tr>
@@ -736,10 +736,10 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                   <tr className="bg-gray-100">
                     <th className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds / all bonds (%)</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bonds (%)</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles / all angles (%)</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond lengths / all bond lengths (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bond lengths (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond angles / all bond angles (%)</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Residues with bad bond angles (%)</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">RNAmoley Quality Score (RQS)</th>
                   </tr>
@@ -781,8 +781,8 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                   <tr className="bg-gray-100">
                     <th className="w-48 min-w-48 sticky left-0 z-10 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds</th>
-                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond lengths</th>
+                    <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond angles</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suiteness</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suite outliers</th>
                     <th className="w-36 min-w-36 border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Sugar Pucker Outliers</th>
@@ -812,8 +812,8 @@ const ResultsComparisonTable: React.FC<ResultsComparisonTableProps> = ({
                   <tr className="bg-gray-100">
                     <th className="sticky left-0 z-10 w-32 min-w-32 whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700"></th>
                     <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Clash score</th>
-                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bonds</th>
-                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad angles</th>
+                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond lengths</th>
+                    <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Bad bond angles</th>
                     <th className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">Suiteness</th>
                   </tr>
                 </thead>

@@ -169,7 +169,7 @@ export function BadBondsColorTheme(ctx: ThemeDataContext, props: PD.Values<Entit
 
 export const BadBondsColorThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'quality-bad-bonds-score'> = {
     name: 'quality-bad-bonds-score',
-    label: 'Bad Bonds',
+    label: 'Bad bond lengths',
     category: "Color by quality",
     factory: BadBondsColorTheme,
     getParams: getEntityIdColorThemeParams,
@@ -223,7 +223,7 @@ export function BadAnglesColorTheme(ctx: ThemeDataContext, props: PD.Values<Enti
 
 export const BadAnglesColorThemeProvider: ColorTheme.Provider<EntityIdColorThemeParams, 'quality-bad-angles-score'> = {
     name: 'quality-bad-angles-score',
-    label: 'Bad Angles',
+    label: 'Bad bond angles',
     category: "Color by quality",
     factory: BadAnglesColorTheme,
     getParams: getEntityIdColorThemeParams,

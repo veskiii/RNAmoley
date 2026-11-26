@@ -219,7 +219,7 @@ const HelpPage = () => {
                 The neighborhood is defined by a sphere with a user-specified radius, centered on 
                 the C1' atoms of the selected residues. <b>Each residue that has at least one atom located
                 within the sphere is considered part of the neighborhood.</b> Enabling local analysis 
-                provides users clash scores, bad bonds and bad angles scores for each residue and its neighborhood, 
+                provides users clash scores, bad bond lengths and bad bond angles scores for each residue and its neighborhood, 
                 while disabling it only provides suiteness and sugar pucker outlier types (also included in local analysis).
               </p>
             </div>
@@ -400,13 +400,13 @@ const HelpPage = () => {
               </h4>
               <p>
                 The global quality summary provides an overview of the quality scores for the entire model
-                and selected region of the model. It includes metrics such as clash score, bad bonds, bad angles, 
+                and selected region of the model. It includes metrics such as clash score, bad bond lengths, bad bond angles, 
                 suite outliers, and sugar pucker outliers.
               </p>
               <p>
                 In this section the <b>RNAmoley Quality Score (RQS)</b> is also displayed. The RQS summarizes the overall
                 distribution of errors in the structure. It is calculated as the average of the percentages
-                of residues containing each type of irregularity (clashes, bad bonds, bad angles, suite outliers and sugar pucker outliers) 
+                of residues containing each type of irregularity (clashes, bad bond lengths, bad bond angles, suite outliers and sugar pucker outliers) 
                 and the percentage of clean residues (without any irregularities). The score ranges from 0 to 1, 
                 where 0 indicates a structure with defects in each residue and 1 indicates a structure 
                 with no deviations. The score is calculated for the entire model and for the selected region of the model, 
@@ -458,7 +458,7 @@ const HelpPage = () => {
               </h4>
               <p>
                 The local quality table provides a detailed breakdown of quality scores for each residue and its neighborhood. 
-                Clash score, bad bonds and bad angles are calculated for each selected residue's neighborhood, while suiteness 
+                Clash score, bad bond lengths and bad bond angles are calculated for each selected residue's neighborhood, while suiteness 
                 and sugar pucker outliers are properties of the residue itself.
               </p>
               <p>
@@ -475,7 +475,7 @@ const HelpPage = () => {
                 The local quality charts provide visual representations of the quality scores for each residue 
                 and its neighborhood. Users can easily identify trends and patterns in the data, allowing for 
                 a more intuitive understanding of the structure's quality. Charts are displayed for each 
-                metric-based quality scores, including clash score, bad bonds, bad angles and suiteness.
+                metric-based quality scores, including clash score, bad bond lengths, bad bond angles and suiteness.
                 Values for original model are displayed in orange, while values for refined model are displayed in blue.
                 On the X-axis, the residue index, RNA base and secondary structure are displayed, while on the Y-axis, 
                 the quality score values.
