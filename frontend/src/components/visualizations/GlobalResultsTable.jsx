@@ -11,19 +11,19 @@ const fieldRows = [
         key: "clashscore",
     },
     {
-        label: "Bad bonds",
+        label: "% bad bond lengths",
         keys: ["numbadbonds", "numbonds", "pct_badbonds"],
     },
     {
-        label: "Residues with bad bonds [%]",
+        label: "Residues with bad bond lengths [%]",
         key: "pct_resbadbonds",
     },
     {
-        label: "Bad angles",
+        label: "% bad bond angles",
         keys: ["numbadangles", "numangles", "pct_badangles"],
     },
     {
-        label: "Residues with bad angles [%]",
+        label: "Residues with bad bond angles [%]",
         key: "pct_resbadangles",
     },
     {

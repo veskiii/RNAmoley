@@ -216,8 +216,8 @@ export interface ComparisonMetrics {
 
 export enum QualityScore {
   CLASH_SCORE = "Clash Score",
-  BAD_ANGLES = "Bad Angles",
-  BAD_BONDS = "Bad Bonds",
+  BAD_ANGLES = "Bad bond angles",
+  BAD_BONDS = "Bad bond lengths",
   SUITENESS = "Suiteness",
   SUGAR_PUCKER_OUT = "Sugar Pucker Outlier",
 }

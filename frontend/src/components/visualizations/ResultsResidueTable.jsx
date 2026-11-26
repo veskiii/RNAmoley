@@ -355,7 +355,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             //       : "#ffffff",
             // }}
             >
-              Bad bonds
+              Bad bond lengths
             </td>
             {hasSimRows && <td className="w-24">Original</td>}
             {tableColumns.map((column, index) => {
@@ -426,7 +426,7 @@ const ResultsResidueTable = ({ data, simData, analyzeNeighborhood, selectedScore
             //       : "#ffffff",
             // }}
             >
-              Bad angles
+              Bad bond angles
             </td>
             {hasSimRows && <td className="w-24">Original</td>}
             {tableColumns.map((column, index) => {

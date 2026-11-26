@@ -38,7 +38,7 @@ export const rangeMap: Map<String, Range> = new Map([
     },
   ],
   [
-    "Bad Angles",
+    "Bad bond angles",
     {
       ranges: [
         [0, 0.01],
@@ -48,7 +48,7 @@ export const rangeMap: Map<String, Range> = new Map([
     },
   ],
   [
-    "Bad Bonds",
+    "Bad bond lengths",
     {
       ranges: [
         [0, 0.01],
@@ -63,7 +63,7 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
   if (givenQualityScore === QualityScore.BAD_BONDS) {
     if(!residue.metrics) return 0;
     var qualityScore = parseFloat(residue.metrics.pct_badbonds);
-    var range = rangeMap.get("Bad Bonds");
+    var range = rangeMap.get("Bad bond lengths");
     const ranges = range?.ranges ?? [];
     // @ts-ignore
     if (qualityScore < ranges[0][1]) {
@@ -78,7 +78,7 @@ function getRange(residue: Residue, givenQualityScore: QualityScore): number {
   } else if (givenQualityScore == QualityScore.BAD_ANGLES) {
     if(!residue.metrics) return 0;
     var qualityScore = parseFloat(residue.metrics.pct_badangles);
-    var range = rangeMap.get("Bad Angles");
+    var range = rangeMap.get("Bad bond angles");
     const ranges = range?.ranges ?? [];
     // @ts-ignore
     if (qualityScore < ranges[0][1]) {
